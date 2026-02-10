@@ -72,6 +72,12 @@ extension CoreBuilder {
                         profileView(router: router, delegate: ProfileDelegate())
                     }
                     .any()
+                }),
+                TabBarScreen(title: "Decks", systemImage: "menucard.fill", screen: {
+                    RouterView { router in
+                        decksView(router: router, delegate: DecksDelegate())
+                    }
+                    .any()
                 })
             ]
         )

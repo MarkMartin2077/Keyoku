@@ -14,6 +14,7 @@ struct CoreInteractor: GlobalInteractor {
     private let streakManager: StreakManager
     private let xpManager: ExperiencePointsManager
     private let progressManager: ProgressManager
+    private let flashcardManager: FlashcardManager
 
     init(container: DependencyContainer) {
         self.appState = container.resolve(AppState.self)!
@@ -28,6 +29,7 @@ struct CoreInteractor: GlobalInteractor {
         self.streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey)!
         self.xpManager = container.resolve(ExperiencePointsManager.self, key: Dependencies.xpConfiguration.experienceKey)!
         self.progressManager = container.resolve(ProgressManager.self, key: Dependencies.progressConfiguration.progressKey)!
+        self.flashcardManager = container.resolve(FlashcardManager.self)!
     }
     
     // MARK: APP STATE
@@ -317,6 +319,41 @@ struct CoreInteractor: GlobalInteractor {
 
     func deleteAllProgress() async throws {
         try await progressManager.deleteAllProgress()
+    }
+
+
+    // MARK: FlashcardManager
+
+    var decks: [DeckModel] {
+        flashcardManager.decks
+    }
+
+    func loadDecks() {
+        flashcardManager.loadDecks()
+    }
+
+    func getDeck(id: String) -> DeckModel? {
+        flashcardManager.getDeck(id: id)
+    }
+
+    func createDeck(name: String, sourceText: String) throws {
+        try flashcardManager.createDeck(name: name, sourceText: sourceText)
+    }
+
+    func updateDeck(_ deck: DeckModel) throws {
+        try flashcardManager.updateDeck(deck)
+    }
+
+    func deleteDeck(id: String) throws {
+        try flashcardManager.deleteDeck(id: id)
+    }
+
+    func addFlashcard(question: String, answer: String, toDeckId: String) throws {
+        try flashcardManager.addFlashcard(question: question, answer: answer, toDeckId: toDeckId)
+    }
+
+    func deleteFlashcard(id: String, fromDeckId: String) throws {
+        try flashcardManager.deleteFlashcard(id: id, fromDeckId: fromDeckId)
     }
 
     // MARK: SHARED

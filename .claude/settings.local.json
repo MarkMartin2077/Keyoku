@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//Users/nicksarno/Documents/documents/GITHUB/SwiftfulGamification/**)",
-      "Read(//Users/nicksarno/Documents/documents/GITHUB/SwiftfulGamificationFirebase/**)"
+      "Read(//Users/nicksarno/Documents/documents/GITHUB/SwiftfulGamificationFirebase/**)",
+      "Bash(awk 'NR==31{print; print \"\"        self.flashcardManager = container.resolve\\(FlashcardManager.self\\)!\"\"; next}1' Keyoku/Root/RIBs/Core/CoreInteractor.swift)"
     ],
     "deny": [],
     "ask": []
