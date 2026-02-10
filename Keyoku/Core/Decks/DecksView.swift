@@ -110,12 +110,7 @@ struct DecksView: View {
         }
     }
     
-    private var addButton: some View {
-//        Image(systemName: "plus")
-//            .anyButton(.press) {
-//                showCreateDeckAlert = true
-//            }
-        
+    private var addButton: some View {        
         Button("Add Deck", systemImage: "plus") {
             showCreateDeckAlert = true
         }

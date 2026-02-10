@@ -96,10 +96,10 @@ struct DeckDetailView: View {
     }
     
     private var addButton: some View {
-        Image(systemName: "plus")
-            .anyButton(.press) {
-                showAddCardSheet = true
-            }
+        Button("Add Card", systemImage: "plus") {
+            showAddCardSheet = true
+        }
+        .buttonStyle(.glassProminent)
     }
     
     private var addCardSheet: some View {
