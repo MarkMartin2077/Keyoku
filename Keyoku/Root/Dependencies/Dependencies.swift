@@ -49,7 +49,7 @@ struct Dependencies {
             streakManager = StreakManager(services: MockStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
             xpManager = ExperiencePointsManager(services: MockExperiencePointsServices(), configuration: Dependencies.xpConfiguration, logger: logManager)
             progressManager = ProgressManager(services: MockProgressServices(), configuration: Dependencies.progressConfiguration, logger: logManager)
-            flashcardManager = FlashcardManager(services: MockFlashcardServices(), logManager: logManager)
+            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
         case .dev:
             logManager = LogManager(services: [
                 ConsoleService(printParameters: true),
@@ -61,7 +61,7 @@ struct Dependencies {
             userManager = UserManager(services: ProductionUserServices(), logManager: logManager)
             abTestManager = ABTestManager(service: LocalABTestService(), logManager: logManager)
             purchaseManager = PurchaseManager(
-                service: RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey), // StoreKitPurchaseService(),
+                service: StoreKitPurchaseService(), // RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey)
                 logger: logManager
             )
             hapticManager = HapticManager(logger: logManager)
@@ -81,7 +81,7 @@ struct Dependencies {
 
             abTestManager = ABTestManager(service: FirebaseABTestService(), logManager: logManager)
             purchaseManager = PurchaseManager(
-                service: RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey),
+                service: StoreKitPurchaseService(), // RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey)
                 logger: logManager
             )
             hapticManager = HapticManager(logger: logManager)

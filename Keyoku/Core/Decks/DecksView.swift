@@ -32,7 +32,7 @@ struct DecksView: View {
         }
         .navigationTitle("Decks")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .primaryAction) {
                 addButton
             }
         }
@@ -111,10 +111,16 @@ struct DecksView: View {
     }
     
     private var addButton: some View {
-        Image(systemName: "plus")
-            .anyButton(.press) {
-                showCreateDeckAlert = true
-            }
+//        Image(systemName: "plus")
+//            .anyButton(.press) {
+//                showCreateDeckAlert = true
+//            }
+        
+        Button("Add Deck", systemImage: "plus") {
+            showCreateDeckAlert = true
+        }
+        .buttonStyle(.glassProminent)
+        
     }
 }
 

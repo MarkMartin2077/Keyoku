@@ -321,7 +321,6 @@ struct CoreInteractor: GlobalInteractor {
         try await progressManager.deleteAllProgress()
     }
 
-
     // MARK: FlashcardManager
 
     var decks: [DeckModel] {
