@@ -18,10 +18,29 @@ class DeckEntity {
     @Relationship(deleteRule: .cascade, inverse: \FlashcardEntity.deck)
     var flashcards: [FlashcardEntity] = []
 
-    init(id: String = UUID().uuidString, name: String, sourceText: String) {
+    init(id: String = UUID().uuidString, name: String, sourceText: String, createdAt: Date = .now) {
         self.id = id
         self.name = name
         self.sourceText = sourceText
-        self.createdAt = .now
+        self.createdAt = createdAt
+    }
+
+    convenience init(from model: DeckModel) {
+        self.init(id: model.deckId, name: model.name, sourceText: model.sourceText, createdAt: model.createdAt)
+        self.flashcards = model.flashcards.map { flashcard in
+            let entity = FlashcardEntity(from: flashcard)
+            entity.deck = self
+            return entity
+        }
+    }
+
+    func toModel() -> DeckModel {
+        DeckModel(
+            deckId: id,
+            name: name,
+            sourceText: sourceText,
+            createdAt: createdAt,
+            flashcards: flashcards.map { $0.toModel() }
+        )
     }
 }

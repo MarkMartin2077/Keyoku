@@ -25,6 +25,7 @@ struct Dependencies {
         let streakManager: StreakManager
         let xpManager: ExperiencePointsManager
         let progressManager: ProgressManager
+        let flashcardManager: FlashcardManager
         
         switch config {
         case .mock(isSignedIn: let isSignedIn):
@@ -48,6 +49,7 @@ struct Dependencies {
             streakManager = StreakManager(services: MockStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
             xpManager = ExperiencePointsManager(services: MockExperiencePointsServices(), configuration: Dependencies.xpConfiguration, logger: logManager)
             progressManager = ProgressManager(services: MockProgressServices(), configuration: Dependencies.progressConfiguration, logger: logManager)
+            flashcardManager = FlashcardManager(services: MockFlashcardServices(), logManager: logManager)
         case .dev:
             logManager = LogManager(services: [
                 ConsoleService(printParameters: true),
@@ -67,6 +69,7 @@ struct Dependencies {
             streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
             xpManager = ExperiencePointsManager(services: ProdExperiencePointsServices(), configuration: Dependencies.xpConfiguration, logger: logManager)
             progressManager = ProgressManager(services: ProdProgressServices(), configuration: Dependencies.progressConfiguration, logger: logManager)
+            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
         case .prod:
             logManager = LogManager(services: [
                 FirebaseAnalyticsService(),
@@ -86,6 +89,7 @@ struct Dependencies {
             streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
             xpManager = ExperiencePointsManager(services: ProdExperiencePointsServices(), configuration: Dependencies.xpConfiguration, logger: logManager)
             progressManager = ProgressManager(services: ProdProgressServices(), configuration: Dependencies.progressConfiguration, logger: logManager)
+            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
         }
         pushManager = PushManager(logManager: logManager)
         soundEffectManager = SoundEffectManager(logger: logManager)
@@ -103,6 +107,7 @@ struct Dependencies {
         container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
         container.register(ExperiencePointsManager.self, key: Dependencies.xpConfiguration.experienceKey, service: xpManager)
         container.register(ProgressManager.self, key: Dependencies.progressConfiguration.progressKey, service: progressManager)
+        container.register(FlashcardManager.self, service: flashcardManager)
 
         self.container = container
         
@@ -146,6 +151,7 @@ class DevPreview {
         container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
         container.register(ExperiencePointsManager.self, key: Dependencies.xpConfiguration.experienceKey, service: xpManager)
         container.register(ProgressManager.self, key: Dependencies.progressConfiguration.progressKey, service: progressManager)
+        container.register(FlashcardManager.self, service: flashcardManager)
         return container
     }
     
@@ -161,6 +167,7 @@ class DevPreview {
     let streakManager: StreakManager
     let xpManager: ExperiencePointsManager
     let progressManager: ProgressManager
+    let flashcardManager: FlashcardManager
 
     init(isSignedIn: Bool = true) {
         self.authManager = AuthManager(service: MockAuthService(user: isSignedIn ? .mock() : nil))
@@ -175,6 +182,7 @@ class DevPreview {
         self.streakManager = StreakManager(services: MockStreakServices(), configuration: StreakConfiguration.mockDefault())
         self.xpManager = ExperiencePointsManager(services: MockExperiencePointsServices(), configuration: ExperiencePointsConfiguration.mockDefault())
         self.progressManager = ProgressManager(services: MockProgressServices(), configuration: ProgressConfiguration.mockDefault())
+        self.flashcardManager = FlashcardManager(services: MockFlashcardServices())
     }
 
 }

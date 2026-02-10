@@ -20,4 +20,17 @@ class FlashcardEntity {
         self.question = question
         self.answer = answer
     }
+
+    convenience init(from model: FlashcardModel) {
+        self.init(id: model.flashcardId, question: model.question, answer: model.answer)
+    }
+
+    func toModel() -> FlashcardModel {
+        FlashcardModel(
+            flashcardId: id,
+            question: question,
+            answer: answer,
+            deckId: deck?.id
+        )
+    }
 }
