@@ -9,6 +9,7 @@ import SwiftUI
 
 @MainActor
 protocol CreateDeckInteractor: GlobalInteractor {
+    func createDeck(name: String, color: DeckColor, sourceText: String) throws
     func createDeck(name: String, color: DeckColor, sourceText: String, flashcards: [FlashcardModel]) throws
 }
 

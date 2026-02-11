@@ -12,9 +12,15 @@ import FoundationModels
 @MainActor
 class CreateDeckPresenter {
     
+    enum CreationMode: String, CaseIterable {
+        case generate = "Generate with AI"
+        case empty = "Start Empty"
+    }
+    
     private let interactor: CreateDeckInteractor
     private let router: CreateDeckRouter
     
+    var creationMode: CreationMode = .generate
     var cardCount: Int = 10
     var deckName: String = ""
     var selectedColor: DeckColor = .blue
@@ -27,6 +33,10 @@ class CreateDeckPresenter {
         !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !isGenerating
+    }
+    
+    var canCreateEmpty: Bool {
+        !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     init(interactor: CreateDeckInteractor, router: CreateDeckRouter) {
@@ -50,6 +60,11 @@ class CreateDeckPresenter {
     func onCardCountChanged(_ count: Int) {
         interactor.trackEvent(event: Event.onCardCountChanged(count: count))
         cardCount = count
+    }
+    
+    func onCreationModeChanged(_ mode: CreationMode) {
+        interactor.trackEvent(event: Event.onCreationModeChanged(mode: mode.rawValue))
+        creationMode = mode
     }
     
     func onCancelPressed() {
@@ -83,6 +98,25 @@ class CreateDeckPresenter {
                 interactor.trackEvent(event: Event.onGenerateFail(error: error))
                 isGenerating = false
             }
+        }
+    }
+    
+    func onCreateEmptyPressed() {
+        interactor.trackEvent(event: Event.onCreateEmptyPressed)
+        
+        guard canCreateEmpty else { return }
+        
+        do {
+            try interactor.createDeck(
+                name: deckName.trimmingCharacters(in: .whitespacesAndNewlines),
+                color: selectedColor,
+                sourceText: ""
+            )
+            
+            interactor.trackEvent(event: Event.onCreateEmptySuccess)
+            router.dismiss()
+        } catch {
+            interactor.trackEvent(event: Event.onCreateEmptyFail(error: error))
         }
     }
     
@@ -237,23 +271,31 @@ extension CreateDeckPresenter {
         case onDisappear(delegate: CreateDeckDelegate)
         case onColorSelected(color: DeckColor)
         case onCardCountChanged(count: Int)
+        case onCreationModeChanged(mode: String)
         case onCancelPressed
         case onGeneratePressed(sourceTextLength: Int, cardCount: Int)
         case onBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
         case onGenerateSuccess(cardCount: Int)
         case onGenerateFail(error: Error)
+        case onCreateEmptyPressed
+        case onCreateEmptySuccess
+        case onCreateEmptyFail(error: Error)
 
         var eventName: String {
             switch self {
-            case .onAppear:             return "CreateDeckView_Appear"
-            case .onDisappear:          return "CreateDeckView_Disappear"
-            case .onColorSelected:      return "CreateDeckView_ColorSelected"
-            case .onCardCountChanged:   return "CreateDeckView_CardCount_Changed"
-            case .onCancelPressed:      return "CreateDeckView_Cancel"
-            case .onGeneratePressed:    return "CreateDeckView_Generate_Pressed"
-            case .onBatchStart:         return "CreateDeckView_Batch_Start"
-            case .onGenerateSuccess:    return "CreateDeckView_Generate_Success"
-            case .onGenerateFail:       return "CreateDeckView_Generate_Fail"
+            case .onAppear:                 return "CreateDeckView_Appear"
+            case .onDisappear:              return "CreateDeckView_Disappear"
+            case .onColorSelected:          return "CreateDeckView_ColorSelected"
+            case .onCardCountChanged:       return "CreateDeckView_CardCount_Changed"
+            case .onCreationModeChanged:    return "CreateDeckView_CreationMode_Changed"
+            case .onCancelPressed:          return "CreateDeckView_Cancel"
+            case .onGeneratePressed:        return "CreateDeckView_Generate_Pressed"
+            case .onBatchStart:             return "CreateDeckView_Batch_Start"
+            case .onGenerateSuccess:        return "CreateDeckView_Generate_Success"
+            case .onGenerateFail:           return "CreateDeckView_Generate_Fail"
+            case .onCreateEmptyPressed:     return "CreateDeckView_CreateEmpty_Pressed"
+            case .onCreateEmptySuccess:     return "CreateDeckView_CreateEmpty_Success"
+            case .onCreateEmptyFail:        return "CreateDeckView_CreateEmpty_Fail"
             }
         }
         
@@ -265,6 +307,8 @@ extension CreateDeckPresenter {
                 return ["color": color.rawValue]
             case .onCardCountChanged(count: let count):
                 return ["card_count": count]
+            case .onCreationModeChanged(mode: let mode):
+                return ["creation_mode": mode]
             case .onGeneratePressed(sourceTextLength: let length, cardCount: let count):
                 return ["source_text_length": length, "card_count": count]
             case .onBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
@@ -273,6 +317,8 @@ extension CreateDeckPresenter {
                 return ["card_count": count]
             case .onGenerateFail(error: let error):
                 return error.eventParameters
+            case .onCreateEmptyFail(error: let error):
+                return error.eventParameters
             default:
                 return nil
             }
@@ -280,7 +326,7 @@ extension CreateDeckPresenter {
         
         var type: LogType {
             switch self {
-            case .onGenerateFail:
+            case .onGenerateFail, .onCreateEmptyFail:
                 return .severe
             default:
                 return .analytic

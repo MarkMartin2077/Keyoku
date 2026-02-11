@@ -22,20 +22,37 @@ struct CreateDeckView: View {
     var body: some View {
         Form {
             deckInfoSection
-            cardAmountSection
-            sourceTextSection
-            generateSection
+            creationModePicker
+
+            if presenter.creationMode == .generate {
+                cardAmountSection
+                sourceTextSection
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if !presenter.isGenerating {
+                bottomActionButton
+                    .padding()
+                    .background(.bar)
+            }
+        }
+        .overlay {
+            if presenter.isGenerating {
+                generatingOverlay
+            }
         }
         .navigationTitle("Create Deck")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    presenter.onCancelPressed()
+                if !presenter.isGenerating {
+                    Button("Cancel") {
+                        presenter.onCancelPressed()
+                    }
                 }
-                .disabled(presenter.isGenerating)
             }
         }
+        .interactiveDismissDisabled(presenter.isGenerating)
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }
@@ -53,6 +70,22 @@ struct CreateDeckView: View {
             colorPicker
         } header: {
             Text("Deck Info")
+        }
+    }
+    
+    // MARK: - Creation Mode Picker
+    
+    private var creationModePicker: some View {
+        Section {
+            Picker("Creation Method", selection: Binding(
+                get: { presenter.creationMode },
+                set: { presenter.onCreationModeChanged($0) }
+            )) {
+                ForEach(CreateDeckPresenter.CreationMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
         }
     }
     
@@ -115,13 +148,15 @@ struct CreateDeckView: View {
         }
     }
     
-    // MARK: - Generate Section
+    // MARK: - Bottom Action Button
     
-    private var generateSection: some View {
-        Section {
+    @ViewBuilder
+    private var bottomActionButton: some View {
+        switch presenter.creationMode {
+        case .generate:
             generateButton
-        } footer: {
-            Text("Apple Intelligence will analyze your text and create \(presenter.cardCount) flashcards.")
+        case .empty:
+            createEmptyButton
         }
     }
     
@@ -133,14 +168,8 @@ struct CreateDeckView: View {
             HStack {
                 Spacer()
                 
-                if presenter.isGenerating {
-                    ProgressView()
-                        .tint(.white)
-                    Text("Generating batch \(presenter.generationProgress) of \(presenter.generationTotal)…")
-                } else {
-                    Image(systemName: "apple.intelligence")
-                    Text("Generate")
-                }
+                Image(systemName: "apple.intelligence")
+                Text("Generate")
                 
                 Spacer()
             }
@@ -154,8 +183,87 @@ struct CreateDeckView: View {
         }
         .buttonStyle(.plain)
         .disabled(!presenter.canGenerate)
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
+    }
+    
+    @ViewBuilder
+    private var createEmptyButton: some View {
+        Button {
+            presenter.onCreateEmptyPressed()
+        } label: {
+            HStack {
+                Spacer()
+                
+                Image(systemName: "rectangle.stack.badge.plus")
+                Text("Create Deck")
+                
+                Spacer()
+            }
+            .font(.headline)
+            .foregroundStyle(.white)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(presenter.canCreateEmpty ? Color.accentColor : Color.gray)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!presenter.canCreateEmpty)
+    }
+    
+    // MARK: - Generating Overlay
+    
+    private var generatingOverlay: some View {
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                Spacer()
+                
+                Image(systemName: "apple.intelligence")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.accent)
+                    .symbolEffect(.pulse, isActive: true)
+                
+                VStack(spacing: 8) {
+                    Text("Generating Flashcards")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("Creating \(presenter.cardCount) cards for **\(presenter.deckName)**")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                
+                if presenter.generationTotal > 0 {
+                    VStack(spacing: 12) {
+                        ProgressView(
+                            value: Double(presenter.generationProgress),
+                            total: Double(presenter.generationTotal)
+                        )
+                        .tint(.accent)
+                        .frame(maxWidth: 220)
+                        
+                        Text("Batch \(presenter.generationProgress) of \(presenter.generationTotal)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    ProgressView()
+                        .controlSize(.large)
+                }
+                
+                Spacer()
+                
+                Text("This may take a moment depending on the amount of source text.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 32)
+            }
+            .padding()
+        }
     }
 }
 
