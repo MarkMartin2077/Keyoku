@@ -14,11 +14,43 @@ struct DecksDelegate {
     }
 }
 
+struct DeckItem: View {
+    var deck: DeckModel
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            if let imageUrl = deck.imageUrl {
+                ImageLoaderView(urlString: imageUrl, resizingMode: .fit)
+                    .scaledToFit()
+                    .frame(width: 200, height: 200)
+            } else {
+                Image(systemName: "rectangle.on.rectangle")
+                    .font(.system(size: 64))
+            }
+            Text(deck.name)
+                .font(.title)
+            if !deck.flashcards.isEmpty {
+                Text("Cards: \(deck.flashcards.count)")
+                    .font(.subheadline)
+                    .padding(.bottom, 16)
+            } else {
+                ContentUnavailableView("No cards yet. Add some!", systemImage: "plus")
+            }
+            
+        }
+        .foregroundStyle(.white)
+        .frame(width: 200, height: 200)
+        .background(deck.color.color.gradient)
+        .clipShape(.rect(cornerRadius: 32))
+        .shadow(color: deck.color.color.opacity(0.5), radius: 30, y: 15)
+    }
+}
+
 struct DecksView: View {
     
     @State var presenter: DecksPresenter
     let delegate: DecksDelegate
-
+    
     var body: some View {
         List {
             if presenter.decks.isEmpty {
@@ -64,15 +96,11 @@ struct DecksView: View {
     
     private var decksSection: some View {
         Section {
-            ScrollView(.horizontal) {
-                HStack {
-                    ForEach(presenter.decks) { deck in
-                        deckRow(deck: deck)
-                    }
-                    .onDelete { indexSet in
-                        presenter.onDeleteDecks(at: indexSet)
-                    }
-                }
+            ForEach(presenter.decks) { deck in
+                deckRow(deck: deck)
+            }
+            .onDelete { indexSet in
+                presenter.onDeleteDecks(at: indexSet)
             }
         } header: {
             Text("\(presenter.decks.count) Deck\(presenter.decks.count == 1 ? "" : "s")")
@@ -99,7 +127,7 @@ struct DecksView: View {
         }
     }
     
-    private var addButton: some View {        
+    private var addButton: some View {
         Button("Add Deck", systemImage: "plus") {
             presenter.onAddDeckPressed()
         }

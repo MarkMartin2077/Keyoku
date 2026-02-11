@@ -50,6 +50,7 @@ struct HomeView: View {
             .padding()
         }
         .navigationTitle("Home")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 if showDevSettingsButton {
