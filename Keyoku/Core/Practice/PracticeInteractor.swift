@@ -9,7 +9,8 @@ import SwiftUI
 
 @MainActor
 protocol PracticeInteractor: GlobalInteractor {
-    
+    @discardableResult func addStreakEvent(metadata: [String: GamificationDictionaryValue]) async throws -> StreakEvent
+    @discardableResult func addExperiencePoints(points: Int, metadata: [String: GamificationDictionaryValue]) async throws -> ExperiencePointsEvent
 }
 
 extension CoreInteractor: PracticeInteractor { }

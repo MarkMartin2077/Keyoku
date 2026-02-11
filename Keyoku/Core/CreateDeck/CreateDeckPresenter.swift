@@ -15,13 +15,18 @@ class CreateDeckPresenter {
     private let interactor: CreateDeckInteractor
     private let router: CreateDeckRouter
     
+    var cardCount: Int = 10
     var deckName: String = ""
     var selectedColor: DeckColor = .blue
     var sourceText: String = ""
     var isGenerating: Bool = false
+    var generationProgress: Int = 0
+    var generationTotal: Int = 0
     
     var canGenerate: Bool {
-        !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isGenerating
+        !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !isGenerating
     }
     
     init(interactor: CreateDeckInteractor, router: CreateDeckRouter) {
@@ -42,13 +47,18 @@ class CreateDeckPresenter {
         selectedColor = color
     }
     
+    func onCardCountChanged(_ count: Int) {
+        interactor.trackEvent(event: Event.onCardCountChanged(count: count))
+        cardCount = count
+    }
+    
     func onCancelPressed() {
         interactor.trackEvent(event: Event.onCancelPressed)
         router.dismiss()
     }
     
     func onGeneratePressed() {
-        interactor.trackEvent(event: Event.onGeneratePressed(sourceTextLength: sourceText.count))
+        interactor.trackEvent(event: Event.onGeneratePressed(sourceTextLength: sourceText.count, cardCount: cardCount))
         
         guard canGenerate else { return }
         
@@ -76,32 +86,147 @@ class CreateDeckPresenter {
         }
     }
     
-    private func generateFlashcards() async throws -> [FlashcardModel] {
-        let session = LanguageModelSession()
+    // MARK: - Text Splitting
+    
+    private func findBreak(in text: String, near target: String.Index, from start: String.Index) -> String.Index {
+        let searchRadius = max(text.distance(from: start, to: target) / 3, 1)
+        let searchStart = text.index(target, offsetBy: -searchRadius, limitedBy: start) ?? start
+        let searchEnd = text.index(target, offsetBy: searchRadius, limitedBy: text.endIndex) ?? text.endIndex
+        let window = text[searchStart..<searchEnd]
         
-        let prompt = """
-        Generate flashcards from the following text. Create cards that help \
-        students learn effectively using these techniques:
-        - Key definitions and terminology
-        - Cause and effect relationships
-        - Compare and contrast important concepts
-        - Important dates, timelines, or sequences
-        - Formulas, rules, or principles
-        - Key facts and their significance
-
-        Each card should have a clear, specific question and a concise but \
-        complete answer.
-
-        Text:
-        \(sourceText)
-        """
+        // Best: paragraph break
+        if let range = window.range(of: "\n\n", options: .backwards) {
+            return range.upperBound
+        }
         
-        let response = try await session.respond(
-            to: prompt,
-            generating: GeneratedFlashcards.self
+        // Good: line break
+        if let range = window.range(of: "\n", options: .backwards) {
+            return range.upperBound
+        }
+        
+        // Okay: sentence break
+        for ender in [". ", "? ", "! "] {
+            if let range = window.range(of: ender, options: .backwards) {
+                return range.upperBound
+            }
+        }
+        
+        // Last resort: next whitespace after target
+        return text[target...].firstIndex(where: \.isWhitespace) ?? target
+    }
+    
+    private func splitText(_ text: String, into count: Int) -> [String] {
+        guard count > 1 else { return [text] }
+        
+        let chunkSize = text.count / count
+        var chunks = [String]()
+        var startIndex = text.startIndex
+        
+        for index in 0..<count {
+            if index == count - 1 {
+                chunks.append(String(text[startIndex...]))
+            } else {
+                let targetEnd = text.index(startIndex, offsetBy: chunkSize, limitedBy: text.endIndex) ?? text.endIndex
+                let breakIndex = findBreak(in: text, near: targetEnd, from: startIndex)
+                chunks.append(String(text[startIndex..<breakIndex]))
+                startIndex = breakIndex
+            }
+        }
+        
+        return chunks
+    }
+    
+    private func makeBatches() -> [(text: String, cards: Int)] {
+        let perBatchBudget = 9500
+        let charsPerCard = 250
+        let totalNeeded = sourceText.count + (cardCount * charsPerCard)
+        let numberOfBatches = max((totalNeeded + perBatchBudget - 1) / perBatchBudget, 1)
+        
+        let textChunks = splitText(sourceText, into: numberOfBatches)
+        var batches = [(text: String, cards: Int)]()
+        var cardsRemaining = cardCount
+        
+        for (index, chunk) in textChunks.enumerated() {
+            let batchesLeft = textChunks.count - index
+            let cardsInBatch = cardsRemaining / batchesLeft
+            batches.append((text: chunk, cards: cardsInBatch))
+            cardsRemaining -= cardsInBatch
+        }
+        
+        return batches
+    }
+    
+    // MARK: - Generation
+    
+    private func flashcardSchema(count: Int) throws -> GenerationSchema {
+        let cardSchema = DynamicGenerationSchema(
+            name: "Card",
+            properties: [
+                .init(name: "question", schema: .init(type: String.self)),
+                .init(name: "answer", schema: .init(type: String.self))
+            ]
         )
         
-        return response.content.toModels()
+        let deckSchema = DynamicGenerationSchema(
+            name: "Flashcards",
+            properties: [
+                .init(
+                    name: "cards",
+                    schema: .init(
+                        arrayOf: cardSchema,
+                        minimumElements: count,
+                        maximumElements: count
+                    )
+                )
+            ]
+        )
+        
+        return try GenerationSchema(root: deckSchema, dependencies: [cardSchema])
+    }
+    
+    private func generateFlashcards() async throws -> [FlashcardModel] {
+        let batches = makeBatches()
+        generationTotal = batches.count
+        generationProgress = 0
+        
+        var allFlashcards: [FlashcardModel] = []
+        
+        for batch in batches {
+            generationProgress += 1
+            interactor.trackEvent(event: Event.onBatchStart(batchNumber: generationProgress, totalBatches: generationTotal, cardCount: batch.cards))
+            
+            let session = LanguageModelSession()
+            let prompt = """
+            Generate exactly \(batch.cards) flashcards from the following text. Create cards that help \
+            students learn effectively using these techniques:
+            - Key definitions and terminology
+            - Cause and effect relationships
+            - Compare and contrast important concepts
+            - Important dates, timelines, or sequences
+            - Formulas, rules, or principles
+            - Key facts and their significance
+
+            Each card should have a clear, specific question and a concise but \
+            complete answer.
+
+            Text:
+            \(batch.text)
+            """
+            
+            let schema = try flashcardSchema(count: batch.cards)
+            let response = try await session.respond(to: prompt, schema: schema)
+            let cards = try response.content.value([GeneratedContent].self, forProperty: "cards")
+            
+            let flashcards = try cards.map { card in
+                let question = try card.value(String.self, forProperty: "question")
+                let answer = try card.value(String.self, forProperty: "answer")
+                return FlashcardModel(question: question, answer: answer)
+            }
+            
+            allFlashcards.append(contentsOf: flashcards)
+        }
+        
+        return allFlashcards
     }
 }
 
@@ -111,8 +236,10 @@ extension CreateDeckPresenter {
         case onAppear(delegate: CreateDeckDelegate)
         case onDisappear(delegate: CreateDeckDelegate)
         case onColorSelected(color: DeckColor)
+        case onCardCountChanged(count: Int)
         case onCancelPressed
-        case onGeneratePressed(sourceTextLength: Int)
+        case onGeneratePressed(sourceTextLength: Int, cardCount: Int)
+        case onBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
         case onGenerateSuccess(cardCount: Int)
         case onGenerateFail(error: Error)
 
@@ -121,8 +248,10 @@ extension CreateDeckPresenter {
             case .onAppear:             return "CreateDeckView_Appear"
             case .onDisappear:          return "CreateDeckView_Disappear"
             case .onColorSelected:      return "CreateDeckView_ColorSelected"
+            case .onCardCountChanged:   return "CreateDeckView_CardCount_Changed"
             case .onCancelPressed:      return "CreateDeckView_Cancel"
             case .onGeneratePressed:    return "CreateDeckView_Generate_Pressed"
+            case .onBatchStart:         return "CreateDeckView_Batch_Start"
             case .onGenerateSuccess:    return "CreateDeckView_Generate_Success"
             case .onGenerateFail:       return "CreateDeckView_Generate_Fail"
             }
@@ -134,8 +263,12 @@ extension CreateDeckPresenter {
                 return delegate.eventParameters
             case .onColorSelected(color: let color):
                 return ["color": color.rawValue]
-            case .onGeneratePressed(sourceTextLength: let length):
-                return ["source_text_length": length]
+            case .onCardCountChanged(count: let count):
+                return ["card_count": count]
+            case .onGeneratePressed(sourceTextLength: let length, cardCount: let count):
+                return ["source_text_length": length, "card_count": count]
+            case .onBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
+                return ["batch_number": batch, "total_batches": total, "batch_card_count": cards]
             case .onGenerateSuccess(cardCount: let count):
                 return ["card_count": count]
             case .onGenerateFail(error: let error):

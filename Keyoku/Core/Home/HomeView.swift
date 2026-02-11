@@ -8,10 +8,10 @@ struct HomeDelegate {
 }
 
 struct HomeView: View {
-    
+
     @State var presenter: HomePresenter
     let delegate: HomeDelegate
-    
+
     private var showDevSettingsButton: Bool {
         #if DEV || MOCK
         return true
@@ -20,30 +20,257 @@ struct HomeView: View {
         #endif
     }
 
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:
+            return "Good morning"
+        case 12..<17:
+            return "Good afternoon"
+        default:
+            return "Good evening"
+        }
+    }
+
+    private var todayCompleted: Bool {
+        let data = presenter.currentStreakData
+        let required = data.eventsRequiredPerDay ?? 1
+        let today = data.todayEventCount ?? 0
+        return today >= required
+    }
+
     var body: some View {
-        Text("Hello, World!")
-            .navigationTitle("Home")
-            .toolbar(content: {
-                ToolbarItem(placement: .topBarLeading) {
-                    if showDevSettingsButton {
-                        devSettingsButton
+        ScrollView {
+            VStack(spacing: 20) {
+                welcomeHeader
+                gamificationRow
+                recentDecksSection
+                quickActionsSection
+            }
+            .padding()
+        }
+        .navigationTitle("Home")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if showDevSettingsButton {
+                    devSettingsButton
+                }
+            }
+        }
+        .onAppear {
+            presenter.onViewAppear(delegate: delegate)
+        }
+        .onDisappear {
+            presenter.onViewDisappear(delegate: delegate)
+        }
+        .onOpenURL { url in
+            presenter.handleDeepLink(url: url)
+        }
+        .onNotificationRecieved(name: .pushNotification) { notification in
+            presenter.handlePushNotificationRecieved(notification: notification)
+        }
+    }
+
+    // MARK: - Welcome Header
+
+    private var welcomeHeader: some View {
+        Text(greeting)
+            .font(.largeTitle)
+            .fontWeight(.bold)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Gamification Row
+
+    private var gamificationRow: some View {
+        HStack(spacing: 12) {
+            StreakCardView(
+                currentStreak: presenter.currentStreakData.currentStreak,
+                longestStreak: presenter.currentStreakData.longestStreak,
+                todayCompleted: todayCompleted
+            )
+
+            statsCard
+        }
+    }
+
+    private var statsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.stack.fill")
+                    .font(.title2)
+                    .foregroundStyle(.accent)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(presenter.decks.count)")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .contentTransition(.numericText())
+
+                    Text(presenter.decks.count == 1 ? "deck" : "decks")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Divider()
+
+            HStack {
+                Image(systemName: "doc.text.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("\(presenter.totalCardCount) cards")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(
+                            Color.accentColor.opacity(0.2),
+                            lineWidth: 1
+                        )
+                }
+        }
+    }
+
+    // MARK: - Recent Decks Section
+
+    private var recentDecksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Recent Decks")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                Spacer()
+
+                if !presenter.decks.isEmpty {
+                    Text("See All")
+                        .font(.subheadline)
+                        .foregroundStyle(.accent)
+                        .anyButton(.press) {
+                            presenter.onViewAllDecksPressed()
+                        }
+                }
+            }
+
+            if presenter.recentDecks.isEmpty {
+                emptyDecksCard
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(presenter.recentDecks) { deck in
+                            deckCard(deck: deck)
+                        }
                     }
                 }
-            })
-            .onAppear {
-                presenter.onViewAppear(delegate: delegate)
             }
-            .onDisappear {
-                presenter.onViewDisappear(delegate: delegate)
-            }
-            .onOpenURL { url in
-                presenter.handleDeepLink(url: url)
-            }
-            .onNotificationRecieved(name: .pushNotification) { notification in
-                presenter.handlePushNotificationRecieved(notification: notification)
-            }
+        }
     }
-    
+
+    private var emptyDecksCard: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "rectangle.stack")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+
+            Text("No decks yet")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Text("Create your first deck to start studying")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
+                }
+        }
+    }
+
+    private func deckCard(deck: DeckModel) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(deck.name)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            Spacer()
+
+            Text("\(deck.flashcards.count) card\(deck.flashcards.count == 1 ? "" : "s")")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.8))
+        }
+        .padding()
+        .frame(width: 150, height: 120, alignment: .topLeading)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [deck.color.color, deck.color.color.opacity(0.7)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+        .anyButton(.press) {
+            presenter.onDeckPressed(deck: deck)
+        }
+    }
+
+    // MARK: - Quick Actions
+
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Actions")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+
+                Text("Create New Deck")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [.accent, .accent.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+            .anyButton(.press) {
+                presenter.onCreateDeckPressed()
+            }
+        }
+    }
+
+    // MARK: - Dev Settings
+
     private var devSettingsButton: some View {
         Text("DEV")
             .foregroundStyle(.white)
@@ -57,7 +284,6 @@ struct HomeView: View {
                 presenter.onDevSettingsPressed()
             }
     }
-
 }
 
 #Preview {
@@ -65,14 +291,14 @@ struct HomeView: View {
     let interactor = CoreInteractor(container: container)
     let builder = CoreBuilder(interactor: interactor)
     let delegate = HomeDelegate()
-    
+
     return RouterView { router in
         builder.homeView(router: router, delegate: delegate)
     }
 }
 
 extension CoreBuilder {
-    
+
     func homeView(router: AnyRouter, delegate: HomeDelegate) -> some View {
         HomeView(
             presenter: HomePresenter(
@@ -82,15 +308,15 @@ extension CoreBuilder {
             delegate: delegate
         )
     }
-    
+
 }
 
 extension CoreRouter {
-    
+
     func showHomeView(delegate: HomeDelegate) {
         router.showScreen(.push) { router in
             builder.homeView(router: router, delegate: delegate)
         }
     }
-    
+
 }

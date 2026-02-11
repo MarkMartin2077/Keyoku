@@ -18,12 +18,11 @@ struct CreateDeckView: View {
     
     @State var presenter: CreateDeckPresenter
     let delegate: CreateDeckDelegate
-    
-    private let characterLimit: Int = 9500
 
     var body: some View {
         Form {
             deckInfoSection
+            cardAmountSection
             sourceTextSection
             generateSection
         }
@@ -34,6 +33,7 @@ struct CreateDeckView: View {
                 Button("Cancel") {
                     presenter.onCancelPressed()
                 }
+                .disabled(presenter.isGenerating)
             }
         }
         .onAppear {
@@ -53,6 +53,18 @@ struct CreateDeckView: View {
             colorPicker
         } header: {
             Text("Deck Info")
+        }
+    }
+    
+    // MARK: - Card Amount Section
+    
+    private var cardAmountSection: some View {
+        Section {
+            Stepper("\(presenter.cardCount) cards", value: $presenter.cardCount, in: 10...50, step: 5)
+        } header: {
+            Text("Number of Cards")
+        } footer: {
+            Text("More cards require more source text for best results.")
         }
     }
     
@@ -98,17 +110,8 @@ struct CreateDeckView: View {
         Section {
             TextEditor(text: $presenter.sourceText)
                 .frame(minHeight: 150)
-            
-            HStack {
-                Spacer()
-                Text("\(presenter.sourceText.count) / \(characterLimit)")
-                    .font(.caption)
-                    .foregroundStyle(presenter.sourceText.count > characterLimit - 500 ? .red : .secondary)
-            }
         } header: {
             Text("Source Text")
-        } footer: {
-            Text("Paste text to generate flashcards from. Keep under \(characterLimit) characters for best results.")
         }
     }
     
@@ -118,7 +121,7 @@ struct CreateDeckView: View {
         Section {
             generateButton
         } footer: {
-            Text("Apple Intelligence will analyze your text and create 10 flashcards.")
+            Text("Apple Intelligence will analyze your text and create \(presenter.cardCount) flashcards.")
         }
     }
     
@@ -133,7 +136,7 @@ struct CreateDeckView: View {
                 if presenter.isGenerating {
                     ProgressView()
                         .tint(.white)
-                    Text("Generating...")
+                    Text("Generating batch \(presenter.generationProgress) of \(presenter.generationTotal)…")
                 } else {
                     Image(systemName: "apple.intelligence")
                     Text("Generate")
