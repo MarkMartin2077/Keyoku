@@ -12,21 +12,28 @@ import SwiftData
 class DeckEntity {
     @Attribute(.unique) var id: String = UUID().uuidString
     var name: String = ""
+    var colorRaw: String = DeckColor.blue.rawValue
     var sourceText: String = ""
     var createdAt: Date = Date.now
 
     @Relationship(deleteRule: .cascade, inverse: \FlashcardEntity.deck)
     var flashcards: [FlashcardEntity] = []
+    
+    var color: DeckColor {
+        get { DeckColor(rawValue: colorRaw) ?? .blue }
+        set { colorRaw = newValue.rawValue }
+    }
 
-    init(id: String = UUID().uuidString, name: String, sourceText: String, createdAt: Date = .now) {
+    init(id: String = UUID().uuidString, name: String, color: DeckColor = .blue, sourceText: String, createdAt: Date = .now) {
         self.id = id
         self.name = name
+        self.colorRaw = color.rawValue
         self.sourceText = sourceText
         self.createdAt = createdAt
     }
 
     convenience init(from model: DeckModel) {
-        self.init(id: model.deckId, name: model.name, sourceText: model.sourceText, createdAt: model.createdAt)
+        self.init(id: model.deckId, name: model.name, color: model.color, sourceText: model.sourceText, createdAt: model.createdAt)
         self.flashcards = model.flashcards.map { flashcard in
             let entity = FlashcardEntity(from: flashcard)
             entity.deck = self
@@ -38,6 +45,7 @@ class DeckEntity {
         DeckModel(
             deckId: id,
             name: name,
+            color: color,
             sourceText: sourceText,
             createdAt: createdAt,
             flashcards: flashcards.map { $0.toModel() }

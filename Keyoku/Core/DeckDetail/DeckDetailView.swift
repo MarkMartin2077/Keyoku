@@ -27,6 +27,10 @@ struct DeckDetailView: View {
 
     var body: some View {
         List {
+            if !presenter.flashcards.isEmpty {
+                practiceSection
+            }
+            
             if presenter.flashcards.isEmpty {
                 emptyStateView
             } else {
@@ -50,6 +54,40 @@ struct DeckDetailView: View {
         }
     }
     
+    // MARK: - Practice Section
+    
+    private var practiceSection: some View {
+        Section {
+            Button {
+                presenter.onPracticePressed()
+            } label: {
+                HStack {
+                    Image(systemName: "rectangle.stack.fill")
+                        .font(.title2)
+                        .foregroundStyle(presenter.deckColor.color)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Practice")
+                            .font(.headline)
+                        Text("Study all \(presenter.flashcards.count) cards")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    // MARK: - Empty State
+    
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "rectangle.on.rectangle")
@@ -69,7 +107,10 @@ struct DeckDetailView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
         .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
+    
+    // MARK: - Flashcards Section
     
     private var flashcardsSection: some View {
         Section {
@@ -95,11 +136,13 @@ struct DeckDetailView: View {
         .padding(.vertical, 4)
     }
     
+    // MARK: - Add Card
+    
     private var addButton: some View {
-        Button("Add Card", systemImage: "plus") {
-            showAddCardSheet = true
-        }
-        .buttonStyle(.glassProminent)
+        Image(systemName: "plus")
+            .anyButton(.press) {
+                showAddCardSheet = true
+            }
     }
     
     private var addCardSheet: some View {
@@ -147,8 +190,10 @@ struct DeckDetailView: View {
     let builder = CoreBuilder(interactor: interactor)
     let delegate = DeckDetailDelegate(deck: .mock)
     
-    return RouterView { router in
-        builder.deckDetailView(router: router, delegate: delegate)
+    return NavigationStack {
+        RouterView { router in
+            builder.deckDetailView(router: router, delegate: delegate)
+        }
     }
 }
 

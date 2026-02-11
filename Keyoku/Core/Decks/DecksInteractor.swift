@@ -11,7 +11,7 @@ import SwiftUI
 protocol DecksInteractor: GlobalInteractor {
     var decks: [DeckModel] { get }
     func loadDecks()
-    func createDeck(name: String, sourceText: String) throws
+    func createDeck(name: String, color: DeckColor, sourceText: String) throws
     func deleteDeck(id: String) throws
 }
 

@@ -43,24 +43,49 @@ struct SwiftDataDeckPersistence: LocalDeckPersistence {
         let existingEntities = try mainContext.fetch(descriptor)
         
         if let existingEntity = existingEntities.first {
-            // Update existing
+            // Update existing deck
             existingEntity.name = deck.name
+            existingEntity.color = deck.color
             existingEntity.sourceText = deck.sourceText
             existingEntity.createdAt = deck.createdAt
             
-            // Update flashcards - remove old ones and add new
+            // Remove old flashcards
             for flashcard in existingEntity.flashcards {
                 mainContext.delete(flashcard)
             }
-            existingEntity.flashcards = deck.flashcards.map { flashcard in
-                let entity = FlashcardEntity(from: flashcard)
-                entity.deck = existingEntity
-                return entity
+            existingEntity.flashcards.removeAll()
+            
+            // Add new flashcards
+            for card in deck.flashcards {
+                let flashcardEntity = FlashcardEntity(
+                    id: card.flashcardId,
+                    question: card.question,
+                    answer: card.answer
+                )
+                flashcardEntity.deck = existingEntity
+                mainContext.insert(flashcardEntity)
             }
         } else {
-            // Insert new
-            let entity = DeckEntity(from: deck)
-            mainContext.insert(entity)
+            // Create new deck
+            let deckEntity = DeckEntity(
+                id: deck.deckId,
+                name: deck.name,
+                color: deck.color,
+                sourceText: deck.sourceText,
+                createdAt: deck.createdAt
+            )
+            mainContext.insert(deckEntity)
+            
+            // Create and insert each flashcard
+            for card in deck.flashcards {
+                let flashcardEntity = FlashcardEntity(
+                    id: card.flashcardId,
+                    question: card.question,
+                    answer: card.answer
+                )
+                flashcardEntity.deck = deckEntity
+                mainContext.insert(flashcardEntity)
+            }
         }
         
         try mainContext.save()
@@ -88,9 +113,13 @@ struct SwiftDataDeckPersistence: LocalDeckPersistence {
             throw DeckPersistenceError.deckNotFound
         }
         
-        let flashcardEntity = FlashcardEntity(from: flashcard)
+        let flashcardEntity = FlashcardEntity(
+            id: flashcard.flashcardId,
+            question: flashcard.question,
+            answer: flashcard.answer
+        )
         flashcardEntity.deck = deckEntity
-        deckEntity.flashcards.append(flashcardEntity)
+        mainContext.insert(flashcardEntity)
         
         try mainContext.save()
     }

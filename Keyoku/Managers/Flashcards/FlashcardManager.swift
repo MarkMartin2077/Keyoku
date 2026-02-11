@@ -38,10 +38,41 @@ class FlashcardManager {
         decks.first { $0.deckId == id }
     }
     
-    func createDeck(name: String, sourceText: String) throws {
+    func createDeck(name: String, color: DeckColor = .blue, sourceText: String) throws {
         logManager?.trackEvent(event: Event.createDeckStart(name: name))
         
-        let deck = DeckModel(name: name, sourceText: sourceText)
+        let deck = DeckModel(name: name, color: color, sourceText: sourceText)
+        
+        do {
+            try local.saveDeck(deck: deck)
+            decks.insert(deck, at: 0)
+            logManager?.trackEvent(event: Event.createDeckSuccess(deck: deck))
+        } catch {
+            logManager?.trackEvent(event: Event.createDeckFail(error: error))
+            throw error
+        }
+    }
+    
+    func createDeck(name: String, color: DeckColor = .blue, sourceText: String, flashcards: [FlashcardModel]) throws {
+        logManager?.trackEvent(event: Event.createDeckStart(name: name))
+        
+        let deckId = UUID().uuidString
+        let flashcardsWithDeckId = flashcards.map { card in
+            FlashcardModel(
+                flashcardId: card.flashcardId,
+                question: card.question,
+                answer: card.answer,
+                deckId: deckId
+            )
+        }
+        
+        let deck = DeckModel(
+            deckId: deckId,
+            name: name,
+            color: color,
+            sourceText: sourceText,
+            flashcards: flashcardsWithDeckId
+        )
         
         do {
             try local.saveDeck(deck: deck)
@@ -97,6 +128,7 @@ class FlashcardManager {
                 let updatedDeck = DeckModel(
                     deckId: deck.deckId,
                     name: deck.name,
+                    color: deck.color,
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
                     flashcards: deck.flashcards + [flashcard]
@@ -123,6 +155,7 @@ class FlashcardManager {
                 let updatedDeck = DeckModel(
                     deckId: deck.deckId,
                     name: deck.name,
+                    color: deck.color,
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
                     flashcards: deck.flashcards.filter { $0.flashcardId != id }

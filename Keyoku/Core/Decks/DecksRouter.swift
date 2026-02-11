@@ -10,6 +10,7 @@ import SwiftUI
 @MainActor
 protocol DecksRouter: GlobalRouter {
     func showDeckDetailView(deck: DeckModel)
+    func showCreateDeckView()
 }
 
 extension CoreRouter: DecksRouter {
@@ -18,6 +19,15 @@ extension CoreRouter: DecksRouter {
         let delegate = DeckDetailDelegate(deck: deck)
         router.showScreen(.push) { router in
             builder.deckDetailView(router: router, delegate: delegate)
+        }
+    }
+    
+    func showCreateDeckView() {
+        let delegate = CreateDeckDelegate()
+        router.showScreen(.sheet) { router in
+            NavigationStack {
+                builder.createDeckView(router: router, delegate: delegate)
+            }
         }
     }
     

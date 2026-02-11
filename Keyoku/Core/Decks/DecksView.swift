@@ -18,9 +18,6 @@ struct DecksView: View {
     
     @State var presenter: DecksPresenter
     let delegate: DecksDelegate
-    
-    @State private var showCreateDeckAlert: Bool = false
-    @State private var newDeckName: String = ""
 
     var body: some View {
         List {
@@ -35,18 +32,6 @@ struct DecksView: View {
             ToolbarItem(placement: .primaryAction) {
                 addButton
             }
-        }
-        .alert("Create New Deck", isPresented: $showCreateDeckAlert) {
-            TextField("Deck Name", text: $newDeckName)
-            Button("Cancel", role: .cancel) {
-                newDeckName = ""
-            }
-            Button("Create") {
-                presenter.onCreateDeckPressed(name: newDeckName)
-                newDeckName = ""
-            }
-        } message: {
-            Text("Enter a name for your new deck")
         }
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
@@ -68,7 +53,7 @@ struct DecksView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("Create Deck") {
-                showCreateDeckAlert = true
+                presenter.onAddDeckPressed()
             }
             .buttonStyle(.borderedProminent)
         }
@@ -112,10 +97,9 @@ struct DecksView: View {
     
     private var addButton: some View {        
         Button("Add Deck", systemImage: "plus") {
-            showCreateDeckAlert = true
+            presenter.onAddDeckPressed()
         }
         .buttonStyle(.glassProminent)
-        
     }
 }
 

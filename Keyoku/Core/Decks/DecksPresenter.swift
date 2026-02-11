@@ -32,20 +32,9 @@ class DecksPresenter {
         interactor.trackEvent(event: Event.onDisappear(delegate: delegate))
     }
     
-    func onCreateDeckPressed(name: String) {
-        interactor.trackEvent(event: Event.onCreateDeckPressed(name: name))
-        
-        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            interactor.trackEvent(event: Event.onCreateDeckEmptyName)
-            return
-        }
-        
-        do {
-            try interactor.createDeck(name: name, sourceText: "")
-            interactor.trackEvent(event: Event.onCreateDeckSuccess(name: name))
-        } catch {
-            interactor.trackEvent(event: Event.onCreateDeckFail(error: error))
-        }
+    func onAddDeckPressed() {
+        interactor.trackEvent(event: Event.onAddDeckPressed)
+        router.showCreateDeckView()
     }
     
     func onDeckPressed(deck: DeckModel) {
@@ -73,10 +62,7 @@ extension DecksPresenter {
     enum Event: LoggableEvent {
         case onAppear(delegate: DecksDelegate)
         case onDisappear(delegate: DecksDelegate)
-        case onCreateDeckPressed(name: String)
-        case onCreateDeckEmptyName
-        case onCreateDeckSuccess(name: String)
-        case onCreateDeckFail(error: Error)
+        case onAddDeckPressed
         case onDeckPressed(deck: DeckModel)
         case onDeleteDeckPressed(deck: DeckModel)
         case onDeleteDeckSuccess(deckId: String)
@@ -86,10 +72,7 @@ extension DecksPresenter {
             switch self {
             case .onAppear:                 return "DecksView_Appear"
             case .onDisappear:              return "DecksView_Disappear"
-            case .onCreateDeckPressed:      return "DecksView_CreateDeck_Pressed"
-            case .onCreateDeckEmptyName:    return "DecksView_CreateDeck_EmptyName"
-            case .onCreateDeckSuccess:      return "DecksView_CreateDeck_Success"
-            case .onCreateDeckFail:         return "DecksView_CreateDeck_Fail"
+            case .onAddDeckPressed:         return "DecksView_AddDeck_Pressed"
             case .onDeckPressed:            return "DecksView_Deck_Pressed"
             case .onDeleteDeckPressed:      return "DecksView_DeleteDeck_Pressed"
             case .onDeleteDeckSuccess:      return "DecksView_DeleteDeck_Success"
@@ -101,13 +84,11 @@ extension DecksPresenter {
             switch self {
             case .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
                 return delegate.eventParameters
-            case .onCreateDeckPressed(name: let name), .onCreateDeckSuccess(name: let name):
-                return ["deck_name": name]
             case .onDeckPressed(deck: let deck), .onDeleteDeckPressed(deck: let deck):
                 return deck.eventParameters
             case .onDeleteDeckSuccess(deckId: let deckId):
                 return ["deck_id": deckId]
-            case .onCreateDeckFail(error: let error), .onDeleteDeckFail(error: let error):
+            case .onDeleteDeckFail(error: let error):
                 return error.eventParameters
             default:
                 return nil
@@ -116,7 +97,7 @@ extension DecksPresenter {
         
         var type: LogType {
             switch self {
-            case .onCreateDeckFail, .onDeleteDeckFail:
+            case .onDeleteDeckFail:
                 return .severe
             default:
                 return .analytic

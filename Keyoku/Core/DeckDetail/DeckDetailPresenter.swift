@@ -15,10 +15,15 @@ class DeckDetailPresenter {
     private let router: DeckDetailRouter
     private let deckId: String
     
-    var deckName: String
+    let deckName: String
+    let deckColor: DeckColor
+    
+    private var deck: DeckModel? {
+        interactor.getDeck(id: deckId)
+    }
     
     var flashcards: [FlashcardModel] {
-        interactor.getDeck(id: deckId)?.flashcards ?? []
+        deck?.flashcards ?? []
     }
     
     init(interactor: DeckDetailInteractor, router: DeckDetailRouter, deck: DeckModel) {
@@ -26,6 +31,7 @@ class DeckDetailPresenter {
         self.router = router
         self.deckId = deck.deckId
         self.deckName = deck.name
+        self.deckColor = deck.color
     }
     
     func onViewAppear(delegate: DeckDetailDelegate) {
@@ -34,6 +40,12 @@ class DeckDetailPresenter {
     
     func onViewDisappear(delegate: DeckDetailDelegate) {
         interactor.trackEvent(event: Event.onDisappear(delegate: delegate))
+    }
+    
+    func onPracticePressed() {
+        guard let deck = deck else { return }
+        interactor.trackEvent(event: Event.onPracticePressed)
+        router.showPracticeView(deck: deck)
     }
     
     func onAddCardPressed(question: String, answer: String) {
@@ -75,6 +87,7 @@ extension DeckDetailPresenter {
     enum Event: LoggableEvent {
         case onAppear(delegate: DeckDetailDelegate)
         case onDisappear(delegate: DeckDetailDelegate)
+        case onPracticePressed
         case onAddCardPressed
         case onAddCardEmptyFields
         case onAddCardSuccess
@@ -87,6 +100,7 @@ extension DeckDetailPresenter {
             switch self {
             case .onAppear:                 return "DeckDetailView_Appear"
             case .onDisappear:              return "DeckDetailView_Disappear"
+            case .onPracticePressed:        return "DeckDetailView_Practice_Pressed"
             case .onAddCardPressed:         return "DeckDetailView_AddCard_Pressed"
             case .onAddCardEmptyFields:     return "DeckDetailView_AddCard_EmptyFields"
             case .onAddCardSuccess:         return "DeckDetailView_AddCard_Success"

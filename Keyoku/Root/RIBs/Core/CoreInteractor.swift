@@ -335,8 +335,12 @@ struct CoreInteractor: GlobalInteractor {
         flashcardManager.getDeck(id: id)
     }
 
-    func createDeck(name: String, sourceText: String) throws {
-        try flashcardManager.createDeck(name: name, sourceText: sourceText)
+    func createDeck(name: String, color: DeckColor = .blue, sourceText: String) throws {
+        try flashcardManager.createDeck(name: name, color: color, sourceText: sourceText)
+    }
+
+    func createDeck(name: String, color: DeckColor = .blue, sourceText: String, flashcards: [FlashcardModel]) throws {
+        try flashcardManager.createDeck(name: name, color: color, sourceText: sourceText, flashcards: flashcards)
     }
 
     func updateDeck(_ deck: DeckModel) throws {
@@ -414,5 +418,4 @@ struct CoreInteractor: GlobalInteractor {
         // Delete logs (Mixpanel)
         logManager.deleteUserProfile()
     }
-
 }

@@ -9,7 +9,7 @@ import SwiftUI
 
 @MainActor
 protocol DeckDetailRouter: GlobalRouter {
-    
+    func showPracticeView(deck: DeckModel)
 }
 
 extension CoreRouter: DeckDetailRouter { }

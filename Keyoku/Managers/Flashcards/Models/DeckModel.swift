@@ -15,6 +15,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
 
     let deckId: String
     let name: String
+    let color: DeckColor
     let sourceText: String
     let createdAt: Date
     let flashcards: [FlashcardModel]
@@ -22,12 +23,14 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     init(
         deckId: String = UUID().uuidString,
         name: String,
+        color: DeckColor = .blue,
         sourceText: String,
         createdAt: Date = .now,
         flashcards: [FlashcardModel] = []
     ) {
         self.deckId = deckId
         self.name = name
+        self.color = color
         self.sourceText = sourceText
         self.createdAt = createdAt
         self.flashcards = flashcards
@@ -36,6 +39,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     init(entity: DeckEntity) {
         self.deckId = entity.id
         self.name = entity.name
+        self.color = entity.color
         self.sourceText = entity.sourceText
         self.createdAt = entity.createdAt
         self.flashcards = entity.flashcards.map { FlashcardModel(entity: $0) }
@@ -44,6 +48,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case deckId = "deck_id"
         case name
+        case color
         case sourceText = "source_text"
         case createdAt = "created_at"
         case flashcards
@@ -53,6 +58,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         let dict: [String: Any?] = [
             "deck_\(CodingKeys.deckId.rawValue)": deckId,
             "deck_\(CodingKeys.name.rawValue)": name,
+            "deck_\(CodingKeys.color.rawValue)": color.rawValue,
             "deck_\(CodingKeys.sourceText.rawValue)": sourceText,
             "deck_\(CodingKeys.createdAt.rawValue)": createdAt,
             "deck_flashcard_count": flashcards.count
@@ -61,8 +67,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     }
 
     func toEntity() -> DeckEntity {
-        let entity = DeckEntity(id: deckId, name: name, sourceText: sourceText)
-        entity.createdAt = createdAt
+        let entity = DeckEntity(id: deckId, name: name, color: color, sourceText: sourceText, createdAt: createdAt)
         entity.flashcards = flashcards.map { flashcard in
             let flashcardEntity = flashcard.toEntity()
             flashcardEntity.deck = entity
@@ -81,6 +86,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
             DeckModel(
                 deckId: "deck1",
                 name: "Japanese Basics",
+                color: .red,
                 sourceText: "Common Japanese phrases and vocabulary",
                 createdAt: now,
                 flashcards: Array(FlashcardModel.mocks.prefix(3))
@@ -88,6 +94,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
             DeckModel(
                 deckId: "deck2",
                 name: "Math Fundamentals",
+                color: .blue,
                 sourceText: "Basic math concepts",
                 createdAt: now.addingTimeInterval(-86400),
                 flashcards: [FlashcardModel.mocks[3]]
@@ -95,6 +102,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
             DeckModel(
                 deckId: "deck3",
                 name: "Empty Deck",
+                color: .green,
                 sourceText: "A deck with no cards yet",
                 createdAt: now.addingTimeInterval(-172800),
                 flashcards: []
