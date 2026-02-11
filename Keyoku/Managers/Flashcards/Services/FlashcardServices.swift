@@ -9,12 +9,12 @@ import Foundation
 
 @MainActor
 protocol FlashcardServices {
-    var local: LocalDeckPersistence { get }
+    var local: DeckService { get }
 }
 
 @MainActor
 struct MockFlashcardServices: FlashcardServices {
-    let local: LocalDeckPersistence
+    let local: DeckService
     
     init(decks: [DeckModel] = DeckModel.mocks) {
         self.local = MockDeckPersistence(decks: decks)
@@ -23,5 +23,5 @@ struct MockFlashcardServices: FlashcardServices {
 
 @MainActor
 struct ProductionFlashcardServices: FlashcardServices {
-    let local: LocalDeckPersistence = SwiftDataDeckPersistence()
+    let local: DeckService = SwiftDataDeckPersistence()
 }

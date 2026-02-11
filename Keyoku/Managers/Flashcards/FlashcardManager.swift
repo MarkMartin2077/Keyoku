@@ -11,7 +11,7 @@ import SwiftUI
 @Observable
 class FlashcardManager {
     
-    private let local: LocalDeckPersistence
+    private let local: DeckService
     private let logManager: LogManager?
     
     private(set) var decks: [DeckModel] = []

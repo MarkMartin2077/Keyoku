@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @MainActor
-struct SwiftDataDeckPersistence: LocalDeckPersistence {
+struct SwiftDataDeckPersistence: DeckService {
     private let container: ModelContainer
     
     private var mainContext: ModelContext {

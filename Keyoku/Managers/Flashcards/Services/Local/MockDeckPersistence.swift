@@ -8,7 +8,7 @@
 import Foundation
 
 @MainActor
-class MockDeckPersistence: LocalDeckPersistence {
+class MockDeckPersistence: DeckService {
     private var decks: [DeckModel]
     
     init(decks: [DeckModel] = DeckModel.mocks) {

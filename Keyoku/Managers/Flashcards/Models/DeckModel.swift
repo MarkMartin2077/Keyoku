@@ -16,7 +16,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     let deckId: String
     let name: String
     let color: DeckColor
-    let imageUrl: String?
+    private(set) var imageUrl: String?
     let sourceText: String
     let createdAt: Date
     let flashcards: [FlashcardModel]
@@ -47,6 +47,10 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         self.sourceText = entity.sourceText
         self.createdAt = entity.createdAt
         self.flashcards = entity.flashcards.map { FlashcardModel(entity: $0) }
+    }
+    
+    mutating func updateDeckImage(imageName: String) {
+        imageUrl = imageName
     }
 
     enum CodingKeys: String, CodingKey {
