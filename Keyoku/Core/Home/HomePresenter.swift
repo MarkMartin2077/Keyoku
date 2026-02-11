@@ -62,6 +62,7 @@ class HomePresenter {
 
     func onViewAllDecksPressed() {
         interactor.trackEvent(event: Event.onViewAllDecksPressed)
+        router.showDecksView(delegate: DecksDelegate())
     }
 
     func handleDeepLink(url: URL) {
