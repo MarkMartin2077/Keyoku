@@ -335,12 +335,12 @@ struct CoreInteractor: GlobalInteractor {
         flashcardManager.getDeck(id: id)
     }
 
-    func createDeck(name: String, color: DeckColor = .blue, sourceText: String) throws {
-        try flashcardManager.createDeck(name: name, color: color, sourceText: sourceText)
+    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String) throws {
+        try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText)
     }
 
-    func createDeck(name: String, color: DeckColor = .blue, sourceText: String, flashcards: [FlashcardModel]) throws {
-        try flashcardManager.createDeck(name: name, color: color, sourceText: sourceText, flashcards: flashcards)
+    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, flashcards: [FlashcardModel]) throws {
+        try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, flashcards: flashcards)
     }
 
     func updateDeck(_ deck: DeckModel) throws {
@@ -357,6 +357,10 @@ struct CoreInteractor: GlobalInteractor {
 
     func deleteFlashcard(id: String, fromDeckId: String) throws {
         try flashcardManager.deleteFlashcard(id: id, fromDeckId: fromDeckId)
+    }
+
+    func saveDeckImage(data: Data) throws -> String {
+        try flashcardManager.saveDeckImage(data: data)
     }
 
     // MARK: SHARED

@@ -67,15 +67,15 @@ extension CoreBuilder {
 //                    }
 //                    .any()
 //                }),
-//                TabBarScreen(title: "Profile", systemImage: "person.fill", screen: {
-//                    RouterView { router in
-//                        profileView(router: router, delegate: ProfileDelegate())
-//                    }
-//                    .any()
-//                }),
                 TabBarScreen(title: "Decks", systemImage: "menucard.fill", screen: {
                     RouterView { router in
                         decksView(router: router, delegate: DecksDelegate())
+                    }
+                    .any()
+                }),
+                TabBarScreen(title: "Profile", systemImage: "person.fill", screen: {
+                    RouterView { router in
+                        profileView(router: router, delegate: ProfileDelegate())
                     }
                     .any()
                 })

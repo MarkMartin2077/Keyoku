@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 import FoundationModels
 
 @Observable
@@ -24,6 +25,7 @@ class CreateDeckPresenter {
     var cardCount: Int = 10
     var deckName: String = ""
     var selectedColor: DeckColor = .blue
+    var selectedImage: UIImage?
     var sourceText: String = ""
     var isGenerating: Bool = false
     var generationProgress: Int = 0
@@ -66,7 +68,19 @@ class CreateDeckPresenter {
         interactor.trackEvent(event: Event.onCreationModeChanged(mode: mode.rawValue))
         creationMode = mode
     }
-    
+
+    func onImageDataLoaded(_ data: Data) {
+        interactor.trackEvent(event: Event.onImageSelected)
+        if let image = UIImage(data: data) {
+            selectedImage = image
+        }
+    }
+
+    func onRemoveImage() {
+        interactor.trackEvent(event: Event.onImageRemoved)
+        selectedImage = nil
+    }
+
     func onCancelPressed() {
         interactor.trackEvent(event: Event.onCancelPressed)
         router.dismiss()
@@ -83,17 +97,20 @@ class CreateDeckPresenter {
             do {
                 let flashcards = try await generateFlashcards()
                 interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
-                
+
+                let savedImageUrl = try saveImageIfNeeded()
+
                 try interactor.createDeck(
                     name: deckName.trimmingCharacters(in: .whitespacesAndNewlines),
                     color: selectedColor,
+                    imageUrl: savedImageUrl,
                     sourceText: sourceText,
                     flashcards: flashcards
                 )
-                
+
                 isGenerating = false
                 router.dismiss()
-                
+
             } catch {
                 interactor.trackEvent(event: Event.onGenerateFail(error: error))
                 isGenerating = false
@@ -103,16 +120,19 @@ class CreateDeckPresenter {
     
     func onCreateEmptyPressed() {
         interactor.trackEvent(event: Event.onCreateEmptyPressed)
-        
+
         guard canCreateEmpty else { return }
-        
+
         do {
+            let savedImageUrl = try saveImageIfNeeded()
+
             try interactor.createDeck(
                 name: deckName.trimmingCharacters(in: .whitespacesAndNewlines),
                 color: selectedColor,
+                imageUrl: savedImageUrl,
                 sourceText: ""
             )
-            
+
             interactor.trackEvent(event: Event.onCreateEmptySuccess)
             router.dismiss()
         } catch {
@@ -120,6 +140,15 @@ class CreateDeckPresenter {
         }
     }
     
+    // MARK: - Image Saving
+
+    private func saveImageIfNeeded() throws -> String? {
+        guard let selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) else {
+            return nil
+        }
+        return try interactor.saveDeckImage(data: imageData)
+    }
+
     // MARK: - Text Splitting
     
     private func findBreak(in text: String, near target: String.Index, from start: String.Index) -> String.Index {
@@ -272,6 +301,8 @@ extension CreateDeckPresenter {
         case onColorSelected(color: DeckColor)
         case onCardCountChanged(count: Int)
         case onCreationModeChanged(mode: String)
+        case onImageSelected
+        case onImageRemoved
         case onCancelPressed
         case onGeneratePressed(sourceTextLength: Int, cardCount: Int)
         case onBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
@@ -288,6 +319,8 @@ extension CreateDeckPresenter {
             case .onColorSelected:          return "CreateDeckView_ColorSelected"
             case .onCardCountChanged:       return "CreateDeckView_CardCount_Changed"
             case .onCreationModeChanged:    return "CreateDeckView_CreationMode_Changed"
+            case .onImageSelected:          return "CreateDeckView_Image_Selected"
+            case .onImageRemoved:           return "CreateDeckView_Image_Removed"
             case .onCancelPressed:          return "CreateDeckView_Cancel"
             case .onGeneratePressed:        return "CreateDeckView_Generate_Pressed"
             case .onBatchStart:             return "CreateDeckView_Batch_Start"

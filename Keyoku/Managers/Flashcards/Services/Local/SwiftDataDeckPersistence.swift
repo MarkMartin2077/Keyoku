@@ -46,6 +46,7 @@ struct SwiftDataDeckPersistence: LocalDeckPersistence {
             // Update existing deck
             existingEntity.name = deck.name
             existingEntity.color = deck.color
+            existingEntity.imageUrl = deck.imageUrl
             existingEntity.sourceText = deck.sourceText
             existingEntity.createdAt = deck.createdAt
             
@@ -71,6 +72,7 @@ struct SwiftDataDeckPersistence: LocalDeckPersistence {
                 id: deck.deckId,
                 name: deck.name,
                 color: deck.color,
+                imageUrl: deck.imageUrl,
                 sourceText: deck.sourceText,
                 createdAt: deck.createdAt
             )

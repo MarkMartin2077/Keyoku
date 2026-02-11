@@ -13,6 +13,7 @@ class DeckEntity {
     @Attribute(.unique) var id: String = UUID().uuidString
     var name: String = ""
     var colorRaw: String = DeckColor.blue.rawValue
+    var imageUrl: String?
     var sourceText: String = ""
     var createdAt: Date = Date.now
 
@@ -24,16 +25,17 @@ class DeckEntity {
         set { colorRaw = newValue.rawValue }
     }
 
-    init(id: String = UUID().uuidString, name: String, color: DeckColor = .blue, sourceText: String, createdAt: Date = .now) {
+    init(id: String = UUID().uuidString, name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, createdAt: Date = .now) {
         self.id = id
         self.name = name
         self.colorRaw = color.rawValue
+        self.imageUrl = imageUrl
         self.sourceText = sourceText
         self.createdAt = createdAt
     }
 
     convenience init(from model: DeckModel) {
-        self.init(id: model.deckId, name: model.name, color: model.color, sourceText: model.sourceText, createdAt: model.createdAt)
+        self.init(id: model.deckId, name: model.name, color: model.color, imageUrl: model.imageUrl, sourceText: model.sourceText, createdAt: model.createdAt)
         self.flashcards = model.flashcards.map { flashcard in
             let entity = FlashcardEntity(from: flashcard)
             entity.deck = self
@@ -46,6 +48,7 @@ class DeckEntity {
             deckId: id,
             name: name,
             color: color,
+            imageUrl: imageUrl,
             sourceText: sourceText,
             createdAt: createdAt,
             flashcards: flashcards.map { $0.toModel() }

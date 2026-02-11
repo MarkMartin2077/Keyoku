@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftfulUI
+import PhotosUI
 
 struct CreateDeckDelegate {
     var eventParameters: [String: Any]? {
@@ -17,6 +18,7 @@ struct CreateDeckDelegate {
 struct CreateDeckView: View {
     
     @State var presenter: CreateDeckPresenter
+    @State private var selectedPhotoItem: PhotosPickerItem?
     let delegate: CreateDeckDelegate
 
     var body: some View {
@@ -66,8 +68,10 @@ struct CreateDeckView: View {
     private var deckInfoSection: some View {
         Section {
             TextField("Deck Name", text: $presenter.deckName)
-            
+
             colorPicker
+
+            coverImagePicker
         } header: {
             Text("Deck Info")
         }
@@ -137,6 +141,55 @@ struct CreateDeckView: View {
             }
     }
     
+    // MARK: - Cover Image Picker
+
+    private var coverImagePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Cover Image")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if let image = presenter.selectedImage {
+                ZStack(alignment: .topTrailing) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 160)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    Button {
+                        selectedPhotoItem = nil
+                        presenter.onRemoveImage()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .black.opacity(0.5))
+                    }
+                    .padding(8)
+                }
+            }
+
+            PhotosPicker(
+                selection: $selectedPhotoItem,
+                matching: .images
+            ) {
+                Label(
+                    presenter.selectedImage == nil ? "Add Cover Image" : "Change Image",
+                    systemImage: "photo.on.rectangle"
+                )
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                Task {
+                    if let newItem, let data = try? await newItem.loadTransferable(type: Data.self) {
+                        presenter.onImageDataLoaded(data)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Source Text Section
     
     private var sourceTextSection: some View {

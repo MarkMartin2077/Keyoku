@@ -64,11 +64,15 @@ struct DecksView: View {
     
     private var decksSection: some View {
         Section {
-            ForEach(presenter.decks) { deck in
-                deckRow(deck: deck)
-            }
-            .onDelete { indexSet in
-                presenter.onDeleteDecks(at: indexSet)
+            ScrollView(.horizontal) {
+                HStack {
+                    ForEach(presenter.decks) { deck in
+                        deckRow(deck: deck)
+                    }
+                    .onDelete { indexSet in
+                        presenter.onDeleteDecks(at: indexSet)
+                    }
+                }
             }
         } header: {
             Text("\(presenter.decks.count) Deck\(presenter.decks.count == 1 ? "" : "s")")

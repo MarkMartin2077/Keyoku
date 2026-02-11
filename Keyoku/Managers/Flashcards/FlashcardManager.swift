@@ -38,10 +38,10 @@ class FlashcardManager {
         decks.first { $0.deckId == id }
     }
     
-    func createDeck(name: String, color: DeckColor = .blue, sourceText: String) throws {
+    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String) throws {
         logManager?.trackEvent(event: Event.createDeckStart(name: name))
-        
-        let deck = DeckModel(name: name, color: color, sourceText: sourceText)
+
+        let deck = DeckModel(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText)
         
         do {
             try local.saveDeck(deck: deck)
@@ -53,9 +53,9 @@ class FlashcardManager {
         }
     }
     
-    func createDeck(name: String, color: DeckColor = .blue, sourceText: String, flashcards: [FlashcardModel]) throws {
+    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, flashcards: [FlashcardModel]) throws {
         logManager?.trackEvent(event: Event.createDeckStart(name: name))
-        
+
         let deckId = UUID().uuidString
         let flashcardsWithDeckId = flashcards.map { card in
             FlashcardModel(
@@ -65,11 +65,12 @@ class FlashcardManager {
                 deckId: deckId
             )
         }
-        
+
         let deck = DeckModel(
             deckId: deckId,
             name: name,
             color: color,
+            imageUrl: imageUrl,
             sourceText: sourceText,
             flashcards: flashcardsWithDeckId
         )
@@ -112,6 +113,23 @@ class FlashcardManager {
         }
     }
     
+    // MARK: - Image Operations
+
+    func saveDeckImage(data: Data) throws -> String {
+        let fileName = "deck_images/\(UUID().uuidString).jpg"
+        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let fileURL = documentsURL.appendingPathComponent(fileName)
+
+        let directoryURL = fileURL.deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        }
+
+        try data.write(to: fileURL)
+        logManager?.trackEvent(event: Event.saveDeckImageSuccess(fileName: fileName))
+        return fileName
+    }
+
     // MARK: - Flashcard Operations
     
     func addFlashcard(question: String, answer: String, toDeckId: String) throws {
@@ -129,6 +147,7 @@ class FlashcardManager {
                     deckId: deck.deckId,
                     name: deck.name,
                     color: deck.color,
+                    imageUrl: deck.imageUrl,
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
                     flashcards: deck.flashcards + [flashcard]
@@ -156,6 +175,7 @@ class FlashcardManager {
                     deckId: deck.deckId,
                     name: deck.name,
                     color: deck.color,
+                    imageUrl: deck.imageUrl,
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
                     flashcards: deck.flashcards.filter { $0.flashcardId != id }
@@ -191,7 +211,8 @@ class FlashcardManager {
         case deleteFlashcardStart(flashcardId: String)
         case deleteFlashcardSuccess(flashcardId: String)
         case deleteFlashcardFail(error: Error)
-        
+        case saveDeckImageSuccess(fileName: String)
+
         var eventName: String {
             switch self {
             case .loadDecksStart:           return "FlashcardMan_LoadDecks_Start"
@@ -212,6 +233,7 @@ class FlashcardManager {
             case .deleteFlashcardStart:     return "FlashcardMan_DeleteFlashcard_Start"
             case .deleteFlashcardSuccess:   return "FlashcardMan_DeleteFlashcard_Success"
             case .deleteFlashcardFail:      return "FlashcardMan_DeleteFlashcard_Fail"
+            case .saveDeckImageSuccess:     return "FlashcardMan_SaveDeckImage_Success"
             }
         }
         
@@ -231,6 +253,8 @@ class FlashcardManager {
                 return flashcard.eventParameters
             case .deleteFlashcardStart(flashcardId: let id), .deleteFlashcardSuccess(flashcardId: let id):
                 return ["flashcard_id": id]
+            case .saveDeckImageSuccess(fileName: let fileName):
+                return ["file_name": fileName]
             case .loadDecksFail(error: let error), .createDeckFail(error: let error), .updateDeckFail(error: let error), .deleteDeckFail(error: let error), .addFlashcardFail(error: let error), .deleteFlashcardFail(error: let error):
                 return error.eventParameters
             default:

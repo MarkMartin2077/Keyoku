@@ -44,6 +44,7 @@ class MockDeckPersistence: LocalDeckPersistence {
         let updatedDeck = DeckModel(
             deckId: deck.deckId,
             name: deck.name,
+            imageUrl: deck.imageUrl,
             sourceText: deck.sourceText,
             createdAt: deck.createdAt,
             flashcards: deck.flashcards + [flashcard]
@@ -56,6 +57,7 @@ class MockDeckPersistence: LocalDeckPersistence {
             let updatedDeck = DeckModel(
                 deckId: deck.deckId,
                 name: deck.name,
+                imageUrl: deck.imageUrl,
                 sourceText: deck.sourceText,
                 createdAt: deck.createdAt,
                 flashcards: deck.flashcards.filter { $0.flashcardId != id }

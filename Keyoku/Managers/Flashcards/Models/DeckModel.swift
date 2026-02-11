@@ -16,6 +16,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     let deckId: String
     let name: String
     let color: DeckColor
+    let imageUrl: String?
     let sourceText: String
     let createdAt: Date
     let flashcards: [FlashcardModel]
@@ -24,6 +25,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         deckId: String = UUID().uuidString,
         name: String,
         color: DeckColor = .blue,
+        imageUrl: String? = nil,
         sourceText: String,
         createdAt: Date = .now,
         flashcards: [FlashcardModel] = []
@@ -31,6 +33,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         self.deckId = deckId
         self.name = name
         self.color = color
+        self.imageUrl = imageUrl
         self.sourceText = sourceText
         self.createdAt = createdAt
         self.flashcards = flashcards
@@ -40,6 +43,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         self.deckId = entity.id
         self.name = entity.name
         self.color = entity.color
+        self.imageUrl = entity.imageUrl
         self.sourceText = entity.sourceText
         self.createdAt = entity.createdAt
         self.flashcards = entity.flashcards.map { FlashcardModel(entity: $0) }
@@ -49,6 +53,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         case deckId = "deck_id"
         case name
         case color
+        case imageUrl = "image_url"
         case sourceText = "source_text"
         case createdAt = "created_at"
         case flashcards
@@ -59,6 +64,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
             "deck_\(CodingKeys.deckId.rawValue)": deckId,
             "deck_\(CodingKeys.name.rawValue)": name,
             "deck_\(CodingKeys.color.rawValue)": color.rawValue,
+            "deck_\(CodingKeys.imageUrl.rawValue)": imageUrl,
             "deck_\(CodingKeys.sourceText.rawValue)": sourceText,
             "deck_\(CodingKeys.createdAt.rawValue)": createdAt,
             "deck_flashcard_count": flashcards.count
@@ -66,8 +72,14 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         return dict.compactMapValues({ $0 })
     }
 
+    var imageFileURL: URL? {
+        guard let imageUrl else { return nil }
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+            .appendingPathComponent(imageUrl)
+    }
+
     func toEntity() -> DeckEntity {
-        let entity = DeckEntity(id: deckId, name: name, color: color, sourceText: sourceText, createdAt: createdAt)
+        let entity = DeckEntity(id: deckId, name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, createdAt: createdAt)
         entity.flashcards = flashcards.map { flashcard in
             let flashcardEntity = flashcard.toEntity()
             flashcardEntity.deck = entity

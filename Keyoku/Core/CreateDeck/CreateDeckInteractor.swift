@@ -9,8 +9,9 @@ import SwiftUI
 
 @MainActor
 protocol CreateDeckInteractor: GlobalInteractor {
-    func createDeck(name: String, color: DeckColor, sourceText: String) throws
-    func createDeck(name: String, color: DeckColor, sourceText: String, flashcards: [FlashcardModel]) throws
+    func createDeck(name: String, color: DeckColor, imageUrl: String?, sourceText: String) throws
+    func createDeck(name: String, color: DeckColor, imageUrl: String?, sourceText: String, flashcards: [FlashcardModel]) throws
+    func saveDeckImage(data: Data) throws -> String
 }
 
 extension CoreInteractor: CreateDeckInteractor { }
