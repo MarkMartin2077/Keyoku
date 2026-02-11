@@ -13,8 +13,6 @@ class WelcomePresenter {
     private let interactor: WelcomeInteractor
     private let router: WelcomeRouter
 
-    private(set) var imageName: String = Constants.randomImage
-    
     init(interactor: WelcomeInteractor, router: WelcomeRouter) {
         self.interactor = interactor
         self.router = router
