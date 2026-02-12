@@ -296,8 +296,10 @@ struct CoreInteractor: GlobalInteractor {
                 firebaseAppInstanceId: Constants.firebaseAnalyticsAppInstanceID
             )
         )
+        async let flashcardLogin: Void = flashcardManager.logIn(userId: user.uid)
+        async let quizLogin: Void = quizManager.logIn(userId: user.uid)
 
-        let (_, _) = await (try userLogin, try purchaseLogin)
+        let (_, _, _, _) = await (try userLogin, try purchaseLogin, try flashcardLogin, try quizLogin)
 
         // Add user properties
         logManager.addUserProperties(dict: Utilities.eventParameters, isHighPriority: false)
@@ -307,6 +309,8 @@ struct CoreInteractor: GlobalInteractor {
         try authManager.signOut()
         try await purchaseManager.logOut()
         userManager.signOut()
+        flashcardManager.signOut()
+        quizManager.signOut()
     }
     
     func deleteAccount() async throws {

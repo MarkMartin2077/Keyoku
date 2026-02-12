@@ -44,8 +44,8 @@ struct Dependencies {
             purchaseManager = PurchaseManager(service: MockPurchaseService(), logger: logManager)
             appState = AppState(startingModuleId: isSignedIn ? Constants.tabbarModuleId : Constants.onboardingModuleId)
             hapticManager = HapticManager(logger: logManager)
-            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
-            quizManager = QuizManager(services: ProductionQuizServices(), logManager: logManager)
+            flashcardManager = FlashcardManager(services: MockFlashcardServices(), logManager: logManager)
+            quizManager = QuizManager(services: MockQuizServices(), logManager: logManager)
         case .dev:
             logManager = LogManager(services: [
                 ConsoleService(printParameters: true),

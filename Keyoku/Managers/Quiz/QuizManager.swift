@@ -12,13 +12,41 @@ import SwiftUI
 class QuizManager {
 
     private let local: QuizService
+    private let remote: RemoteQuizService
     private let logManager: LogManager?
+    private var userId: String?
 
     private(set) var quizzes: [QuizModel] = []
 
     init(services: QuizServices, logManager: LogManager? = nil) {
         self.local = services.local
+        self.remote = services.remote
         self.logManager = logManager
+    }
+
+    // MARK: - Auth Lifecycle
+
+    func logIn(userId: String) async throws {
+        self.userId = userId
+        logManager?.trackEvent(event: Event.logInStart(userId: userId))
+
+        do {
+            let remoteQuizzes = try await remote.getAllQuizzes(userId: userId)
+            for quiz in remoteQuizzes {
+                try? local.saveQuiz(quiz: quiz)
+            }
+            loadQuizzes()
+            logManager?.trackEvent(event: Event.logInSuccess(userId: userId, count: quizzes.count))
+        } catch {
+            logManager?.trackEvent(event: Event.logInFail(error: error))
+            loadQuizzes()
+        }
+    }
+
+    func signOut() {
+        logManager?.trackEvent(event: Event.signOut)
+        userId = nil
+        quizzes = []
     }
 
     // MARK: - Quiz Operations
@@ -47,6 +75,7 @@ class QuizManager {
             try local.saveQuiz(quiz: quiz)
             quizzes.insert(quiz, at: 0)
             logManager?.trackEvent(event: Event.createQuizSuccess(quiz: quiz))
+            pushQuizToRemote(quiz)
         } catch {
             logManager?.trackEvent(event: Event.createQuizFail(error: error))
             throw error
@@ -80,6 +109,7 @@ class QuizManager {
             try local.saveQuiz(quiz: quiz)
             quizzes.insert(quiz, at: 0)
             logManager?.trackEvent(event: Event.createQuizSuccess(quiz: quiz))
+            pushQuizToRemote(quiz)
         } catch {
             logManager?.trackEvent(event: Event.createQuizFail(error: error))
             throw error
@@ -93,9 +123,36 @@ class QuizManager {
             try local.deleteQuiz(id: id)
             quizzes.removeAll { $0.quizId == id }
             logManager?.trackEvent(event: Event.deleteQuizSuccess(quizId: id))
+            deleteQuizFromRemote(quizId: id)
         } catch {
             logManager?.trackEvent(event: Event.deleteQuizFail(error: error))
             throw error
+        }
+    }
+
+    // MARK: - Remote Sync Helpers
+
+    private func pushQuizToRemote(_ quiz: QuizModel) {
+        guard let userId else { return }
+        Task {
+            do {
+                try await remote.saveQuiz(userId: userId, quiz: quiz)
+                logManager?.trackEvent(event: Event.remotePushSuccess(quizId: quiz.quizId))
+            } catch {
+                logManager?.trackEvent(event: Event.remotePushFail(error: error))
+            }
+        }
+    }
+
+    private func deleteQuizFromRemote(quizId: String) {
+        guard let userId else { return }
+        Task {
+            do {
+                try await remote.deleteQuiz(userId: userId, quizId: quizId)
+                logManager?.trackEvent(event: Event.remoteDeleteSuccess(quizId: quizId))
+            } catch {
+                logManager?.trackEvent(event: Event.remoteDeleteFail(error: error))
+            }
         }
     }
 
@@ -111,18 +168,34 @@ class QuizManager {
         case deleteQuizStart(quizId: String)
         case deleteQuizSuccess(quizId: String)
         case deleteQuizFail(error: Error)
+        case logInStart(userId: String)
+        case logInSuccess(userId: String, count: Int)
+        case logInFail(error: Error)
+        case signOut
+        case remotePushSuccess(quizId: String)
+        case remotePushFail(error: Error)
+        case remoteDeleteSuccess(quizId: String)
+        case remoteDeleteFail(error: Error)
 
         var eventName: String {
             switch self {
-            case .loadQuizzesStart:     return "QuizMan_LoadQuizzes_Start"
-            case .loadQuizzesSuccess:   return "QuizMan_LoadQuizzes_Success"
-            case .loadQuizzesFail:      return "QuizMan_LoadQuizzes_Fail"
-            case .createQuizStart:      return "QuizMan_CreateQuiz_Start"
-            case .createQuizSuccess:    return "QuizMan_CreateQuiz_Success"
-            case .createQuizFail:       return "QuizMan_CreateQuiz_Fail"
-            case .deleteQuizStart:      return "QuizMan_DeleteQuiz_Start"
-            case .deleteQuizSuccess:    return "QuizMan_DeleteQuiz_Success"
-            case .deleteQuizFail:       return "QuizMan_DeleteQuiz_Fail"
+            case .loadQuizzesStart:         return "QuizMan_LoadQuizzes_Start"
+            case .loadQuizzesSuccess:       return "QuizMan_LoadQuizzes_Success"
+            case .loadQuizzesFail:          return "QuizMan_LoadQuizzes_Fail"
+            case .createQuizStart:          return "QuizMan_CreateQuiz_Start"
+            case .createQuizSuccess:        return "QuizMan_CreateQuiz_Success"
+            case .createQuizFail:           return "QuizMan_CreateQuiz_Fail"
+            case .deleteQuizStart:          return "QuizMan_DeleteQuiz_Start"
+            case .deleteQuizSuccess:        return "QuizMan_DeleteQuiz_Success"
+            case .deleteQuizFail:           return "QuizMan_DeleteQuiz_Fail"
+            case .logInStart:               return "QuizMan_LogIn_Start"
+            case .logInSuccess:             return "QuizMan_LogIn_Success"
+            case .logInFail:                return "QuizMan_LogIn_Fail"
+            case .signOut:                  return "QuizMan_SignOut"
+            case .remotePushSuccess:        return "QuizMan_RemotePush_Success"
+            case .remotePushFail:           return "QuizMan_RemotePush_Fail"
+            case .remoteDeleteSuccess:      return "QuizMan_RemoteDelete_Success"
+            case .remoteDeleteFail:         return "QuizMan_RemoteDelete_Fail"
             }
         }
 
@@ -130,13 +203,17 @@ class QuizManager {
             switch self {
             case .loadQuizzesSuccess(count: let count):
                 return ["quiz_count": count]
+            case .logInSuccess(userId: let userId, count: let count):
+                return ["user_id": userId, "quiz_count": count]
+            case .logInStart(userId: let userId):
+                return ["user_id": userId]
             case .createQuizStart(name: let name):
                 return ["quiz_name": name]
             case .createQuizSuccess(quiz: let quiz):
                 return quiz.eventParameters
-            case .deleteQuizStart(quizId: let id), .deleteQuizSuccess(quizId: let id):
+            case .deleteQuizStart(quizId: let id), .deleteQuizSuccess(quizId: let id), .remotePushSuccess(quizId: let id), .remoteDeleteSuccess(quizId: let id):
                 return ["quiz_id": id]
-            case .loadQuizzesFail(error: let error), .createQuizFail(error: let error), .deleteQuizFail(error: let error):
+            case .loadQuizzesFail(error: let error), .createQuizFail(error: let error), .deleteQuizFail(error: let error), .logInFail(error: let error), .remotePushFail(error: let error), .remoteDeleteFail(error: let error):
                 return error.eventParameters
             default:
                 return nil
@@ -145,7 +222,7 @@ class QuizManager {
 
         var type: LogType {
             switch self {
-            case .loadQuizzesFail, .createQuizFail, .deleteQuizFail:
+            case .loadQuizzesFail, .createQuizFail, .deleteQuizFail, .logInFail, .remotePushFail, .remoteDeleteFail:
                 return .severe
             default:
                 return .analytic
