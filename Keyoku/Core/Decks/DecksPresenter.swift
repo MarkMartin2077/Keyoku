@@ -23,7 +23,7 @@ class DecksPresenter {
     var filteredDecks: [DeckModel] {
         let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         guard !query.isEmpty else { return decks }
-        return decks.filter { $0.name.lowercased().contains(query) }
+        return decks.filter { $0.name.lowercased().localizedStandardContains(query) }
     }
 
     init(interactor: DecksInteractor, router: DecksRouter) {

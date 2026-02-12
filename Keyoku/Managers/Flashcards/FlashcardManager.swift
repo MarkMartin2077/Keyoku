@@ -335,7 +335,15 @@ class FlashcardManager {
                 return ["flashcard_id": id]
             case .saveDeckImageSuccess(fileName: let fileName):
                 return ["file_name": fileName]
-            case .loadDecksFail(error: let error), .createDeckFail(error: let error), .updateDeckFail(error: let error), .deleteDeckFail(error: let error), .addFlashcardFail(error: let error), .deleteFlashcardFail(error: let error), .logInFail(error: let error), .remotePushFail(error: let error), .remoteDeleteFail(error: let error):
+            case .loadDecksFail(error: let error),
+                    .createDeckFail(error: let error),
+                    .updateDeckFail(error: let error),
+                    .deleteDeckFail(error: let error),
+                    .addFlashcardFail(error: let error),
+                    .deleteFlashcardFail(error: let error),
+                    .logInFail(error: let error),
+                    .remotePushFail(error: let error),
+                    .remoteDeleteFail(error: let error):
                 return error.eventParameters
             default:
                 return nil

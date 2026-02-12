@@ -23,7 +23,7 @@ class QuizzesPresenter {
     var filteredQuizzes: [QuizModel] {
         let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         guard !query.isEmpty else { return quizzes }
-        return quizzes.filter { $0.name.lowercased().contains(query) }
+        return quizzes.filter { $0.name.lowercased().localizedStandardContains(query) }
     }
 
     init(interactor: QuizzesInteractor, router: QuizzesRouter) {

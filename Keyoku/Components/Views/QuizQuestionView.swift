@@ -93,7 +93,7 @@ struct QuizQuestionView: View {
             Text(index < optionLetters.count ? optionLetters[index] : "\(index + 1)")
                 .font(.headline)
                 .fontWeight(.bold)
-                .foregroundStyle(foregroundColor(for: index))
+                .foregroundStyle(foregroundStyle(for: index))
                 .frame(width: 36, height: 36)
                 .background(
                     Circle()
@@ -172,7 +172,7 @@ struct QuizQuestionView: View {
         return AnyShapeStyle(Color.secondary.opacity(0.1))
     }
 
-    private func foregroundColor(for index: Int) -> Color {
+    private func foregroundStyle(for index: Int) -> Color {
         if isRevealed {
             if index == correctAnswerIndex {
                 return .green

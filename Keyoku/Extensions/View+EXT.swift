@@ -37,7 +37,7 @@ extension View {
     
     func callToActionButton(
         font: Font = .headline,
-        foregroundColor: Color = .white,
+        foreground: Color = .white,
         backgroundColor: Color = .accent,
         verticalPadding: CGFloat? = 12,
         horizontalPadding: CGFloat? = nil,
@@ -45,7 +45,7 @@ extension View {
     ) -> some View {
         self
             .font(font)
-            .foregroundStyle(foregroundColor)
+            .foregroundStyle(foreground)
             .padding(.horizontal, horizontalPadding)
             .frame(maxWidth: horizontalPadding == nil ? .infinity : nil)
             .padding(.vertical, verticalPadding)
