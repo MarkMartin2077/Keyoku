@@ -471,13 +471,25 @@ struct CreateDeckView: View {
                 
                 Spacer()
                 
-                Text("This may take a moment depending on the amount of source text.")
+                Text(estimatedTimeText ?? "This may take a moment depending on the amount of source text.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
+                    .contentTransition(.numericText())
+                    .animation(.smooth, value: presenter.estimatedSecondsRemaining)
                     .padding(.bottom, 32)
             }
             .padding()
+        }
+    }
+
+    private var estimatedTimeText: String? {
+        guard let seconds = presenter.estimatedSecondsRemaining, seconds > 0 else { return nil }
+        if seconds < 60 {
+            return "About \(seconds) seconds remaining"
+        } else {
+            let minutes = Int(ceil(Double(seconds) / 60.0))
+            return "About \(minutes) minute\(minutes == 1 ? "" : "s") remaining"
         }
     }
 

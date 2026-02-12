@@ -51,6 +51,8 @@ class CreateDeckPresenter {
     var isGenerating: Bool = false
     var generationProgress: Int = 0
     var generationTotal: Int = 0
+    var generationStartTime: Date?
+    var estimatedSecondsRemaining: Int?
 
     var sourceInputMode: SourceInputMode = .text
     var pdfFileName: String?
@@ -194,6 +196,8 @@ class CreateDeckPresenter {
         guard canGenerate else { return }
 
         isGenerating = true
+        generationStartTime = Date()
+        estimatedSecondsRemaining = nil
 
         Task {
             do {

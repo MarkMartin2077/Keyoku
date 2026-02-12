@@ -57,6 +57,23 @@ extension CreateDeckPresenter {
     }
 }
 
+// MARK: - Time Estimation
+
+extension CreateDeckPresenter {
+
+    func updateTimeEstimate() {
+        guard let startTime = generationStartTime, generationProgress > 0 else { return }
+        let elapsed = Date().timeIntervalSince(startTime)
+        let avgPerBatch = elapsed / Double(generationProgress)
+        let remaining = generationTotal - generationProgress
+        if remaining > 0 {
+            estimatedSecondsRemaining = Int(ceil(avgPerBatch * Double(remaining)))
+        } else {
+            estimatedSecondsRemaining = nil
+        }
+    }
+}
+
 // MARK: - Session Configuration
 
 extension CreateDeckPresenter {
@@ -171,6 +188,7 @@ extension CreateDeckPresenter {
             }
 
             allFlashcards.append(contentsOf: flashcards)
+            updateTimeEstimate()
         }
 
         return allFlashcards
@@ -290,6 +308,8 @@ extension CreateDeckPresenter {
                     allQuestions.append(contentsOf: tfQuestions)
                 }
             }
+
+            updateTimeEstimate()
         }
 
         allQuestions.shuffle()
