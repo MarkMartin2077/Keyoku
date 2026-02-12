@@ -6,6 +6,7 @@ protocol HomeRouter: GlobalRouter {
     func showDeckDetailView(deck: DeckModel)
     func showCreateDeckView()
     func showDecksView(delegate: DecksDelegate)
+    func showSettingsView()
 }
 
 extension CoreRouter: HomeRouter { }

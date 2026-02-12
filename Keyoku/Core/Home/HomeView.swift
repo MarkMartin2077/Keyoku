@@ -32,18 +32,10 @@ struct HomeView: View {
         }
     }
 
-    private var todayCompleted: Bool {
-        let data = presenter.currentStreakData
-        let required = data.eventsRequiredPerDay ?? 1
-        let today = data.todayEventCount ?? 0
-        return today >= required
-    }
-
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 welcomeHeader
-                gamificationRow
                 recentDecksSection
                 quickActionsSection
             }
@@ -55,6 +47,12 @@ struct HomeView: View {
             ToolbarItem(placement: .topBarLeading) {
                 if showDevSettingsButton {
                     devSettingsButton
+                }
+            }
+            
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Settings", systemImage: "gear") {
+                    presenter.onSettingsPressed()
                 }
             }
         }
@@ -79,20 +77,6 @@ struct HomeView: View {
             .font(.largeTitle)
             .fontWeight(.bold)
             .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // MARK: - Gamification Row
-
-    private var gamificationRow: some View {
-        HStack(spacing: 12) {
-            StreakCardView(
-                currentStreak: presenter.currentStreakData.currentStreak,
-                longestStreak: presenter.currentStreakData.longestStreak,
-                todayCompleted: todayCompleted
-            )
-
-            statsCard
-        }
     }
 
     private var statsCard: some View {

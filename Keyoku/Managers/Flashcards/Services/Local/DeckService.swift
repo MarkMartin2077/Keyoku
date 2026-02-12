@@ -9,10 +9,10 @@ import SwiftUI
 
 @MainActor
 protocol DeckService {
-    func getAllDecks() async throws -> [DeckModel]
-    func getDeck(id: String) async throws -> DeckModel?
-    func saveDeck(deck: DeckModel, image: UIImage) async throws
-    func deleteDeck(id: String) async throws
-    func addFlashcard(flashcard: FlashcardModel, toDeckId: String) async throws
-    func deleteFlashcard(id: String) async throws
+    func getAllDecks() throws -> [DeckModel]
+    func getDeck(id: String) throws -> DeckModel?
+    func saveDeck(deck: DeckModel) throws
+    func deleteDeck(id: String) throws
+    func addFlashcard(flashcard: FlashcardModel, toDeckId: String) throws
+    func deleteFlashcard(id: String) throws
 }

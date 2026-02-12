@@ -75,13 +75,6 @@ class PracticePresenter {
         if currentIndex == flashcards.count - 1, !hasRecordedCompletion {
             hasRecordedCompletion = true
             interactor.trackEvent(event: Event.onPracticeSessionComplete(deckName: deckName, cardsCount: flashcards.count))
-
-            Task {
-                try? await interactor.addStreakEvent(metadata: ["deck": .string(deckName)])
-            }
-            Task {
-                try? await interactor.addExperiencePoints(points: 10, metadata: ["deck": .string(deckName)])
-            }
         }
     }
 

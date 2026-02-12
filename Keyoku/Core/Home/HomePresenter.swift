@@ -24,14 +24,6 @@ class HomePresenter {
         decks.reduce(0) { $0 + $1.flashcards.count }
     }
 
-    var currentStreakData: CurrentStreakData {
-        interactor.currentStreakData
-    }
-
-    var currentXPData: CurrentExperiencePointsData {
-        interactor.currentExperiencePointsData
-    }
-
     init(interactor: HomeInteractor, router: HomeRouter) {
         self.interactor = interactor
         self.router = router
@@ -109,6 +101,10 @@ class HomePresenter {
         #else
         interactor.trackEvent(event: Event.onDevSettingsFail)
         #endif
+    }
+    
+    func onSettingsPressed() {
+        router.showSettingsView()
     }
 }
 

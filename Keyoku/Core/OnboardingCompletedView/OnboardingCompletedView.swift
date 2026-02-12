@@ -202,7 +202,7 @@ struct OnboardingCompletedView: View {
         OnboardingPageView(
             illustration: AnyView(page2Illustration),
             title: "Organize Your Knowledge",
-            subtitle: "Create colorful decks with cover images. Keep your subjects tidy and find what you need at a glance."
+            subtitle: "Create colorful decks with up to 50 cards. Keep your subjects tidy and find what you need at a glance."
         )
     }
 
