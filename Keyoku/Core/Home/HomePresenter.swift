@@ -8,11 +8,13 @@ class HomePresenter {
     private let router: HomeRouter
 
     // MARK: - Dashboard Data
+    
+    private var searchText = ""
 
     var decks: [DeckModel] {
         interactor.decks
     }
-
+    
     var recentDecks: [DeckModel] {
         Array(
             decks.sorted { $0.createdAt > $1.createdAt }

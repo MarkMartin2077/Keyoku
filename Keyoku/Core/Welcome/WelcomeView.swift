@@ -36,9 +36,9 @@ struct WelcomeView: View {
                 ctaButtons
                     .padding(.horizontal, 24)
 
-                policyLinks
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
+//                policyLinks
+//                    .padding(.top, 16)
+//                    .padding(.bottom, 8)
             }
         }
         .onAppear {

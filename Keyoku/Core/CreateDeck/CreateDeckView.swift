@@ -71,7 +71,6 @@ struct CreateDeckView: View {
 
             colorPicker
 
-            coverImagePicker
         } header: {
             Text("Deck Info")
         }
@@ -168,23 +167,6 @@ struct CreateDeckView: View {
                             .foregroundStyle(.white, .black.opacity(0.5))
                     }
                     .padding(8)
-                }
-            }
-
-            PhotosPicker(
-                selection: $selectedPhotoItem,
-                matching: .images
-            ) {
-                Label(
-                    presenter.selectedImage == nil ? "Add Cover Image" : "Change Image",
-                    systemImage: "photo.on.rectangle"
-                )
-            }
-            .onChange(of: selectedPhotoItem) { _, newItem in
-                Task {
-                    if let newItem, let data = try? await newItem.loadTransferable(type: Data.self) {
-                        presenter.onImageDataLoaded(data)
-                    }
                 }
             }
         }
@@ -300,6 +282,8 @@ struct CreateDeckView: View {
                         
                         Text("Batch \(presenter.generationProgress) of \(presenter.generationTotal)")
                             .font(.caption)
+                            .contentTransition(.numericText())
+                            .animation(.smooth, value: presenter.generationProgress)
                             .foregroundStyle(.secondary)
                     }
                 } else {

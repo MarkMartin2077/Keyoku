@@ -132,7 +132,7 @@ class CreateDeckPresenter {
                 imageUrl: savedImageUrl,
                 sourceText: ""
             )
-
+            
             interactor.trackEvent(event: Event.onCreateEmptySuccess)
             router.dismiss()
         } catch {

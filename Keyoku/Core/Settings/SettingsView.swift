@@ -109,7 +109,7 @@ struct SettingsView: View {
         } header: {
             Text("Application")
         } footer: {
-            Text("2024 Developer, LLC")
+            Text("Markyminaj, LLC")
                 .baselineOffset(6)
         }
     }
