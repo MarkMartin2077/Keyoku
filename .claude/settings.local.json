@@ -13,7 +13,8 @@
       "Bash(Keyoku/Core/Practice/PracticeInteractor.swift << 'SWIFT_EOF'\n//\n//  PracticeInteractor.swift\n//  Keyoku\n//\n//  Created by Mark Martin on 2/10/26.\n//\n\nimport SwiftUI\n\n@MainActor\nprotocol PracticeInteractor: GlobalInteractor {\n    @discardableResult func addStreakEvent\\(metadata: [String: GamificationDictionaryValue]\\) async throws -> StreakEvent\n    @discardableResult func addExperiencePoints\\(points: Int, metadata: [String: GamificationDictionaryValue]\\) async throws -> ExperiencePointsEvent\n}\n\nextension CoreInteractor: PracticeInteractor { }\nSWIFT_EOF)",
       "Bash(grep:*)",
       "WebFetch(domain:nilcoalescing.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(xcodebuild test:*)"
     ],
     "deny": [],
     "ask": []

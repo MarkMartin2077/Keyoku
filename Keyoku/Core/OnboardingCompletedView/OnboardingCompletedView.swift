@@ -27,6 +27,7 @@ struct OnboardingCompletedView: View {
                 TabView(selection: $presenter.currentPage) {
                     page1.tag(0)
                     page2.tag(1)
+                    page3.tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: presenter.currentPage)
@@ -105,6 +106,7 @@ struct OnboardingCompletedView: View {
         switch presenter.currentPage {
         case 0:  return CGPoint(x: -80, y: 0)
         case 1:  return CGPoint(x: 60, y: 0)
+        case 2:  return CGPoint(x: -20, y: 0)
         default: return CGPoint(x: -20, y: 0)
         }
     }
@@ -201,7 +203,7 @@ struct OnboardingCompletedView: View {
         OnboardingPageView(
             illustration: AnyView(page2Illustration),
             title: "Organize Your Knowledge",
-            subtitle: "Create colorful decks of flashcards cards. Keep your subjects tidy and find what you need at a glance."
+            subtitle: "Create colorful decks of flashcards. Keep your subjects tidy and find what you need at a glance."
         )
     }
 
@@ -269,73 +271,104 @@ struct OnboardingCompletedView: View {
             .offset(offset)
     }
 
-    // MARK: - Page 3: Track Progress
+    // MARK: - Page 3: Study Your Way
 
     private var page3: some View {
         OnboardingPageView(
             illustration: AnyView(page3Illustration),
-            title: "Build Your Streak",
-            subtitle: "Study a little every day to build your streak. Track your growth and stay motivated on your learning journey."
+            title: "Study Your Way",
+            subtitle: "Flip through flashcards to practice or challenge yourself with quizzes. Multiple choice, true or false — you decide."
         )
     }
 
     private var page3Illustration: some View {
-        VStack(spacing: 20) {
-            // Flame icon with glow
-            ZStack {
-                Circle()
+        HStack(spacing: 16) {
+            // Flashcard side
+            VStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 16)
                     .fill(
-                        RadialGradient(
-                            colors: [Color.orange.opacity(0.3), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 60
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(
                         LinearGradient(
-                            colors: [.orange, .red],
-                            startPoint: .top,
-                            endPoint: .bottom
+                            colors: [.accentColor, .accentColor.opacity(0.75)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
                     )
-            }
+                    .frame(width: 130, height: 160)
+                    .overlay {
+                        VStack(spacing: 10) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.title2)
+                                .foregroundStyle(.white.opacity(0.7))
 
-            // Streak week bar
-            HStack(spacing: 8) {
-                ForEach(0..<7, id: \.self) { day in
-                    VStack(spacing: 6) {
-                        Circle()
-                            .fill(day < 5
-                                ? LinearGradient(colors: [.orange, .red.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                                : LinearGradient(colors: [Color(.systemGray4), Color(.systemGray5)], startPoint: .top, endPoint: .bottom)
-                            )
-                            .frame(width: 28, height: 28)
-                            .overlay {
-                                if day < 5 {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption2)
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(.white)
-                                }
+                            VStack(spacing: 5) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(.white.opacity(0.4))
+                                    .frame(width: 80, height: 5)
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(.white.opacity(0.3))
+                                    .frame(width: 60, height: 5)
                             }
 
-                        Text(shortDayLabel(day))
-                            .font(.system(size: 10))
-                            .foregroundStyle(day < 5 ? .primary : .tertiary)
+                            Text("Tap to flip")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
                     }
-                }
+                    .shadow(color: Color.accentColor.opacity(0.25), radius: 12, y: 6)
+
+                Text("Flashcards")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
+
+            // Quiz side
+            VStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [.purple, .purple.opacity(0.75)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 130, height: 160)
+                    .overlay {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Image(systemName: "questionmark.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.white.opacity(0.7))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            ForEach(0..<3, id: \.self) { index in
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(index == 0 ? .white : .white.opacity(0.25))
+                                        .frame(width: 10, height: 10)
+                                        .overlay {
+                                            if index == 0 {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 6, weight: .bold))
+                                                    .foregroundStyle(.purple)
+                                            }
+                                        }
+
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(.white.opacity(index == 0 ? 0.5 : 0.25))
+                                        .frame(height: 4)
+                                }
+                            }
+                        }
+                        .padding(14)
+                    }
+                    .shadow(color: Color.purple.opacity(0.25), radius: 12, y: 6)
+
+                Text("Quizzes")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
             }
         }
-    }
-
-    private func shortDayLabel(_ index: Int) -> String {
-        let labels = ["M", "T", "W", "T", "F", "S", "S"]
-        return labels[index]
     }
 
     // MARK: - Page Indicator

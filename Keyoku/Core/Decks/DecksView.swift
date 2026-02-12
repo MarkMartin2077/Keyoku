@@ -52,11 +52,13 @@ struct DecksView: View {
     let delegate: DecksDelegate
     
     var body: some View {
-        List {
-            if presenter.decks.isEmpty {
-                emptyStateView
-            } else {
-                decksSection
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                if presenter.decks.isEmpty {
+                    emptyStateView
+                } else {
+                    decksSection
+                }
             }
         }
         .navigationTitle("Decks")
@@ -92,22 +94,36 @@ struct DecksView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
-        .listRowBackground(Color.clear)
     }
     
     private var decksSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("\(presenter.filteredDecks.count) Deck\(presenter.filteredDecks.count == 1 ? "" : "s")")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .animation(.none, value: presenter.searchText)
+
             ForEach(presenter.filteredDecks) { deck in
                 deckRow(deck: deck)
+                    .bouncyScroll()
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+
+                if deck.id != presenter.filteredDecks.last?.id {
+                    Divider()
+                        .padding(.leading)
+                }
             }
-            .onDelete { indexSet in
-                presenter.onDeleteDecks(at: indexSet)
-            }
-        } header: {
-            Text("\(presenter.filteredDecks.count) Deck\(presenter.filteredDecks.count == 1 ? "" : "s")")
         }
+        .animation(.spring(duration: 0.4, bounce: 0.3), value: presenter.searchText)
     }
-    
+
     private func deckRow(deck: DeckModel) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -117,11 +133,14 @@ struct DecksView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
         .anyButton(.highlight) {
             presenter.onDeckPressed(deck: deck)

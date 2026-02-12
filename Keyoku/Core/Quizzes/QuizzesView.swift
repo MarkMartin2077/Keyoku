@@ -20,11 +20,13 @@ struct QuizzesView: View {
     let delegate: QuizzesDelegate
 
     var body: some View {
-        List {
-            if presenter.quizzes.isEmpty {
-                emptyStateView
-            } else {
-                quizzesSection
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                if presenter.quizzes.isEmpty {
+                    emptyStateView
+                } else {
+                    quizzesSection
+                }
             }
         }
         .navigationTitle("Quizzes")
@@ -60,20 +62,34 @@ struct QuizzesView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
-        .listRowBackground(Color.clear)
     }
 
     private var quizzesSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("\(presenter.filteredQuizzes.count) Quiz\(presenter.filteredQuizzes.count == 1 ? "" : "zes")")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .animation(.none, value: presenter.searchText)
+
             ForEach(presenter.filteredQuizzes) { quiz in
                 quizRow(quiz: quiz)
+                    .bouncyScroll()
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+
+                if quiz.id != presenter.filteredQuizzes.last?.id {
+                    Divider()
+                        .padding(.leading)
+                }
             }
-            .onDelete { indexSet in
-                presenter.onDeleteQuizzes(at: indexSet)
-            }
-        } header: {
-            Text("\(presenter.filteredQuizzes.count) Quiz\(presenter.filteredQuizzes.count == 1 ? "" : "zes")")
         }
+        .animation(.spring(duration: 0.4, bounce: 0.3), value: presenter.searchText)
     }
 
     private func quizRow(quiz: QuizModel) -> some View {
@@ -89,11 +105,14 @@ struct QuizzesView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
         .anyButton(.highlight) {
             presenter.onQuizPressed(quiz: quiz)

@@ -130,22 +130,10 @@ struct HomeView: View {
 
     private var recentDecksSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recent Decks")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-
-                Spacer()
-
-                if !presenter.decks.isEmpty {
-                    Text("See All")
-                        .font(.subheadline)
-                        .foregroundStyle(.accent)
-                        .anyButton(.press) {
-                            presenter.onViewAllDecksPressed()
-                        }
-                }
-            }
+            Text("Recent Decks")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             if presenter.recentDecks.isEmpty {
                 emptyDecksCard
@@ -154,9 +142,12 @@ struct HomeView: View {
                     HStack(spacing: 12) {
                         ForEach(presenter.recentDecks) { deck in
                             deckCard(deck: deck)
+                                .card3DScroll()
                         }
                     }
+                    .scrollTargetLayout()
                 }
+                .scrollTargetBehavior(.viewAligned)
             }
         }
     }
@@ -234,9 +225,12 @@ struct HomeView: View {
                     HStack(spacing: 12) {
                         ForEach(presenter.recentQuizzes) { quiz in
                             quizCard(quiz: quiz)
+                                .card3DScroll()
                         }
                     }
+                    .scrollTargetLayout()
                 }
+                .scrollTargetBehavior(.viewAligned)
             }
         }
     }
