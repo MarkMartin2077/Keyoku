@@ -70,7 +70,7 @@ struct QuizQuestionView: View {
             }
             .padding(24)
         }
-        .frame(height: 200)
+        .frame(minHeight: 200)
         .padding(.horizontal, 20)
     }
 
