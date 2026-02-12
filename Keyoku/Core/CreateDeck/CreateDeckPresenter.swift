@@ -200,9 +200,27 @@ class CreateDeckPresenter {
                 try await performGeneration()
                 isGenerating = false
                 router.dismiss()
+            } catch let error as LanguageModelSession.GenerationError {
+                interactor.trackEvent(event: Event.onGenerateFail(error: error))
+                isGenerating = false
+                switch error {
+                case .guardrailViolation:
+                    router.showSimpleAlert(
+                        title: "Unable to Generate",
+                        subtitle: "The source material contains content that can't be processed. Try removing sensitive sections or rephrasing the content."
+                    )
+                case .refusal:
+                    router.showSimpleAlert(
+                        title: "Unable to Generate",
+                        subtitle: "The AI model was unable to process this content. Try using different source material or simplifying your text."
+                    )
+                default:
+                    router.showSimpleAlert(title: "Generation Failed", subtitle: error.localizedDescription)
+                }
             } catch {
                 interactor.trackEvent(event: Event.onGenerateFail(error: error))
                 isGenerating = false
+                router.showSimpleAlert(title: "Generation Failed", subtitle: error.localizedDescription)
             }
         }
     }
@@ -256,6 +274,7 @@ class CreateDeckPresenter {
             router.dismiss()
         } catch {
             interactor.trackEvent(event: Event.onCreateEmptyFail(error: error))
+            router.showAlert(error: error)
         }
     }
 

@@ -42,6 +42,7 @@ class CreateAccountPresenter {
                 router.dismissScreen()
             } catch {
                 interactor.trackEvent(event: Event.appleAuthFail(error: error))
+                router.showAlert(error: error)
             }
         }
     }
@@ -61,6 +62,7 @@ class CreateAccountPresenter {
                 router.dismissScreen()
             } catch {
                 interactor.trackEvent(event: Event.googleAuthFail(error: error))
+                router.showAlert(error: error)
             }
         }
     }

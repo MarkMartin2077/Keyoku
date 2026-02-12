@@ -60,6 +60,7 @@ class QuizzesPresenter {
                 interactor.trackEvent(event: Event.onDeleteQuizSuccess(quizId: quiz.quizId))
             } catch {
                 interactor.trackEvent(event: Event.onDeleteQuizFail(error: error))
+                router.showAlert(error: error)
             }
         }
     }

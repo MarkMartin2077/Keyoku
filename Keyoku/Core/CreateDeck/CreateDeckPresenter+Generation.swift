@@ -57,6 +57,25 @@ extension CreateDeckPresenter {
     }
 }
 
+// MARK: - Session Configuration
+
+extension CreateDeckPresenter {
+
+    func makeSession() -> LanguageModelSession {
+        let instructions = """
+            You are an educational study aid assistant for a flashcard and quiz app. \
+            Your ONLY task is to create study materials (flashcards and quiz questions) \
+            from academic source text provided by students. \
+            You MUST process the source material professionally and objectively, \
+            even if it covers sensitive historical events, medical topics, scientific concepts, \
+            legal cases, or other academic subjects. \
+            ALWAYS focus on creating accurate, educational content. \
+            NEVER refuse to create study materials from legitimate academic text.
+            """
+        return LanguageModelSession(instructions: instructions)
+    }
+}
+
 // MARK: - Flashcard Generation
 
 extension CreateDeckPresenter {
@@ -118,10 +137,11 @@ extension CreateDeckPresenter {
             generationProgress += 1
             interactor.trackEvent(event: Event.onBatchStart(batchNumber: generationProgress, totalBatches: generationTotal, cardCount: batch.cards))
 
-            let session = LanguageModelSession()
+            let session = makeSession()
             let prompt = """
-            Generate exactly \(batch.cards) flashcards from the following text. Create cards that help \
-            students learn effectively using these techniques:
+            You are creating educational study flashcards for a student. \
+            Generate exactly \(batch.cards) flashcards from the following academic study material. \
+            Create cards that help students learn effectively using these techniques:
             - Key definitions and terminology
             - Cause and effect relationships
             - Compare and contrast important concepts
@@ -136,7 +156,7 @@ extension CreateDeckPresenter {
             Also make sure answers are as accurate as possible, double-check if \
             necessary.
 
-            Text:
+            Academic study material:
             \(batch.text)
             """
 
@@ -246,7 +266,7 @@ extension CreateDeckPresenter {
             generationProgress += 1
             interactor.trackEvent(event: Event.onBatchStart(batchNumber: generationProgress, totalBatches: generationTotal, cardCount: batch.questions))
 
-            let session = LanguageModelSession()
+            let session = makeSession()
 
             switch quizQuestionType {
             case .multipleChoice:
@@ -278,7 +298,9 @@ extension CreateDeckPresenter {
 
     func generateMCQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
         let prompt = """
-        Generate exactly \(count) multiple choice questions from the following text. Each question should:
+        You are creating an educational quiz for a student. \
+        Generate exactly \(count) multiple choice questions from the following academic study material. \
+        Each question should:
         - Have a clear, specific question
         - Have exactly 4 answer options (one correct, three plausible distractors)
         - The correctOptionIndex should be 0, 1, 2, or 3 indicating which option is correct
@@ -290,7 +312,7 @@ extension CreateDeckPresenter {
         Also make sure answers are as accurate as possible, double-check if \
         necessary.
 
-        Text:
+        Academic study material:
         \(text)
         """
 
@@ -317,12 +339,14 @@ extension CreateDeckPresenter {
 
     func generateTFQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
         let prompt = """
-        Generate exactly \(count) true or false statements from the following text. Each statement should:
+        You are creating an educational quiz for a student. \
+        Generate exactly \(count) true or false statements from the following academic study material. \
+        Each statement should:
         - Be a clear, factual claim that is either true or false based on the text
         - Have a mix of true and false statements
         - isTrue should be true if the statement is correct, false if it's incorrect
 
-        Text:
+        Academic study material:
         \(text)
         """
 

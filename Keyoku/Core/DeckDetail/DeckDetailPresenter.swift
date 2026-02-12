@@ -64,6 +64,7 @@ class DeckDetailPresenter {
             interactor.trackEvent(event: Event.onAddCardSuccess)
         } catch {
             interactor.trackEvent(event: Event.onAddCardFail(error: error))
+            router.showAlert(error: error)
         }
     }
     
@@ -77,6 +78,7 @@ class DeckDetailPresenter {
                 interactor.trackEvent(event: Event.onDeleteCardSuccess(flashcardId: flashcard.flashcardId))
             } catch {
                 interactor.trackEvent(event: Event.onDeleteCardFail(error: error))
+                router.showAlert(error: error)
             }
         }
     }

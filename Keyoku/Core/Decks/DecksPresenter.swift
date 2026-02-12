@@ -60,6 +60,7 @@ class DecksPresenter {
                 interactor.trackEvent(event: Event.onDeleteDeckSuccess(deckId: deck.deckId))
             } catch {
                 interactor.trackEvent(event: Event.onDeleteDeckFail(error: error))
+                router.showAlert(error: error)
             }
         }
     }
