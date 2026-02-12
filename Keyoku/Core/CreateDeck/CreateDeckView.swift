@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftfulUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 struct CreateDeckDelegate {
     var eventParameters: [String: Any]? {
@@ -19,6 +20,7 @@ struct CreateDeckView: View {
     
     @State var presenter: CreateDeckPresenter
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showingPDFPicker: Bool = false
     let delegate: CreateDeckDelegate
 
     var body: some View {
@@ -52,6 +54,20 @@ struct CreateDeckView: View {
                         presenter.onCancelPressed()
                     }
                 }
+            }
+        }
+        .fileImporter(
+            isPresented: $showingPDFPicker,
+            allowedContentTypes: [.pdf],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    presenter.onPDFFileSelected(result: .success(url))
+                }
+            case .failure(let error):
+                presenter.onPDFFileSelected(result: .failure(error))
             }
         }
         .interactiveDismissDisabled(presenter.isGenerating)
@@ -173,13 +189,119 @@ struct CreateDeckView: View {
     }
 
     // MARK: - Source Text Section
-    
+
     private var sourceTextSection: some View {
         Section {
-            TextEditor(text: $presenter.sourceText)
-                .frame(minHeight: 150)
+            Picker("Source Input", selection: Binding(
+                get: { presenter.sourceInputMode },
+                set: { presenter.onSourceInputModeChanged($0) }
+            )) {
+                ForEach(CreateDeckPresenter.SourceInputMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            switch presenter.sourceInputMode {
+            case .text:
+                TextEditor(text: $presenter.sourceText)
+                    .frame(minHeight: 150)
+            case .pdf:
+                pdfUploadContent
+            }
         } header: {
             Text("Source Text")
+        }
+    }
+
+    // MARK: - PDF Upload Content
+
+    @ViewBuilder
+    private var pdfUploadContent: some View {
+        if presenter.isExtractingPDF {
+            HStack(spacing: 12) {
+                ProgressView()
+                Text("Extracting text from PDF...")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 20)
+        } else if let fileName = presenter.pdfFileName {
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    Image(systemName: "doc.fill")
+                        .font(.title2)
+                        .foregroundStyle(.accent)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(fileName)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+
+                        HStack(spacing: 8) {
+                            if let pageCount = presenter.pdfPageCount {
+                                Text("\(pageCount) pages")
+                            }
+                            Text("\(presenter.sourceText.count) characters")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.title3)
+                }
+
+                Button(role: .destructive) {
+                    presenter.onClearPDF()
+                } label: {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("Remove PDF")
+                    }
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.vertical, 8)
+        } else {
+            VStack(spacing: 12) {
+                VStack(spacing: 8) {
+                    Image(systemName: "doc.badge.plus")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+
+                    Text("Upload a PDF document")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 12)
+
+                Button {
+                    showingPDFPicker = true
+                } label: {
+                    HStack {
+                        Image(systemName: "folder")
+                        Text("Select PDF")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                if let error = presenter.pdfError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
         }
     }
     

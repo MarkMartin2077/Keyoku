@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import PDFKit
 import FoundationModels
 
 @Observable
@@ -16,6 +17,11 @@ class CreateDeckPresenter {
     enum CreationMode: String, CaseIterable {
         case generate = "Generate with AI"
         case empty = "Start Empty"
+    }
+
+    enum SourceInputMode: String, CaseIterable {
+        case text = "Paste Text"
+        case pdf = "Upload PDF"
     }
     
     private let interactor: CreateDeckInteractor
@@ -30,6 +36,12 @@ class CreateDeckPresenter {
     var isGenerating: Bool = false
     var generationProgress: Int = 0
     var generationTotal: Int = 0
+
+    var sourceInputMode: SourceInputMode = .text
+    var pdfFileName: String?
+    var pdfPageCount: Int?
+    var isExtractingPDF: Bool = false
+    var pdfError: String?
     
     var canGenerate: Bool {
         !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -81,13 +93,60 @@ class CreateDeckPresenter {
         selectedImage = nil
     }
 
+    func onSourceInputModeChanged(_ mode: SourceInputMode) {
+        interactor.trackEvent(event: Event.onSourceInputModeChanged(mode: mode.rawValue))
+        sourceInputMode = mode
+        pdfError = nil
+
+        if mode == .text {
+            pdfFileName = nil
+            pdfPageCount = nil
+            sourceText = ""
+        }
+    }
+
+    func onPDFFileSelected(result: Result<URL, Error>) {
+        pdfError = nil
+
+        switch result {
+        case .success(let url):
+            let fileName = url.lastPathComponent
+            interactor.trackEvent(event: Event.onPDFFileSelected(fileName: fileName))
+            isExtractingPDF = true
+
+            do {
+                let text = try extractText(from: url)
+                sourceText = text
+                pdfFileName = fileName
+                isExtractingPDF = false
+                interactor.trackEvent(event: Event.onPDFExtractSuccess(fileName: fileName, pageCount: pdfPageCount ?? 0, textLength: text.count))
+            } catch {
+                isExtractingPDF = false
+                pdfError = error.localizedDescription
+                interactor.trackEvent(event: Event.onPDFExtractFail(error: error))
+            }
+
+        case .failure(let error):
+            pdfError = error.localizedDescription
+            interactor.trackEvent(event: Event.onPDFPickerFail(error: error))
+        }
+    }
+
+    func onClearPDF() {
+        interactor.trackEvent(event: Event.onPDFCleared)
+        sourceText = ""
+        pdfFileName = nil
+        pdfPageCount = nil
+        pdfError = nil
+    }
+
     func onCancelPressed() {
         interactor.trackEvent(event: Event.onCancelPressed)
         router.dismiss()
     }
     
     func onGeneratePressed() {
-        interactor.trackEvent(event: Event.onGeneratePressed(sourceTextLength: sourceText.count, cardCount: cardCount))
+        interactor.trackEvent(event: Event.onGeneratePressed(sourceTextLength: sourceText.count, cardCount: cardCount, sourceInputMode: sourceInputMode.rawValue))
         
         guard canGenerate else { return }
         
@@ -147,6 +206,42 @@ class CreateDeckPresenter {
             return nil
         }
         return try interactor.saveDeckImage(data: imageData)
+    }
+
+    // MARK: - PDF Extraction
+
+    private func extractText(from url: URL) throws -> String {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard let document = PDFDocument(url: url) else {
+            throw AppError("Could not read the PDF. The file may be damaged or password-protected.")
+        }
+
+        guard document.pageCount > 0 else {
+            throw AppError("The PDF has no pages.")
+        }
+
+        pdfPageCount = document.pageCount
+
+        var pages: [String] = []
+        for index in 0..<document.pageCount {
+            if let page = document.page(at: index), let text = page.string, !text.isEmpty {
+                pages.append(text)
+            }
+        }
+
+        let fullText = pages.joined(separator: "\n\n")
+
+        guard !fullText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw AppError("No readable text found in the PDF. It may contain only images or scanned content.")
+        }
+
+        return fullText
     }
 
     // MARK: - Text Splitting
@@ -303,8 +398,14 @@ extension CreateDeckPresenter {
         case onCreationModeChanged(mode: String)
         case onImageSelected
         case onImageRemoved
+        case onSourceInputModeChanged(mode: String)
+        case onPDFFileSelected(fileName: String)
+        case onPDFExtractSuccess(fileName: String, pageCount: Int, textLength: Int)
+        case onPDFExtractFail(error: Error)
+        case onPDFPickerFail(error: Error)
+        case onPDFCleared
         case onCancelPressed
-        case onGeneratePressed(sourceTextLength: Int, cardCount: Int)
+        case onGeneratePressed(sourceTextLength: Int, cardCount: Int, sourceInputMode: String)
         case onBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
         case onGenerateSuccess(cardCount: Int)
         case onGenerateFail(error: Error)
@@ -321,6 +422,12 @@ extension CreateDeckPresenter {
             case .onCreationModeChanged:    return "CreateDeckView_CreationMode_Changed"
             case .onImageSelected:          return "CreateDeckView_Image_Selected"
             case .onImageRemoved:           return "CreateDeckView_Image_Removed"
+            case .onSourceInputModeChanged: return "CreateDeckView_SourceInputMode_Changed"
+            case .onPDFFileSelected:        return "CreateDeckView_PDF_Selected"
+            case .onPDFExtractSuccess:      return "CreateDeckView_PDF_Extract_Success"
+            case .onPDFExtractFail:         return "CreateDeckView_PDF_Extract_Fail"
+            case .onPDFPickerFail:          return "CreateDeckView_PDF_Picker_Fail"
+            case .onPDFCleared:             return "CreateDeckView_PDF_Cleared"
             case .onCancelPressed:          return "CreateDeckView_Cancel"
             case .onGeneratePressed:        return "CreateDeckView_Generate_Pressed"
             case .onBatchStart:             return "CreateDeckView_Batch_Start"
@@ -342,8 +449,18 @@ extension CreateDeckPresenter {
                 return ["card_count": count]
             case .onCreationModeChanged(mode: let mode):
                 return ["creation_mode": mode]
-            case .onGeneratePressed(sourceTextLength: let length, cardCount: let count):
-                return ["source_text_length": length, "card_count": count]
+            case .onSourceInputModeChanged(mode: let mode):
+                return ["source_input_mode": mode]
+            case .onPDFFileSelected(fileName: let name):
+                return ["file_name": name]
+            case .onPDFExtractSuccess(fileName: let name, pageCount: let pages, textLength: let length):
+                return ["file_name": name, "page_count": pages, "text_length": length]
+            case .onPDFExtractFail(error: let error):
+                return error.eventParameters
+            case .onPDFPickerFail(error: let error):
+                return error.eventParameters
+            case .onGeneratePressed(sourceTextLength: let length, cardCount: let count, sourceInputMode: let mode):
+                return ["source_text_length": length, "card_count": count, "source_input_mode": mode]
             case .onBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
                 return ["batch_number": batch, "total_batches": total, "batch_card_count": cards]
             case .onGenerateSuccess(cardCount: let count):
@@ -359,7 +476,7 @@ extension CreateDeckPresenter {
         
         var type: LogType {
             switch self {
-            case .onGenerateFail, .onCreateEmptyFail:
+            case .onGenerateFail, .onCreateEmptyFail, .onPDFExtractFail, .onPDFPickerFail:
                 return .severe
             default:
                 return .analytic
