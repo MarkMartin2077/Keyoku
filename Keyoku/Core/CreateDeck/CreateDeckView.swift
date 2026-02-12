@@ -11,6 +11,8 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 struct CreateDeckDelegate {
+    var defaultContentType: CreateDeckPresenter.ContentType? = nil
+
     var eventParameters: [String: Any]? {
         nil
     }
@@ -54,7 +56,7 @@ struct CreateDeckView: View {
                 generatingOverlay
             }
         }
-        .navigationTitle("Create Deck")
+        .navigationTitle("Create")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -92,12 +94,12 @@ struct CreateDeckView: View {
     
     private var deckInfoSection: some View {
         Section {
-            TextField("Deck Name", text: $presenter.deckName)
+            TextField("Name", text: $presenter.deckName)
 
             colorPicker
 
         } header: {
-            Text("Deck Info")
+            Text("Details")
         }
     }
     
@@ -405,7 +407,7 @@ struct CreateDeckView: View {
                 Spacer()
                 
                 Image(systemName: "rectangle.stack.badge.plus")
-                Text("Create Deck")
+                Text("Create Empty Deck")
                 
                 Spacer()
             }
@@ -518,7 +520,8 @@ extension CoreBuilder {
         CreateDeckView(
             presenter: CreateDeckPresenter(
                 interactor: interactor,
-                router: CoreRouter(router: router, builder: self)
+                router: CoreRouter(router: router, builder: self),
+                defaultContentType: delegate.defaultContentType
             ),
             delegate: delegate
         )
@@ -526,14 +529,3 @@ extension CoreBuilder {
     
 }
 
-extension CoreRouter {
-    
-    func showCreateDeckView(delegate: CreateDeckDelegate) {
-        router.showScreen(.sheet) { router in
-            NavigationStack {
-                builder.createDeckView(router: router, delegate: delegate)
-            }
-        }
-    }
-    
-}

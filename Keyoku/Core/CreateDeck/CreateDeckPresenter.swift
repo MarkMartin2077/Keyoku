@@ -68,9 +68,12 @@ class CreateDeckPresenter {
         !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
-    init(interactor: CreateDeckInteractor, router: CreateDeckRouter) {
+    init(interactor: CreateDeckInteractor, router: CreateDeckRouter, defaultContentType: CreateDeckPresenter.ContentType? = nil) {
         self.interactor = interactor
         self.router = router
+        if let defaultContentType {
+            self.contentType = defaultContentType
+        }
     }
     
     func onViewAppear(delegate: CreateDeckDelegate) {

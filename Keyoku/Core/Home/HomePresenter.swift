@@ -63,9 +63,9 @@ class HomePresenter {
         router.showDeckDetailView(deck: deck)
     }
 
-    func onCreateDeckPressed() {
-        interactor.trackEvent(event: Event.onCreateDeckPressed)
-        router.showCreateDeckView()
+    func onCreatePressed() {
+        interactor.trackEvent(event: Event.onCreatePressed)
+        router.showCreateContentView(defaultContentType: nil)
     }
 
     func onQuizPressed(quiz: QuizModel) {
@@ -136,7 +136,7 @@ extension HomePresenter {
         case onDisappear(delegate: HomeDelegate)
         case onDeckPressed(deck: DeckModel)
         case onQuizPressed(quiz: QuizModel)
-        case onCreateDeckPressed
+        case onCreatePressed
         case onViewAllDecksPressed
         case deepLinkStart
         case deepLinkNoQueryItems
@@ -153,7 +153,7 @@ extension HomePresenter {
             case .onDisappear:              return "HomeView_Disappear"
             case .onDeckPressed:            return "HomeView_Deck_Pressed"
             case .onQuizPressed:            return "HomeView_Quiz_Pressed"
-            case .onCreateDeckPressed:      return "HomeView_CreateDeck_Pressed"
+            case .onCreatePressed:          return "HomeView_Create_Pressed"
             case .onViewAllDecksPressed:    return "HomeView_ViewAllDecks_Pressed"
             case .deepLinkStart:            return "HomeView_DeepLink_Start"
             case .deepLinkNoQueryItems:     return "HomeView_DeepLink_NoItems"

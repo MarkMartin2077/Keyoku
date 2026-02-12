@@ -171,7 +171,7 @@ struct HomeView: View {
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
-            Text("Create your first deck to start studying")
+            Text("Create a deck to start studying")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -321,7 +321,7 @@ struct HomeView: View {
                     .font(.title3)
                     .foregroundStyle(.white)
 
-                Text("Create New Deck")
+                Text("Create New")
                     .font(.headline)
                     .foregroundStyle(.white)
             }
@@ -338,7 +338,7 @@ struct HomeView: View {
                     )
             }
             .anyButton(.press) {
-                presenter.onCreateDeckPressed()
+                presenter.onCreatePressed()
             }
         }
     }

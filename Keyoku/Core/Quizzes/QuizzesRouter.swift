@@ -10,7 +10,18 @@ import SwiftUI
 @MainActor
 protocol QuizzesRouter: GlobalRouter {
     func showQuizView(quiz: QuizModel)
-    func showCreateDeckView()
+    func showCreateContentView(defaultContentType: CreateDeckPresenter.ContentType?)
 }
 
-extension CoreRouter: QuizzesRouter { }
+extension CoreRouter: QuizzesRouter {
+
+    func showCreateContentView(defaultContentType: CreateDeckPresenter.ContentType?) {
+        let delegate = CreateDeckDelegate(defaultContentType: defaultContentType)
+        router.showScreen(.sheet) { router in
+            NavigationStack {
+                builder.createDeckView(router: router, delegate: delegate)
+            }
+        }
+    }
+
+}

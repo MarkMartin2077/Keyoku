@@ -42,7 +42,7 @@ class QuizzesPresenter {
 
     func onAddQuizPressed() {
         interactor.trackEvent(event: Event.onAddQuizPressed)
-        router.showCreateDeckView()
+        router.showCreateContentView(defaultContentType: .quiz)
     }
 
     func onQuizPressed(quiz: QuizModel) {
