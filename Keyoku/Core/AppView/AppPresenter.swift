@@ -43,7 +43,7 @@ class AppPresenter {
         if let user = interactor.auth {
             // User is authenticated
             interactor.trackEvent(event: Event.existingAuthStart)
-            
+
             do {
                 try await interactor.logIn(user: user, isNewUser: false)
             } catch {
@@ -57,10 +57,10 @@ class AppPresenter {
 
             do {
                 let result = try await interactor.signInAnonymously()
-                
+
                 // log in to app
                 interactor.trackEvent(event: Event.anonAuthSuccess)
-                
+
                 // Log in
                 try await interactor.logIn(user: result.user, isNewUser: result.isNewUser)
 

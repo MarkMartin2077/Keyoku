@@ -1004,8 +1004,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SwiftfulThinking/SwiftfulAuthenticating";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				kind = upToNextMinorVersion;
+				minimumVersion = 1.0.14;
 			};
 		};
 		028F9BDD2CED1617009B9F48 /* XCRemoteSwiftPackageReference "SwiftfulUI" */ = {

@@ -5,6 +5,7 @@
 //  
 //
 import SwiftUI
+import SignInAppleAsync
 
 @Observable
 @MainActor
