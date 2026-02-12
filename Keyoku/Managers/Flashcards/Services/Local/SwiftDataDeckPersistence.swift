@@ -17,8 +17,9 @@ struct SwiftDataDeckPersistence: DeckService {
     }
     
     init() {
+        let config = ModelConfiguration("DeckStore")
         // swiftlint:disable:next force_try
-        self.container = try! ModelContainer(for: DeckEntity.self, FlashcardEntity.self)
+        self.container = try! ModelContainer(for: DeckEntity.self, FlashcardEntity.self, configurations: config)
     }
     
     func getAllDecks() throws -> [DeckModel] {

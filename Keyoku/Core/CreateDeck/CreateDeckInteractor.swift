@@ -12,6 +12,7 @@ protocol CreateDeckInteractor: GlobalInteractor {
     func createDeck(name: String, color: DeckColor, imageUrl: String?, sourceText: String) throws
     func createDeck(name: String, color: DeckColor, imageUrl: String?, sourceText: String, flashcards: [FlashcardModel]) throws
     func saveDeckImage(data: Data) throws -> String
+    func createQuiz(name: String, color: DeckColor, sourceText: String, questions: [QuizQuestionModel]) throws
 }
 
 extension CoreInteractor: CreateDeckInteractor { }

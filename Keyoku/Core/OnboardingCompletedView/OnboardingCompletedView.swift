@@ -27,7 +27,6 @@ struct OnboardingCompletedView: View {
                 TabView(selection: $presenter.currentPage) {
                     page1.tag(0)
                     page2.tag(1)
-                    page3.tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: presenter.currentPage)
@@ -116,7 +115,7 @@ struct OnboardingCompletedView: View {
         OnboardingPageView(
             illustration: AnyView(page1Illustration),
             title: "Create with Intelligence",
-            subtitle: "Generate flashcards instantly from any text using on-device AI. Just paste your notes and let Keyoku do the rest."
+            subtitle: "Generate flashcards instantly from any text using on-device AI. Just paste your notes or upload a PDF and let Keyoku do the rest."
         )
     }
 
@@ -202,7 +201,7 @@ struct OnboardingCompletedView: View {
         OnboardingPageView(
             illustration: AnyView(page2Illustration),
             title: "Organize Your Knowledge",
-            subtitle: "Create colorful decks with up to 50 cards. Keep your subjects tidy and find what you need at a glance."
+            subtitle: "Create colorful decks of flashcards cards. Keep your subjects tidy and find what you need at a glance."
         )
     }
 

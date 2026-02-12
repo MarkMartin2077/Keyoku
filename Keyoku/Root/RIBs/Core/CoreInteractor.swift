@@ -12,6 +12,7 @@ struct CoreInteractor: GlobalInteractor {
     private let hapticManager: HapticManager
     private let soundEffectManager: SoundEffectManager
     private let flashcardManager: FlashcardManager
+    private let quizManager: QuizManager
 
     init(container: DependencyContainer) {
         self.appState = container.resolve(AppState.self)!
@@ -24,6 +25,7 @@ struct CoreInteractor: GlobalInteractor {
         self.hapticManager = container.resolve(HapticManager.self)!
         self.soundEffectManager = container.resolve(SoundEffectManager.self)!
         self.flashcardManager = container.resolve(FlashcardManager.self)!
+        self.quizManager = container.resolve(QuizManager.self)!
     }
     
     // MARK: APP STATE
@@ -253,6 +255,32 @@ struct CoreInteractor: GlobalInteractor {
 
     func saveDeckImage(data: Data) throws -> String {
         try flashcardManager.saveDeckImage(data: data)
+    }
+
+    // MARK: QuizManager
+
+    var quizzes: [QuizModel] {
+        quizManager.quizzes
+    }
+
+    func loadQuizzes() {
+        quizManager.loadQuizzes()
+    }
+
+    func getQuiz(id: String) -> QuizModel? {
+        quizManager.getQuiz(id: id)
+    }
+
+    func createQuiz(name: String, color: DeckColor = .blue, sourceText: String) throws {
+        try quizManager.createQuiz(name: name, color: color, sourceText: sourceText)
+    }
+
+    func createQuiz(name: String, color: DeckColor = .blue, sourceText: String, questions: [QuizQuestionModel]) throws {
+        try quizManager.createQuiz(name: name, color: color, sourceText: sourceText, questions: questions)
+    }
+
+    func deleteQuiz(id: String) throws {
+        try quizManager.deleteQuiz(id: id)
     }
 
     // MARK: SHARED

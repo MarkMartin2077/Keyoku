@@ -8,13 +8,11 @@ class HomePresenter {
     private let router: HomeRouter
 
     // MARK: - Dashboard Data
-    
-    private var searchText = ""
 
     var decks: [DeckModel] {
         interactor.decks
     }
-    
+
     var recentDecks: [DeckModel] {
         Array(
             decks.sorted { $0.createdAt > $1.createdAt }
@@ -24,6 +22,21 @@ class HomePresenter {
 
     var totalCardCount: Int {
         decks.reduce(0) { $0 + $1.flashcards.count }
+    }
+
+    var quizzes: [QuizModel] {
+        interactor.quizzes
+    }
+
+    var recentQuizzes: [QuizModel] {
+        Array(
+            quizzes.sorted { $0.createdAt > $1.createdAt }
+                .prefix(3)
+        )
+    }
+
+    var totalQuestionCount: Int {
+        quizzes.reduce(0) { $0 + $1.questions.count }
     }
 
     init(interactor: HomeInteractor, router: HomeRouter) {
@@ -36,6 +49,7 @@ class HomePresenter {
     func onViewAppear(delegate: HomeDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
         interactor.loadDecks()
+        interactor.loadQuizzes()
     }
 
     func onViewDisappear(delegate: HomeDelegate) {
@@ -52,6 +66,11 @@ class HomePresenter {
     func onCreateDeckPressed() {
         interactor.trackEvent(event: Event.onCreateDeckPressed)
         router.showCreateDeckView()
+    }
+
+    func onQuizPressed(quiz: QuizModel) {
+        interactor.trackEvent(event: Event.onQuizPressed(quiz: quiz))
+        router.showQuizView(quiz: quiz)
     }
 
     func onViewAllDecksPressed() {
@@ -116,6 +135,7 @@ extension HomePresenter {
         case onAppear(delegate: HomeDelegate)
         case onDisappear(delegate: HomeDelegate)
         case onDeckPressed(deck: DeckModel)
+        case onQuizPressed(quiz: QuizModel)
         case onCreateDeckPressed
         case onViewAllDecksPressed
         case deepLinkStart
@@ -132,6 +152,7 @@ extension HomePresenter {
             case .onAppear:                 return "HomeView_Appear"
             case .onDisappear:              return "HomeView_Disappear"
             case .onDeckPressed:            return "HomeView_Deck_Pressed"
+            case .onQuizPressed:            return "HomeView_Quiz_Pressed"
             case .onCreateDeckPressed:      return "HomeView_CreateDeck_Pressed"
             case .onViewAllDecksPressed:    return "HomeView_ViewAllDecks_Pressed"
             case .deepLinkStart:            return "HomeView_DeepLink_Start"
@@ -151,6 +172,8 @@ extension HomePresenter {
                 return delegate.eventParameters
             case .onDeckPressed(deck: let deck):
                 return deck.eventParameters
+            case .onQuizPressed(quiz: let quiz):
+                return quiz.eventParameters
             default:
                 return nil
             }

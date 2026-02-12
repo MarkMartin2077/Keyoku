@@ -60,6 +60,7 @@ struct DecksView: View {
             }
         }
         .navigationTitle("Decks")
+        .searchable(text: $presenter.searchText, prompt: "Search decks")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 addButton
@@ -96,14 +97,14 @@ struct DecksView: View {
     
     private var decksSection: some View {
         Section {
-            ForEach(presenter.decks) { deck in
+            ForEach(presenter.filteredDecks) { deck in
                 deckRow(deck: deck)
             }
             .onDelete { indexSet in
                 presenter.onDeleteDecks(at: indexSet)
             }
         } header: {
-            Text("\(presenter.decks.count) Deck\(presenter.decks.count == 1 ? "" : "s")")
+            Text("\(presenter.filteredDecks.count) Deck\(presenter.filteredDecks.count == 1 ? "" : "s")")
         }
     }
     

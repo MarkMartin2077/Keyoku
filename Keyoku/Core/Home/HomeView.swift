@@ -37,6 +37,7 @@ struct HomeView: View {
             VStack(spacing: 20) {
                 welcomeHeader
                 recentDecksSection
+                recentQuizzesSection
                 quickActionsSection
             }
             .padding()
@@ -49,7 +50,7 @@ struct HomeView: View {
                     devSettingsButton
                 }
             }
-            
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Settings", systemImage: "gear") {
                     presenter.onSettingsPressed()
@@ -215,6 +216,94 @@ struct HomeView: View {
         }
         .anyButton(.press) {
             presenter.onDeckPressed(deck: deck)
+        }
+    }
+
+    // MARK: - Recent Quizzes Section
+
+    private var recentQuizzesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recent Quizzes")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            if presenter.recentQuizzes.isEmpty {
+                emptyQuizzesCard
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(presenter.recentQuizzes) { quiz in
+                            quizCard(quiz: quiz)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var emptyQuizzesCard: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "questionmark.circle")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+
+            Text("No quizzes yet")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Text("Create a quiz to test your knowledge")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
+                }
+        }
+    }
+
+    private func quizCard(quiz: QuizModel) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(quiz.name)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                Spacer()
+
+                Image(systemName: "questionmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+
+            Spacer()
+
+            Text("\(quiz.questions.count) question\(quiz.questions.count == 1 ? "" : "s")")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.8))
+        }
+        .padding()
+        .frame(width: 150, height: 120, alignment: .topLeading)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [quiz.color.color, quiz.color.color.opacity(0.7)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+        .anyButton(.press) {
+            presenter.onQuizPressed(quiz: quiz)
         }
     }
 

@@ -7,6 +7,7 @@ protocol HomeRouter: GlobalRouter {
     func showCreateDeckView()
     func showDecksView(delegate: DecksDelegate)
     func showSettingsView()
+    func showQuizView(quiz: QuizModel)
 }
 
 extension CoreRouter: HomeRouter { }

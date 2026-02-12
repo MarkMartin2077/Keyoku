@@ -19,6 +19,18 @@ class CreateDeckPresenter {
         case empty = "Start Empty"
     }
 
+    enum ContentType: String, CaseIterable {
+        case flashcards = "Flashcards"
+        case quiz = "Quiz"
+        case both = "Both"
+    }
+
+    enum QuizQuestionType: String, CaseIterable {
+        case multipleChoice = "Multiple Choice"
+        case trueFalse = "True & False"
+        case both = "Both"
+    }
+
     enum SourceInputMode: String, CaseIterable {
         case text = "Paste Text"
         case pdf = "Upload PDF"
@@ -28,7 +40,10 @@ class CreateDeckPresenter {
     private let router: CreateDeckRouter
     
     var creationMode: CreationMode = .generate
+    var contentType: ContentType = .flashcards
     var cardCount: Int = 10
+    var questionCount: Int = 10
+    var quizQuestionType: QuizQuestionType = .both
     var deckName: String = ""
     var selectedColor: DeckColor = .blue
     var selectedImage: UIImage?
@@ -79,6 +94,21 @@ class CreateDeckPresenter {
     func onCreationModeChanged(_ mode: CreationMode) {
         interactor.trackEvent(event: Event.onCreationModeChanged(mode: mode.rawValue))
         creationMode = mode
+    }
+
+    func onContentTypeChanged(_ type: ContentType) {
+        interactor.trackEvent(event: Event.onContentTypeChanged(contentType: type.rawValue))
+        contentType = type
+    }
+
+    func onQuestionCountChanged(_ count: Int) {
+        interactor.trackEvent(event: Event.onQuestionCountChanged(count: count))
+        questionCount = count
+    }
+
+    func onQuizQuestionTypeChanged(_ type: QuizQuestionType) {
+        interactor.trackEvent(event: Event.onQuizQuestionTypeChanged(questionType: type.rawValue))
+        quizQuestionType = type
     }
 
     func onImageDataLoaded(_ data: Data) {
@@ -147,25 +177,62 @@ class CreateDeckPresenter {
     
     func onGeneratePressed() {
         interactor.trackEvent(event: Event.onGeneratePressed(sourceTextLength: sourceText.count, cardCount: cardCount, sourceInputMode: sourceInputMode.rawValue))
-        
+
         guard canGenerate else { return }
-        
+
         isGenerating = true
-        
+
         Task {
             do {
-                let flashcards = try await generateFlashcards()
-                interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
-
+                let trimmedName = deckName.trimmingCharacters(in: .whitespacesAndNewlines)
                 let savedImageUrl = try saveImageIfNeeded()
 
-                try interactor.createDeck(
-                    name: deckName.trimmingCharacters(in: .whitespacesAndNewlines),
-                    color: selectedColor,
-                    imageUrl: savedImageUrl,
-                    sourceText: sourceText,
-                    flashcards: flashcards
-                )
+                switch contentType {
+                case .flashcards:
+                    let flashcards = try await generateFlashcards()
+                    interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
+
+                    try interactor.createDeck(
+                        name: trimmedName,
+                        color: selectedColor,
+                        imageUrl: savedImageUrl,
+                        sourceText: sourceText,
+                        flashcards: flashcards
+                    )
+
+                case .quiz:
+                    let questions = try await generateQuizQuestions()
+                    interactor.trackEvent(event: Event.onQuizGenerateSuccess(questionCount: questions.count))
+
+                    try interactor.createQuiz(
+                        name: trimmedName,
+                        color: selectedColor,
+                        sourceText: sourceText,
+                        questions: questions
+                    )
+
+                case .both:
+                    let flashcards = try await generateFlashcards()
+                    interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
+
+                    let questions = try await generateQuizQuestions()
+                    interactor.trackEvent(event: Event.onQuizGenerateSuccess(questionCount: questions.count))
+
+                    try interactor.createDeck(
+                        name: trimmedName,
+                        color: selectedColor,
+                        imageUrl: savedImageUrl,
+                        sourceText: sourceText,
+                        flashcards: flashcards
+                    )
+
+                    try interactor.createQuiz(
+                        name: trimmedName,
+                        color: selectedColor,
+                        sourceText: sourceText,
+                        questions: questions
+                    )
+                }
 
                 isGenerating = false
                 router.dismiss()
@@ -365,7 +432,11 @@ class CreateDeckPresenter {
             - Key facts and their significance
 
             Each card should have a clear, specific question and a concise but \
-            complete answer.
+            complete answer. Make sure there is no weird mid sentence cut off and \
+            the answers also do not have a weird cutoff.
+            
+            Also make sure answers are as accurate as possible, double-check if \
+            necessary.
 
             Text:
             \(batch.text)
@@ -385,6 +456,190 @@ class CreateDeckPresenter {
         }
         
         return allFlashcards
+    }
+
+    // MARK: - Quiz Generation
+
+    private func makeQuizBatches() -> [(text: String, questions: Int)] {
+        let perBatchBudget = 9500
+        let charsPerQuestion = 300
+        let totalNeeded = sourceText.count + (questionCount * charsPerQuestion)
+        let numberOfBatches = max((totalNeeded + perBatchBudget - 1) / perBatchBudget, 1)
+
+        let textChunks = splitText(sourceText, into: numberOfBatches)
+        var batches = [(text: String, questions: Int)]()
+        var questionsRemaining = questionCount
+
+        for (index, chunk) in textChunks.enumerated() {
+            let batchesLeft = textChunks.count - index
+            let questionsInBatch = questionsRemaining / batchesLeft
+            batches.append((text: chunk, questions: questionsInBatch))
+            questionsRemaining -= questionsInBatch
+        }
+
+        return batches
+    }
+
+    private func multipleChoiceSchema(count: Int) throws -> GenerationSchema {
+        let questionSchema = DynamicGenerationSchema(
+            name: "MCQuestion",
+            properties: [
+                .init(name: "questionText", schema: .init(type: String.self)),
+                .init(name: "option1", schema: .init(type: String.self)),
+                .init(name: "option2", schema: .init(type: String.self)),
+                .init(name: "option3", schema: .init(type: String.self)),
+                .init(name: "option4", schema: .init(type: String.self)),
+                .init(name: "correctOptionIndex", schema: .init(type: Int.self))
+            ]
+        )
+
+        let rootSchema = DynamicGenerationSchema(
+            name: "MCQuestions",
+            properties: [
+                .init(
+                    name: "questions",
+                    schema: .init(
+                        arrayOf: questionSchema,
+                        minimumElements: count,
+                        maximumElements: count
+                    )
+                )
+            ]
+        )
+
+        return try GenerationSchema(root: rootSchema, dependencies: [questionSchema])
+    }
+
+    private func trueFalseSchema(count: Int) throws -> GenerationSchema {
+        let statementSchema = DynamicGenerationSchema(
+            name: "TFStatement",
+            properties: [
+                .init(name: "statement", schema: .init(type: String.self)),
+                .init(name: "isTrue", schema: .init(type: Bool.self))
+            ]
+        )
+
+        let rootSchema = DynamicGenerationSchema(
+            name: "TFStatements",
+            properties: [
+                .init(
+                    name: "statements",
+                    schema: .init(
+                        arrayOf: statementSchema,
+                        minimumElements: count,
+                        maximumElements: count
+                    )
+                )
+            ]
+        )
+
+        return try GenerationSchema(root: rootSchema, dependencies: [statementSchema])
+    }
+
+    private func generateQuizQuestions() async throws -> [QuizQuestionModel] {
+        let batches = makeQuizBatches()
+        generationTotal += batches.count
+        var allQuestions: [QuizQuestionModel] = []
+
+        for batch in batches {
+            generationProgress += 1
+            interactor.trackEvent(event: Event.onBatchStart(batchNumber: generationProgress, totalBatches: generationTotal, cardCount: batch.questions))
+
+            let session = LanguageModelSession()
+
+            switch quizQuestionType {
+            case .multipleChoice:
+                let questions = try await generateMCQuestions(session: session, text: batch.text, count: batch.questions)
+                allQuestions.append(contentsOf: questions)
+
+            case .trueFalse:
+                let questions = try await generateTFQuestions(session: session, text: batch.text, count: batch.questions)
+                allQuestions.append(contentsOf: questions)
+
+            case .both:
+                let mcCount = batch.questions / 2
+                let tfCount = batch.questions - mcCount
+
+                if mcCount > 0 {
+                    let mcQuestions = try await generateMCQuestions(session: session, text: batch.text, count: mcCount)
+                    allQuestions.append(contentsOf: mcQuestions)
+                }
+                if tfCount > 0 {
+                    let tfQuestions = try await generateTFQuestions(session: session, text: batch.text, count: tfCount)
+                    allQuestions.append(contentsOf: tfQuestions)
+                }
+            }
+        }
+
+        allQuestions.shuffle()
+        return allQuestions
+    }
+
+    private func generateMCQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
+        let prompt = """
+        Generate exactly \(count) multiple choice questions from the following text. Each question should:
+        - Have a clear, specific question
+        - Have exactly 4 answer options (one correct, three plausible distractors)
+        - The correctOptionIndex should be 0, 1, 2, or 3 indicating which option is correct
+        - Vary the position of the correct answer across questions
+        
+        Make sure there is no weird mid sentence cut off and \
+        the answers also do not have a weird cutoff.
+                    
+        Also make sure answers are as accurate as possible, double-check if \
+        necessary.
+
+        Text:
+        \(text)
+        """
+
+        let schema = try multipleChoiceSchema(count: count)
+        let response = try await session.respond(to: prompt, schema: schema)
+        let items = try response.content.value([GeneratedContent].self, forProperty: "questions")
+
+        return try items.map { item in
+            let questionText = try item.value(String.self, forProperty: "questionText")
+            let opt1 = try item.value(String.self, forProperty: "option1")
+            let opt2 = try item.value(String.self, forProperty: "option2")
+            let opt3 = try item.value(String.self, forProperty: "option3")
+            let opt4 = try item.value(String.self, forProperty: "option4")
+            let correctIndex = try item.value(Int.self, forProperty: "correctOptionIndex")
+
+            return QuizQuestionModel(
+                questionType: .multipleChoice,
+                questionText: questionText,
+                options: [opt1, opt2, opt3, opt4],
+                correctAnswerIndex: min(max(correctIndex, 0), 3)
+            )
+        }
+    }
+
+    private func generateTFQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
+        let prompt = """
+        Generate exactly \(count) true or false statements from the following text. Each statement should:
+        - Be a clear, factual claim that is either true or false based on the text
+        - Have a mix of true and false statements
+        - isTrue should be true if the statement is correct, false if it's incorrect
+
+        Text:
+        \(text)
+        """
+
+        let schema = try trueFalseSchema(count: count)
+        let response = try await session.respond(to: prompt, schema: schema)
+        let items = try response.content.value([GeneratedContent].self, forProperty: "statements")
+
+        return try items.map { item in
+            let statement = try item.value(String.self, forProperty: "statement")
+            let isTrue = try item.value(Bool.self, forProperty: "isTrue")
+
+            return QuizQuestionModel(
+                questionType: .trueFalse,
+                questionText: statement,
+                options: ["True", "False"],
+                correctAnswerIndex: isTrue ? 0 : 1
+            )
+        }
     }
 }
 
@@ -409,6 +664,10 @@ extension CreateDeckPresenter {
         case onBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
         case onGenerateSuccess(cardCount: Int)
         case onGenerateFail(error: Error)
+        case onContentTypeChanged(contentType: String)
+        case onQuestionCountChanged(count: Int)
+        case onQuizQuestionTypeChanged(questionType: String)
+        case onQuizGenerateSuccess(questionCount: Int)
         case onCreateEmptyPressed
         case onCreateEmptySuccess
         case onCreateEmptyFail(error: Error)
@@ -433,6 +692,10 @@ extension CreateDeckPresenter {
             case .onBatchStart:             return "CreateDeckView_Batch_Start"
             case .onGenerateSuccess:        return "CreateDeckView_Generate_Success"
             case .onGenerateFail:           return "CreateDeckView_Generate_Fail"
+            case .onContentTypeChanged:      return "CreateDeckView_ContentType_Changed"
+            case .onQuestionCountChanged:   return "CreateDeckView_QuestionCount_Changed"
+            case .onQuizQuestionTypeChanged: return "CreateDeckView_QuizQuestionType_Changed"
+            case .onQuizGenerateSuccess:    return "CreateDeckView_QuizGenerate_Success"
             case .onCreateEmptyPressed:     return "CreateDeckView_CreateEmpty_Pressed"
             case .onCreateEmptySuccess:     return "CreateDeckView_CreateEmpty_Success"
             case .onCreateEmptyFail:        return "CreateDeckView_CreateEmpty_Fail"
@@ -463,6 +726,14 @@ extension CreateDeckPresenter {
                 return ["source_text_length": length, "card_count": count, "source_input_mode": mode]
             case .onBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
                 return ["batch_number": batch, "total_batches": total, "batch_card_count": cards]
+            case .onContentTypeChanged(contentType: let type):
+                return ["content_type": type]
+            case .onQuestionCountChanged(count: let count):
+                return ["question_count": count]
+            case .onQuizQuestionTypeChanged(questionType: let type):
+                return ["quiz_question_type": type]
+            case .onQuizGenerateSuccess(questionCount: let count):
+                return ["question_count": count]
             case .onGenerateSuccess(cardCount: let count):
                 return ["card_count": count]
             case .onGenerateFail(error: let error):

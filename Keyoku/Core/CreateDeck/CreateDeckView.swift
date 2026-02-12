@@ -29,7 +29,16 @@ struct CreateDeckView: View {
             creationModePicker
 
             if presenter.creationMode == .generate {
-                cardAmountSection
+                contentTypePicker
+
+                if presenter.contentType == .flashcards || presenter.contentType == .both {
+                    cardAmountSection
+                }
+
+                if presenter.contentType == .quiz || presenter.contentType == .both {
+                    questionSettingsSection
+                }
+
                 sourceTextSection
             }
         }
@@ -108,8 +117,45 @@ struct CreateDeckView: View {
         }
     }
     
+    // MARK: - Content Type Picker
+
+    private var contentTypePicker: some View {
+        Section {
+            Picker("Content Type", selection: Binding(
+                get: { presenter.contentType },
+                set: { presenter.onContentTypeChanged($0) }
+            )) {
+                ForEach(CreateDeckPresenter.ContentType.allCases, id: \.self) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    // MARK: - Question Settings Section
+
+    private var questionSettingsSection: some View {
+        Section {
+            Stepper("\(presenter.questionCount) questions", value: $presenter.questionCount, in: 5...30, step: 5)
+
+            Picker("Question Type", selection: Binding(
+                get: { presenter.quizQuestionType },
+                set: { presenter.onQuizQuestionTypeChanged($0) }
+            )) {
+                ForEach(CreateDeckPresenter.QuizQuestionType.allCases, id: \.self) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+        } header: {
+            Text("Quiz Settings")
+        } footer: {
+            Text("More questions require more source text for best results.")
+        }
+    }
+
     // MARK: - Card Amount Section
-    
+
     private var cardAmountSection: some View {
         Section {
             Stepper("\(presenter.cardCount) cards", value: $presenter.cardCount, in: 10...50, step: 5)
@@ -326,8 +372,8 @@ struct CreateDeckView: View {
                 Spacer()
                 
                 Image(systemName: "apple.intelligence")
-                Text("Generate")
-                
+                Text(generateButtonLabel)
+
                 Spacer()
             }
             .font(.headline)
@@ -340,6 +386,14 @@ struct CreateDeckView: View {
         }
         .buttonStyle(.plain)
         .disabled(!presenter.canGenerate)
+    }
+
+    private var generateButtonLabel: String {
+        switch presenter.contentType {
+        case .flashcards: return "Generate"
+        case .quiz: return "Generate Quiz"
+        case .both: return "Generate All"
+        }
     }
     
     @ViewBuilder
@@ -383,11 +437,11 @@ struct CreateDeckView: View {
                     .symbolEffect(.pulse, isActive: true)
                 
                 VStack(spacing: 8) {
-                    Text("Generating Flashcards")
+                    Text(generatingTitle)
                         .font(.title2)
                         .fontWeight(.bold)
-                    
-                    Text("Creating \(presenter.cardCount) cards for **\(presenter.deckName)**")
+
+                    Text(generatingSubtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -422,6 +476,25 @@ struct CreateDeckView: View {
                     .padding(.bottom, 32)
             }
             .padding()
+        }
+    }
+
+    private var generatingTitle: String {
+        switch presenter.contentType {
+        case .flashcards: return "Generating Flashcards"
+        case .quiz: return "Generating Quiz"
+        case .both: return "Generating Content"
+        }
+    }
+
+    private var generatingSubtitle: String {
+        switch presenter.contentType {
+        case .flashcards:
+            return "Creating \(presenter.cardCount) cards for **\(presenter.deckName)**"
+        case .quiz:
+            return "Creating \(presenter.questionCount) questions for **\(presenter.deckName)**"
+        case .both:
+            return "Creating \(presenter.cardCount) cards and \(presenter.questionCount) questions for **\(presenter.deckName)**"
         }
     }
 }

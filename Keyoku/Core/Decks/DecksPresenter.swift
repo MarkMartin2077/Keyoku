@@ -13,11 +13,19 @@ class DecksPresenter {
     
     private let interactor: DecksInteractor
     private let router: DecksRouter
-    
+
+    var searchText = ""
+
     var decks: [DeckModel] {
         interactor.decks
     }
-    
+
+    var filteredDecks: [DeckModel] {
+        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !query.isEmpty else { return decks }
+        return decks.filter { $0.name.lowercased().contains(query) }
+    }
+
     init(interactor: DecksInteractor, router: DecksRouter) {
         self.interactor = interactor
         self.router = router
@@ -44,7 +52,7 @@ class DecksPresenter {
     
     func onDeleteDecks(at indexSet: IndexSet) {
         for index in indexSet {
-            let deck = decks[index]
+            let deck = filteredDecks[index]
             interactor.trackEvent(event: Event.onDeleteDeckPressed(deck: deck))
             
             do {
