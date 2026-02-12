@@ -11,7 +11,7 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 struct CreateDeckDelegate {
-    var defaultContentType: CreateDeckPresenter.ContentType? = nil
+    var defaultContentType: CreateDeckPresenter.ContentType?
 
     var eventParameters: [String: Any]? {
         nil
@@ -528,4 +528,3 @@ extension CoreBuilder {
     }
     
 }
-
