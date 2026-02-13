@@ -55,6 +55,23 @@ extension GlobalRouter {
         router.showAlert(.alert, title: "Error", subtitle: error.localizedDescription, buttons: { })
     }
     
+    func showRatingsModal(onYesPressed: @escaping () -> Void, onNoPressed: @escaping () -> Void) {
+        router.showModal(transition: .fade, backgroundColor: Color.black.opacity(0.6)) {
+            CustomModalView(
+                title: "Are you enjoying Keyoku?",
+                subtitle: "We'd love to hear your feedback!",
+                primaryButtonTitle: "Yes",
+                primaryButtonAction: {
+                    onYesPressed()
+                },
+                secondaryButtonTitle: "No",
+                secondaryButtonAction: {
+                    onNoPressed()
+                }
+            )
+        }
+    }
+    
     func dismissAlert() {
         router.dismissAlert()
     }

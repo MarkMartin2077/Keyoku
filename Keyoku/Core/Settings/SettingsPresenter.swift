@@ -47,6 +47,26 @@ class SettingsPresenter {
         UIApplication.shared.open(url)
     }
     
+    func onRatingsButtonPressed() {
+        interactor.trackEvent(event: Event.ratingsPressed)
+        
+        func onEnjoyingAppYesPressed() {
+            interactor.trackEvent(event: Event.ratingsYesPressed)
+            router.dismissModal()
+            AppStoreRatingsHelper.requestRatingsReview()
+        }
+        
+        func onEnjoyingAppNoPressed() {
+            interactor.trackEvent(event: Event.ratingsNoPressed)
+            router.dismissModal()
+        }
+        
+        router.showRatingsModal(
+            onYesPressed: onEnjoyingAppYesPressed,
+            onNoPressed: onEnjoyingAppNoPressed
+        )
+    }
+    
     func onSignOutPressed() {
         interactor.trackEvent(event: Event.signOutStart)
         
@@ -140,6 +160,9 @@ extension SettingsPresenter {
         case deleteAccountFail(error: Error)
         case createAccountPressed
         case contactUsPressed
+        case ratingsPressed
+        case ratingsYesPressed
+        case ratingsNoPressed
 
         var eventName: String {
             switch self {
@@ -154,6 +177,9 @@ extension SettingsPresenter {
             case .deleteAccountFail:            return "SettingsView_DeleteAccount_Fail"
             case .createAccountPressed:         return "SettingsView_CreateAccount_Pressed"
             case .contactUsPressed:             return "SettingsView_ContactUs_Pressed"
+            case .ratingsPressed:               return "SettingsView_Ratings_Pressed"
+            case .ratingsYesPressed:            return "SettingsView_RatingsYes_Pressed"
+            case .ratingsNoPressed:             return "SettingsView_RatingsNo_Pressed"
             }
         }
         

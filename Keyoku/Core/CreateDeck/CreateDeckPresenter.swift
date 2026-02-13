@@ -203,6 +203,7 @@ class CreateDeckPresenter {
             do {
                 try await performGeneration()
                 isGenerating = false
+                interactor.playHaptic(option: .achievementUnlocked())
                 router.dismiss()
             } catch let error as LanguageModelSession.GenerationError {
                 interactor.trackEvent(event: Event.onGenerateFail(error: error))
@@ -275,6 +276,7 @@ class CreateDeckPresenter {
             )
 
             interactor.trackEvent(event: Event.onCreateEmptySuccess)
+            interactor.playHaptic(option: .success)
             router.dismiss()
         } catch {
             interactor.trackEvent(event: Event.onCreateEmptyFail(error: error))

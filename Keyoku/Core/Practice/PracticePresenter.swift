@@ -57,6 +57,7 @@ class PracticePresenter {
     func onPreviousPressed() {
         guard canGoPrevious else { return }
         interactor.trackEvent(event: Event.onPreviousPressed(fromIndex: currentIndex))
+        interactor.playHaptic(option: .flashcardFlip())
 
         withAnimation(.easeInOut(duration: 0.2)) {
             currentIndex -= 1
@@ -66,6 +67,7 @@ class PracticePresenter {
     func onNextPressed() {
         guard canGoNext else { return }
         interactor.trackEvent(event: Event.onNextPressed(fromIndex: currentIndex))
+        interactor.playHaptic(option: .flashcardFlip())
 
         withAnimation(.easeInOut(duration: 0.2)) {
             currentIndex += 1
@@ -75,11 +77,13 @@ class PracticePresenter {
         if currentIndex == flashcards.count - 1, !hasRecordedCompletion {
             hasRecordedCompletion = true
             interactor.trackEvent(event: Event.onPracticeSessionComplete(deckName: deckName, cardsCount: flashcards.count))
+            interactor.playHaptic(option: .lessonComplete())
         }
     }
 
     func onShufflePressed() {
         interactor.trackEvent(event: Event.onShufflePressed)
+        interactor.playHaptic(option: .medium)
 
         withAnimation(.easeInOut(duration: 0.3)) {
             flashcards.shuffle()

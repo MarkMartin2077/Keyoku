@@ -48,6 +48,7 @@ class QuizPresenter {
 
     func onViewAppear(delegate: QuizDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
+        interactor.playHaptic(option: .quizStart())
     }
 
     func onViewDisappear(delegate: QuizDelegate) {
@@ -63,6 +64,9 @@ class QuizPresenter {
         let isCorrect = index == currentQuestion?.correctAnswerIndex
         if isCorrect {
             correctAnswers += 1
+            interactor.playHaptic(option: .correctAnswer())
+        } else {
+            interactor.playHaptic(option: .incorrectGentle())
         }
 
         interactor.trackEvent(event: Event.onOptionSelected(
@@ -88,6 +92,14 @@ class QuizPresenter {
                 score: correctAnswers,
                 total: questions.count
             ))
+
+            if correctAnswers == questions.count {
+                interactor.playHaptic(option: .perfectScore())
+            } else if scorePercentage >= 80 {
+                interactor.playHaptic(option: .lessonComplete())
+            } else {
+                interactor.playHaptic(option: .success)
+            }
 
             withAnimation(.easeInOut(duration: 0.3)) {
                 isQuizComplete = true

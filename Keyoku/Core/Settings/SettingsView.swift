@@ -99,6 +99,14 @@ struct SettingsView: View {
             .rowFormatting()
             .removeListRowFormatting()
             
+            Text("Rate us on the App Store!")
+                .foregroundStyle(.blue)
+                .rowFormatting()
+                .anyButton(.highlight, action: {
+                    presenter.onRatingsButtonPressed()
+                })
+                .removeListRowFormatting()
+            
             Text("Contact us")
                 .foregroundStyle(.blue)
                 .rowFormatting()
