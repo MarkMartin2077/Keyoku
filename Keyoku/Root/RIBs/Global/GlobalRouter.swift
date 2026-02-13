@@ -55,6 +55,26 @@ extension GlobalRouter {
         router.showAlert(.alert, title: "Error", subtitle: error.localizedDescription, buttons: { })
     }
     
+    func showPushNotificationModal(onEnablePressed: @escaping () -> Void, onCancelPressed: @escaping () -> Void) {
+        router.showModal(
+            transition: .move(edge: .bottom), backgroundColor: Color.black.opacity(0.6),
+            destination: {
+                CustomModalView(
+                    title: "Enable push notifications?",
+                    subtitle: "We'll send you reminders and updates!",
+                    primaryButtonTitle: "Enable",
+                    primaryButtonAction: {
+                        onEnablePressed()
+                    },
+                    secondaryButtonTitle: "Cancel",
+                    secondaryButtonAction: {
+                        onCancelPressed()
+                    }
+                )
+            }
+        )
+    }
+    
     func showRatingsModal(onYesPressed: @escaping () -> Void, onNoPressed: @escaping () -> Void) {
         router.showModal(transition: .fade, backgroundColor: Color.black.opacity(0.6)) {
             CustomModalView(

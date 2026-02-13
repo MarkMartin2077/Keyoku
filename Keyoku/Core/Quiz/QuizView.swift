@@ -102,7 +102,7 @@ struct QuizView: View {
 
     private var progressSection: some View {
         VStack(spacing: 8) {
-            Text("\(presenter.currentIndex + 1) / \(presenter.questions.count)")
+            Text("Question \(presenter.currentIndex + 1) of \(presenter.questions.count)")
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
@@ -118,6 +118,7 @@ struct QuizView: View {
                 }
             }
             .frame(height: 6)
+            .accessibilityLabel("Progress: question \(presenter.currentIndex + 1) of \(presenter.questions.count)")
         }
     }
 
@@ -136,6 +137,7 @@ struct QuizView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(presenter.quizColor.color)
         )
+        .accessibilityHint(presenter.currentIndex < presenter.questions.count - 1 ? "Go to next question" : "View your results")
         .anyButton(.press) {
             presenter.onNextPressed()
         }

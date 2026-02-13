@@ -78,15 +78,15 @@ struct PracticeView: View {
     
     private var progressIndicator: some View {
         VStack(spacing: 8) {
-            Text("\(presenter.currentIndex + 1) / \(presenter.flashcards.count)")
+            Text("Card \(presenter.currentIndex + 1) of \(presenter.flashcards.count)")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            
+
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.secondary.opacity(0.2))
-                    
+
                     RoundedRectangle(cornerRadius: 4)
                         .fill(presenter.deckColor.color)
                         .frame(width: geometry.size.width * presenter.progress)
@@ -95,6 +95,7 @@ struct PracticeView: View {
             }
             .frame(height: 6)
             .padding(.horizontal, 40)
+            .accessibilityLabel("Progress: card \(presenter.currentIndex + 1) of \(presenter.flashcards.count)")
         }
     }
     
@@ -120,7 +121,8 @@ struct PracticeView: View {
             }
             .buttonStyle(.plain)
             .disabled(!presenter.canGoPrevious)
-            
+            .accessibilityHint(presenter.canGoPrevious ? "Go to previous card" : "Already on first card")
+
             Button {
                 presenter.onNextPressed()
             } label: {
@@ -139,6 +141,7 @@ struct PracticeView: View {
             }
             .buttonStyle(.plain)
             .disabled(!presenter.canGoNext)
+            .accessibilityHint(presenter.canGoNext ? "Go to next card" : "Already on last card")
         }
     }
     
@@ -151,6 +154,7 @@ struct PracticeView: View {
             Image(systemName: "shuffle")
         }
         .disabled(presenter.flashcards.count < 2)
+        .accessibilityLabel("Shuffle cards")
     }
 }
 

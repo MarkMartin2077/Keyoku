@@ -65,7 +65,7 @@ struct DeckDetailView: View {
                     Image(systemName: "rectangle.stack.fill")
                         .font(.title2)
                         .foregroundStyle(presenter.deckColor.color)
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Practice")
                             .font(.headline)
@@ -73,16 +73,18 @@ struct DeckDetailView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
                 }
                 .padding(.vertical, 8)
             }
             .buttonStyle(.plain)
+            .accessibilityHint("Start studying all cards in this deck")
         }
     }
     
@@ -134,12 +136,15 @@ struct DeckDetailView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Question: \(flashcard.question), Answer: \(flashcard.answer)")
     }
     
     // MARK: - Add Card
     
     private var addButton: some View {
         Image(systemName: "plus")
+            .accessibilityLabel("Add flashcard")
             .anyButton(.press) {
                 showAddCardSheet = true
             }

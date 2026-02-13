@@ -128,7 +128,11 @@ struct CoreInteractor: GlobalInteractor {
     func canRequestPushAuthorization() async -> Bool {
         await pushManager.canRequestAuthorization()
     }
-
+    
+    func schedulePushNotificationsForTheNextWeek() {
+        pushManager.schedulePushNotificationsForTheNextWeek()
+    }
+    
     // MARK: ABTestManager
     
     var activeTests: ActiveABTests {

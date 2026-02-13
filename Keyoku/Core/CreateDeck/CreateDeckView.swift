@@ -186,11 +186,12 @@ struct CreateDeckView: View {
     }
     
     private func colorOption(_ deckColor: DeckColor) -> some View {
-        Circle()
+        let isSelected = presenter.selectedColor == deckColor
+        return Circle()
             .fill(deckColor.color)
             .frame(width: 32, height: 32)
             .overlay {
-                if presenter.selectedColor == deckColor {
+                if isSelected {
                     Circle()
                         .strokeBorder(.white, lineWidth: 2)
                     Image(systemName: "checkmark")
@@ -199,6 +200,7 @@ struct CreateDeckView: View {
                 }
             }
             .shadow(color: deckColor.color.opacity(0.4), radius: 2, y: 1)
+            .accessibilityLabel(isSelected ? "\(deckColor.displayName), selected" : deckColor.displayName)
             .anyButton(.press) {
                 presenter.onColorSelected(deckColor)
             }
@@ -388,6 +390,7 @@ struct CreateDeckView: View {
         }
         .buttonStyle(.plain)
         .disabled(!presenter.canGenerate)
+        .accessibilityHint(presenter.canGenerate ? "" : "Enter a deck name and source text to generate")
     }
 
     private var generateButtonLabel: String {
@@ -470,7 +473,7 @@ struct CreateDeckView: View {
                 }
                 
                 Spacer()
-                
+
                 Text(estimatedTimeText ?? "This may take a moment depending on the amount of source text.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -480,7 +483,20 @@ struct CreateDeckView: View {
                     .padding(.bottom, 32)
             }
             .padding()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(generatingAccessibilityLabel)
         }
+    }
+
+    private var generatingAccessibilityLabel: String {
+        var label = "\(generatingTitle). \(generatingSubtitle)."
+        if presenter.generationTotal > 0 {
+            label += " Batch \(presenter.generationProgress) of \(presenter.generationTotal)."
+        }
+        if let timeText = estimatedTimeText {
+            label += " \(timeText)."
+        }
+        return label
     }
 
     private var estimatedTimeText: String? {

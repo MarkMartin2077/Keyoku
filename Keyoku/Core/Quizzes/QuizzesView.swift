@@ -66,7 +66,7 @@ struct QuizzesView: View {
 
     private var quizzesSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("\(presenter.filteredQuizzes.count) Quiz\(presenter.filteredQuizzes.count == 1 ? "" : "zes")")
+            Text("^[\(presenter.filteredQuizzes.count) quiz](inflect: true)")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -97,6 +97,7 @@ struct QuizzesView: View {
             Circle()
                 .fill(quiz.color.color.gradient)
                 .frame(width: 10, height: 10)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(quiz.name)
@@ -110,10 +111,14 @@ struct QuizzesView: View {
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(quiz.name), \(quiz.questions.count) \(quiz.questions.count == 1 ? "question" : "questions")")
+        .accessibilityHint("Opens quiz")
         .anyButton(.highlight) {
             presenter.onQuizPressed(quiz: quiz)
         }

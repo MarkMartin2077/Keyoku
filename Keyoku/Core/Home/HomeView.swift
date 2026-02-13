@@ -11,6 +11,10 @@ struct HomeView: View {
 
     @State var presenter: HomePresenter
     let delegate: HomeDelegate
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var deckCardWidth: CGFloat { sizeClass == .regular ? 200 : 150 }
+    private var deckCardHeight: CGFloat { sizeClass == .regular ? 150 : 120 }
 
     private var showDevSettingsButton: Bool {
         #if DEV || MOCK
@@ -48,6 +52,12 @@ struct HomeView: View {
             ToolbarItem(placement: .topBarLeading) {
                 if showDevSettingsButton {
                     devSettingsButton
+                }
+            }
+            
+            ToolbarItem(placement: .topBarTrailing) {
+                if presenter.showNotificationButton {
+                    pushNotificationButton
                 }
             }
 
@@ -124,6 +134,8 @@ struct HomeView: View {
                         )
                 }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks"), \(presenter.totalCardCount) \(presenter.totalCardCount == 1 ? "card" : "cards")")
     }
 
     // MARK: - Recent Decks Section
@@ -194,7 +206,7 @@ struct HomeView: View {
                 .foregroundStyle(.white.opacity(0.8))
         }
         .padding()
-        .frame(width: 150, height: 120, alignment: .topLeading)
+        .frame(width: deckCardWidth, height: deckCardHeight, alignment: .topLeading)
         .background {
             RoundedRectangle(cornerRadius: 16)
                 .fill(
@@ -205,6 +217,8 @@ struct HomeView: View {
                     )
                 )
         }
+        .accessibilityLabel("\(deck.name), \(deck.flashcards.count) \(deck.flashcards.count == 1 ? "card" : "cards")")
+        .accessibilityHint("Opens deck")
         .anyButton(.press) {
             presenter.onDeckPressed(deck: deck)
         }
@@ -276,6 +290,7 @@ struct HomeView: View {
                 Image(systemName: "questionmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
+                    .accessibilityHidden(true)
             }
 
             Spacer()
@@ -285,7 +300,7 @@ struct HomeView: View {
                 .foregroundStyle(.white.opacity(0.8))
         }
         .padding()
-        .frame(width: 150, height: 120, alignment: .topLeading)
+        .frame(width: deckCardWidth, height: deckCardHeight, alignment: .topLeading)
         .background {
             RoundedRectangle(cornerRadius: 16)
                 .fill(
@@ -296,6 +311,8 @@ struct HomeView: View {
                     )
                 )
         }
+        .accessibilityLabel("\(quiz.name), \(quiz.questions.count) \(quiz.questions.count == 1 ? "question" : "questions")")
+        .accessibilityHint("Opens quiz")
         .anyButton(.press) {
             presenter.onQuizPressed(quiz: quiz)
         }
@@ -331,6 +348,7 @@ struct HomeView: View {
                         )
                     )
             }
+            .accessibilityHint("Create a new deck or quiz")
             .anyButton(.press) {
                 presenter.onCreatePressed()
             }
@@ -350,6 +368,19 @@ struct HomeView: View {
             .cornerRadius(12)
             .anyButton(.press) {
                 presenter.onDevSettingsPressed()
+            }
+    }
+    
+    // MARK: - Push Notifications
+    private var pushNotificationButton: some View {
+        Image(systemName: "bell.fill")
+            .font(.headline)
+            .padding(4)
+            .tappableBackground()
+            .foregroundStyle(.accent)
+            .accessibilityLabel("Notifications")
+            .anyButton {
+                presenter.onPushNotificationButtonPressed()
             }
     }
 }

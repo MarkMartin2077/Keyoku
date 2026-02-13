@@ -64,10 +64,15 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
     
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Firebase push notifications put the payload within "aps" sub-dictionary.
-        // This may not be the case for other push notification services
-        let userInfo = response.notification.request.content.userInfo["aps"] as? [String: Any]
+        let content = response.notification.request.content
+        let notificationId = response.notification.request.identifier
+
+        // Remote (Firebase) notifications store payload under "aps", local notifications use userInfo directly
+        var userInfo: [String: Any] = content.userInfo["aps"] as? [String: Any] ?? content.userInfo as? [String: Any] ?? [:]
+        userInfo["notification_id"] = notificationId
+
         NotificationCenter.default.post(name: .pushNotification, object: nil, userInfo: userInfo)
+        completionHandler()
     }
 }
 

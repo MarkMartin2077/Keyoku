@@ -72,6 +72,8 @@ struct QuizResultView: View {
                         .foregroundStyle(scoreColor)
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(scoreAccessibilityLabel)
 
             if let quizName {
                 Text(quizName)
@@ -79,6 +81,11 @@ struct QuizResultView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var scoreAccessibilityLabel: String {
+        guard let score, let totalQuestions else { return "No score" }
+        return "\(score) out of \(totalQuestions) correct, \(Int(percentage)) percent"
     }
 
     // MARK: - Message Section
@@ -132,6 +139,7 @@ struct QuizResultView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(accentColor)
             )
+            .accessibilityHint("Retake this quiz")
             .anyButton(.press) {
                 onRetakePressed?()
             }
@@ -148,6 +156,7 @@ struct QuizResultView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(accentColor, lineWidth: 2)
             )
+            .accessibilityHint("Return to previous screen")
             .anyButton(.press) {
                 onDonePressed?()
             }

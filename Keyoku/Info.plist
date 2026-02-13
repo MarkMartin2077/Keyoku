@@ -24,6 +24,16 @@
 				<string>com.googleusercontent.apps.412551810159-mbl960veufcu5bemig1jrbuj14baca6t</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>basic_deep_link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>keyoku</string>
+			</array>
+		</dict>
 	</array>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>

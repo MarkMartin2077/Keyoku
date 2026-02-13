@@ -27,24 +27,82 @@ class PushManager {
     func canRequestAuthorization() async -> Bool {
         await LocalNotifications.canRequestAuthorization()
     }
-        
-    private func scheduleNotification(title: String, subtitle: String, triggerDate: Date) async throws {
-        let content = AnyNotificationContent(title: title, body: subtitle)
+    
+    private let notificationHour: Int = 10
+    private let notificationMinute: Int = 0
+
+    private struct ScheduledMessage {
+        let title: String
+        let subtitle: String
+        let day: Int
+        let action: String
+    }
+
+    private let messages: [ScheduledMessage] = [
+        .init(title: "Hey you! Wanna study?", subtitle: "Open Keyoku to get started.", day: 1, action: "study"),
+        .init(title: "Time to practice!", subtitle: "Open Keyoku and try your best.", day: 2, action: "study"),
+        .init(title: "Hey stranger. We miss you!", subtitle: "Don't forget about us.", day: 3, action: "quiz"),
+        .init(title: "Knowledge awaits!", subtitle: "Your flashcards are waiting for you.", day: 4, action: "study"),
+        .init(title: "Quick quiz time?", subtitle: "Test what you've learned today.", day: 5, action: "quiz"),
+        .init(title: "Keep the streak going!", subtitle: "A few minutes of study goes a long way.", day: 6, action: "create"),
+        .init(title: "Your brain will thank you!", subtitle: "Open Keyoku and learn something new.", day: 7, action: "create")
+    ]
+
+    func schedulePushNotificationsForTheNextWeek() {
+        Task {
+            do {
+                let status = try await LocalNotifications.getNotificationStatus()
+                guard status == .authorized else { return }
+
+                LocalNotifications.removeAllPendingNotifications()
+                LocalNotifications.removeAllDeliveredNotifications()
+
+                for message in messages {
+                    guard let triggerDate = notificationDate(daysFromNow: message.day) else { continue }
+                    try await scheduleNotification(
+                        id: "\(message.action)-day\(message.day)",
+                        title: message.title,
+                        subtitle: message.subtitle,
+                        triggerDate: triggerDate
+                    )
+                }
+
+                logManager?.trackEvent(event: Event.weekScheduledSuccess)
+            } catch {
+                logManager?.trackEvent(event: Event.weekScheduledFail(error: error))
+            }
+        }
+    }
+
+    private func notificationDate(daysFromNow: Int) -> Date? {
+        let calendar = Calendar.current
+        guard let futureDate = calendar.date(byAdding: .day, value: daysFromNow, to: Date()) else { return nil }
+        return calendar.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: futureDate)
+    }
+
+    private func scheduleNotification(id: String, title: String, subtitle: String, triggerDate: Date) async throws {
+        let content = AnyNotificationContent(id: id, title: title, body: subtitle)
         let trigger = NotificationTriggerOption.date(date: triggerDate, repeats: false)
         try await LocalNotifications.scheduleNotification(content: content, trigger: trigger)
     }
     
     enum Event: LoggableEvent {
-        case sample
+        case weekScheduledSuccess
+        case weekScheduledFail(error: Error)
+        case weekScheduledSkippedNotAuthorized
 
         var eventName: String {
             switch self {
-            case .sample:          return "PushMan_SampleEvent"
+            case .weekScheduledSuccess:                 return "PushMan_WeekSchedule_Success"
+            case .weekScheduledFail:                    return "PushMan_WeekSchedule_Fail"
+            case .weekScheduledSkippedNotAuthorized:    return "PushMan_WeekSchedule_Skipped_NotAuth"
             }
         }
         
         var parameters: [String: Any]? {
             switch self {
+            case .weekScheduledFail(error: let error):
+                return error.eventParameters
             default:
                 return nil
             }
@@ -52,6 +110,8 @@ class PushManager {
         
         var type: LogType {
             switch self {
+            case .weekScheduledFail:
+                return .severe
             default:
                 return .analytic
             }

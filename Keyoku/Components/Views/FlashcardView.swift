@@ -31,6 +31,8 @@ struct FlashcardView: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(showingAnswer ? "Answer: \(answer)" : "Question: \(question)")
+        .accessibilityHint("Tap to flip to \(showingAnswer ? "question" : "answer")")
         .onChange(of: question) {
             showingAnswer = false
             rotation = 0
@@ -68,6 +70,7 @@ struct FlashcardView: View {
                         Capsule()
                             .fill(showingAnswer ? Color.green : accentColor)
                     )
+                    .accessibilityHidden(true)
                 
                 Spacer()
                 
@@ -87,6 +90,7 @@ struct FlashcardView: View {
                 }
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
             }
             .padding(24)
         }

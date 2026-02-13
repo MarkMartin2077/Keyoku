@@ -16,13 +16,16 @@ struct DecksDelegate {
 
 struct DeckItem: View {
     var deck: DeckModel
-    
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var itemSize: CGFloat { sizeClass == .regular ? 260 : 200 }
+
     var body: some View {
         VStack(spacing: 20) {
             if let imageUrl = deck.imageUrl {
                 ImageLoaderView(urlString: imageUrl, resizingMode: .fit)
                     .scaledToFit()
-                    .frame(width: 200, height: 200)
+                    .frame(width: itemSize, height: itemSize)
             } else {
                 Image(systemName: "rectangle.on.rectangle")
                     .font(.system(size: 64))
@@ -36,10 +39,10 @@ struct DeckItem: View {
             } else {
                 ContentUnavailableView("No cards yet. Add some!", systemImage: "plus")
             }
-            
+
         }
         .foregroundStyle(.white)
-        .frame(width: 200, height: 200)
+        .frame(width: itemSize, height: itemSize)
         .background(deck.color.color.gradient)
         .clipShape(.rect(cornerRadius: 32))
         .shadow(color: deck.color.color.opacity(0.5), radius: 30, y: 15)
@@ -98,7 +101,7 @@ struct DecksView: View {
     
     private var decksSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("\(presenter.filteredDecks.count) Deck\(presenter.filteredDecks.count == 1 ? "" : "s")")
+            Text("^[\(presenter.filteredDecks.count) deck](inflect: true)")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -138,10 +141,14 @@ struct DecksView: View {
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(deck.name), \(deck.flashcards.count) \(deck.flashcards.count == 1 ? "card" : "cards")")
+        .accessibilityHint("Opens deck details")
         .anyButton(.highlight) {
             presenter.onDeckPressed(deck: deck)
         }

@@ -69,6 +69,8 @@ struct QuizQuestionView: View {
                 }
             }
             .padding(24)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(questionCardAccessibilityLabel)
         }
         .frame(minHeight: 200)
         .padding(.horizontal, 20)
@@ -108,9 +110,11 @@ struct QuizQuestionView: View {
             if isRevealed, index == correctAnswerIndex {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
+                    .accessibilityHidden(true)
             } else if isRevealed, selectedIndex == index, index != correctAnswerIndex {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(.red)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.horizontal, 16)
@@ -123,12 +127,41 @@ struct QuizQuestionView: View {
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(borderColor(for: index), lineWidth: selectedIndex == index ? 2 : 1)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(optionAccessibilityLabel(index: index, text: text))
+        .accessibilityHint(isRevealed ? "" : "Select this answer")
         .anyButton(.press) {
             if !isRevealed {
                 onOptionSelected?(index)
             }
         }
         .disabled(isRevealed)
+    }
+
+    // MARK: - Accessibility Helpers
+
+    private var questionCardAccessibilityLabel: String {
+        var parts: [String] = []
+        if let questionType {
+            parts.append(questionType.displayName)
+        }
+        if let questionText {
+            parts.append(questionText)
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private func optionAccessibilityLabel(index: Int, text: String) -> String {
+        let letter = index < optionLetters.count ? optionLetters[index] : "\(index + 1)"
+        var label = "Option \(letter), \(text)"
+        if isRevealed {
+            if index == correctAnswerIndex {
+                label += ", correct answer"
+            } else if selectedIndex == index {
+                label += ", incorrect"
+            }
+        }
+        return label
     }
 
     // MARK: - Styling Helpers
