@@ -93,8 +93,8 @@ class SettingsPresenter {
 
         router.showAlert(
             .alert,
-            title: "Delete Account?",
-            subtitle: "This action is permanent and cannot be undone. Your data will be deleted from our server forever.",
+            title: String(localized: "Delete Account?"),
+            subtitle: String(localized: "This action is permanent and cannot be undone. Your data will be deleted from our server forever."),
             buttons: {
                 AnyView(
                     Button("Delete", role: .destructive, action: {
@@ -108,8 +108,8 @@ class SettingsPresenter {
     private func showDeleteAccountReauthAlert() {
         router.showAlert(
             .alert,
-            title: "Reauthentication Required",
-            subtitle: "As a safety precaution in order to delete your account, you must first sign again.",
+            title: String(localized: "Reauthentication Required"),
+            subtitle: String(localized: "As a safety precaution in order to delete your account, you must first sign again."),
             buttons: {
                 AnyView(
                     Button("Delete", role: .destructive, action: {

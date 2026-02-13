@@ -1,0 +1,194 @@
+[
+    {
+        "name": "First Card",
+        "description": "Create your first flashcard.",
+        "color": "Light Blue",
+        "criterion": "flashcards",
+        "value": 1,
+        "image": "rectangle.portrait.on.rectangle.portrait.fill"
+    },
+    {
+        "name": "Getting Started",
+        "description": "Create 10 flashcards.",
+        "color": "Light Blue",
+        "criterion": "flashcards",
+        "value": 10,
+        "image": "hand.thumbsup.fill"
+    },
+    {
+        "name": "Card Collector",
+        "description": "Create 25 flashcards.",
+        "color": "Light Blue",
+        "criterion": "flashcards",
+        "value": 25,
+        "image": "tray.full.fill"
+    },
+    {
+        "name": "Stacking Up",
+        "description": "Create 50 flashcards.",
+        "color": "Light Blue",
+        "criterion": "flashcards",
+        "value": 50,
+        "image": "square.stack.3d.up.fill"
+    },
+    {
+        "name": "Flashcard Fanatic",
+        "description": "Create 100 flashcards.",
+        "color": "Light Blue",
+        "criterion": "flashcards",
+        "value": 100,
+        "image": "star.circle.fill"
+    },
+    {
+        "name": "Knowledge Vault",
+        "description": "Create 250 flashcards.",
+        "color": "Light Blue",
+        "criterion": "flashcards",
+        "value": 250,
+        "image": "building.columns.fill"
+    },
+    {
+        "name": "Card Master",
+        "description": "Create 500 flashcards.",
+        "color": "Light Blue",
+        "criterion": "flashcards",
+        "value": 500,
+        "image": "crown.fill"
+    },
+    {
+        "name": "First Deck",
+        "description": "Create your first deck.",
+        "color": "Gold",
+        "criterion": "decks",
+        "value": 1,
+        "image": "menucard.fill"
+    },
+    {
+        "name": "Deck Builder",
+        "description": "Create 5 decks.",
+        "color": "Gold",
+        "criterion": "decks",
+        "value": 5,
+        "image": "rectangle.stack.fill"
+    },
+    {
+        "name": "Organized Mind",
+        "description": "Create 10 decks.",
+        "color": "Gold",
+        "criterion": "decks",
+        "value": 10,
+        "image": "brain.head.profile.fill"
+    },
+    {
+        "name": "Library Builder",
+        "description": "Create 25 decks.",
+        "color": "Gold",
+        "criterion": "decks",
+        "value": 25,
+        "image": "books.vertical.fill"
+    },
+    {
+        "name": "Quiz Rookie",
+        "description": "Complete your first quiz.",
+        "color": "Green",
+        "criterion": "quizzes_completed",
+        "value": 1,
+        "image": "questionmark.circle.fill"
+    },
+    {
+        "name": "Quiz Regular",
+        "description": "Complete 10 quizzes.",
+        "color": "Green",
+        "criterion": "quizzes_completed",
+        "value": 10,
+        "image": "checkmark.shield.fill"
+    },
+    {
+        "name": "Sharp Mind",
+        "description": "Complete 25 quizzes.",
+        "color": "Green",
+        "criterion": "quizzes_completed",
+        "value": 25,
+        "image": "bolt.circle.fill"
+    },
+    {
+        "name": "Quiz Whiz",
+        "description": "Complete 50 quizzes.",
+        "color": "Green",
+        "criterion": "quizzes_completed",
+        "value": 50,
+        "image": "flame.fill"
+    },
+    {
+        "name": "Quiz Champion",
+        "description": "Complete 100 quizzes.",
+        "color": "Green",
+        "criterion": "quizzes_completed",
+        "value": 100,
+        "image": "trophy.fill"
+    },
+    {
+        "name": "Perfect Score",
+        "description": "Score 100% on a quiz.",
+        "color": "Indigo",
+        "criterion": "perfect_scores",
+        "value": 1,
+        "image": "star.fill"
+    },
+    {
+        "name": "Perfectionist",
+        "description": "Score 100% on 10 quizzes.",
+        "color": "Indigo",
+        "criterion": "perfect_scores",
+        "value": 10,
+        "image": "sparkles"
+    },
+    {
+        "name": "Flawless",
+        "description": "Score 100% on 25 quizzes.",
+        "color": "Indigo",
+        "criterion": "perfect_scores",
+        "value": 25,
+        "image": "medal.fill"
+    },
+    {
+        "name": "Study Session",
+        "description": "Complete your first practice session.",
+        "color": "Orange",
+        "criterion": "practice_sessions",
+        "value": 1,
+        "image": "book.fill"
+    },
+    {
+        "name": "Dedicated Learner",
+        "description": "Complete 10 practice sessions.",
+        "color": "Orange",
+        "criterion": "practice_sessions",
+        "value": 10,
+        "image": "book.closed.fill"
+    },
+    {
+        "name": "Study Machine",
+        "description": "Complete 50 practice sessions.",
+        "color": "Orange",
+        "criterion": "practice_sessions",
+        "value": 50,
+        "image": "graduationcap.fill"
+    },
+    {
+        "name": "Scholar",
+        "description": "Complete 100 practice sessions.",
+        "color": "Orange",
+        "criterion": "practice_sessions",
+        "value": 100,
+        "image": "brain.fill"
+    },
+    {
+        "name": "Supporter",
+        "description": "Unlock Keyoku Premium.",
+        "color": "Purple",
+        "criterion": "unlock",
+        "value": 0,
+        "image": "heart.circle.fill"
+    }
+]

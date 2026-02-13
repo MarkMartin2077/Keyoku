@@ -10,8 +10,8 @@ import SwiftUI
 struct CustomPaywallView: View {
     
     var products: [AnyProduct] = []
-    var title: String = "Try Premium Today!"
-    var subtitle: String = "Unlock unlimited access and exclusive features for premium members."
+    var title: String = String(localized: "Try Premium Today!")
+    var subtitle: String = String(localized: "Unlock unlimited access and exclusive features for premium members.")
     var onBackButtonPressed: () -> Void = { }
     var onRestorePurchasePressed: () -> Void = { }
     var onPurchaseProductPressed: (AnyProduct) -> Void = { _ in }

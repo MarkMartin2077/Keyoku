@@ -9,11 +9,11 @@ import SwiftUI
 
 struct CustomModalView: View {
     
-    var title: String = "Title"
-    var subtitle: String? = "This is a subtitle."
-    var primaryButtonTitle: String = "Yes"
+    var title: String = String(localized: "Title")
+    var subtitle: String? = String(localized: "This is a subtitle.")
+    var primaryButtonTitle: String = String(localized: "Yes")
     var primaryButtonAction: () -> Void = { }
-    var secondaryButtonTitle: String = "No"
+    var secondaryButtonTitle: String = String(localized: "No")
     var secondaryButtonAction: () -> Void = { }
     
     var body: some View {

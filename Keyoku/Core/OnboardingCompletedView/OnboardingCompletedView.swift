@@ -116,8 +116,8 @@ struct OnboardingCompletedView: View {
     private var page1: some View {
         OnboardingPageView(
             illustration: AnyView(page1Illustration),
-            title: "Create with Intelligence",
-            subtitle: "Generate flashcards instantly from any text using on-device AI. Just paste your notes or upload a PDF and let Keyoku do the rest."
+            title: String(localized: "Create with Intelligence"),
+            subtitle: String(localized: "Generate flashcards instantly from any text using on-device AI. Just paste your notes or upload a PDF and let Keyoku do the rest.")
         )
     }
 
@@ -202,8 +202,8 @@ struct OnboardingCompletedView: View {
     private var page2: some View {
         OnboardingPageView(
             illustration: AnyView(page2Illustration),
-            title: "Organize Your Knowledge",
-            subtitle: "Create colorful decks of flashcards. Keep your subjects tidy and find what you need at a glance."
+            title: String(localized: "Organize Your Knowledge"),
+            subtitle: String(localized: "Create colorful decks of flashcards. Keep your subjects tidy and find what you need at a glance.")
         )
     }
 
@@ -276,8 +276,8 @@ struct OnboardingCompletedView: View {
     private var page3: some View {
         OnboardingPageView(
             illustration: AnyView(page3Illustration),
-            title: "Study Your Way",
-            subtitle: "Flip through flashcards to practice or challenge yourself with quizzes. Multiple choice, true or false — you decide."
+            title: String(localized: "Study Your Way"),
+            subtitle: String(localized: "Flip through flashcards to practice or challenge yourself with quizzes. Multiple choice, true or false — you decide.")
         )
     }
 

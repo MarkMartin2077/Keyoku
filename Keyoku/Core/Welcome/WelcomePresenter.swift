@@ -45,8 +45,8 @@ class WelcomePresenter {
         interactor.trackEvent(event: Event.signInPressed)
         
         let delegate = CreateAccountDelegate(
-            title: "Sign in",
-            subtitle: "Connect to an existing account.",
+            title: String(localized: "Sign in"),
+            subtitle: String(localized: "Connect to an existing account."),
             onDidSignIn: { isNewUser in
                 self.handleDidSignIn(isNewUser: isNewUser)
             }

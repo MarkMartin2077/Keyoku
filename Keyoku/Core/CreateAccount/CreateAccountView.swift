@@ -9,8 +9,8 @@ import SwiftfulAuthUI
 import SwiftfulRouting
 
 struct CreateAccountDelegate {
-    var title: String = "Create Account?"
-    var subtitle: String = "Don't lose your data! Connect to an SSO provider to save your account."
+    var title: String = String(localized: "Create Account?")
+    var subtitle: String = String(localized: "Don't lose your data! Connect to an SSO provider to save your account.")
     var onDidSignIn: ((_ isNewUser: Bool) -> Void)?
     
     var eventParameters: [String: Any]? {

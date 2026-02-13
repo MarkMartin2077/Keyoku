@@ -7,6 +7,26 @@
 
 import SwiftUI
 
+/// Manages deck and flashcard CRUD operations using a local-first architecture with remote backup.
+///
+/// **Data Flow:**
+/// 1. All writes go to local storage first (synchronous, immediate)
+/// 2. The in-memory `decks` array is updated to reflect the change
+/// 3. A fire-and-forget `Task` pushes the change to the remote service
+///
+/// **Login Sync:**
+/// On `logIn`, remote decks are fetched and merged into local storage.
+/// If the remote fetch fails, the manager falls back to whatever is cached locally.
+///
+/// **Flashcard Ownership:**
+/// Flashcards are stored as children of their parent `DeckModel`. When a flashcard
+/// is added or removed, the entire `DeckModel` is reconstructed with the updated
+/// flashcard list and saved back to both local and remote storage.
+///
+/// **Dependencies:**
+/// - `DeckService` (local) — synchronous, file-based persistence for decks and flashcards
+/// - `RemoteDeckService` (remote) — async, typically Firestore-backed
+/// - `LogManager` — optional analytics tracking for every operation
 @MainActor
 @Observable
 class FlashcardManager {
@@ -16,6 +36,8 @@ class FlashcardManager {
     private let logManager: LogManager?
     private var userId: String?
 
+    /// The current user's decks (including their flashcards), loaded from local storage.
+    /// Updated in-place on create/update/delete to avoid full reloads.
     private(set) var decks: [DeckModel] = []
 
     init(services: FlashcardServices, logManager: LogManager? = nil) {
@@ -26,6 +48,13 @@ class FlashcardManager {
 
     // MARK: - Auth Lifecycle
 
+    /// Syncs remote decks to local storage and loads them into memory.
+    ///
+    /// Remote decks are saved locally one at a time using `try?` so that a
+    /// single corrupt deck doesn't prevent the rest from syncing. If the entire
+    /// remote fetch fails, the manager falls back to whatever is already cached locally.
+    ///
+    /// - Parameter userId: The authenticated user's ID, stored for remote operations.
     func logIn(userId: String) async throws {
         self.userId = userId
         logManager?.trackEvent(event: Event.logInStart(userId: userId))
@@ -43,17 +72,20 @@ class FlashcardManager {
         }
     }
 
+    /// Clears the userId and in-memory decks. Local storage is not deleted.
     func signOut() {
         logManager?.trackEvent(event: Event.signOut)
         userId = nil
         decks = []
     }
-    
+
     // MARK: - Deck Operations
-    
+
+    /// Reloads all decks from local storage into the in-memory `decks` array.
+    /// Errors are logged but do not throw — the array simply remains unchanged.
     func loadDecks() {
         logManager?.trackEvent(event: Event.loadDecksStart)
-        
+
         do {
             decks = try local.getAllDecks()
             logManager?.trackEvent(event: Event.loadDecksSuccess(count: decks.count))
@@ -61,11 +93,22 @@ class FlashcardManager {
             logManager?.trackEvent(event: Event.loadDecksFail(error: error))
         }
     }
-    
+
+    /// Returns a deck from the in-memory array by its ID, or `nil` if not found.
     func getDeck(id: String) -> DeckModel? {
         decks.first { $0.deckId == id }
     }
-    
+
+    /// Creates an empty deck (no flashcards) and persists it locally.
+    ///
+    /// The deck is inserted at index 0 so it appears first in the list,
+    /// then pushed to remote in the background.
+    ///
+    /// - Parameters:
+    ///   - name: Display name for the deck.
+    ///   - color: Theme color (defaults to `.blue`).
+    ///   - imageUrl: Optional cover image path (relative to Documents directory).
+    ///   - sourceText: The original text used to generate the deck.
     func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String) throws {
         logManager?.trackEvent(event: Event.createDeckStart(name: name))
 
@@ -81,7 +124,19 @@ class FlashcardManager {
             throw error
         }
     }
-    
+
+    /// Creates a deck with pre-generated flashcards.
+    ///
+    /// A new `deckId` is generated, and each flashcard's `deckId` field is
+    /// remapped to match it. This ensures consistent parent-child relationships
+    /// even when flashcards were generated before the deck existed (e.g., from AI generation).
+    ///
+    /// - Parameters:
+    ///   - name: Display name for the deck.
+    ///   - color: Theme color (defaults to `.blue`).
+    ///   - imageUrl: Optional cover image path (relative to Documents directory).
+    ///   - sourceText: The original text used to generate the deck.
+    ///   - flashcards: Pre-generated flashcards whose `deckId` will be overwritten.
     func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, flashcards: [FlashcardModel]) throws {
         logManager?.trackEvent(event: Event.createDeckStart(name: name))
 
@@ -114,7 +169,11 @@ class FlashcardManager {
             throw error
         }
     }
-    
+
+    /// Replaces an existing deck in local storage and updates the in-memory array.
+    ///
+    /// Finds the deck by `deckId` and swaps it in-place. If the deck isn't found
+    /// in the in-memory array, local storage is still updated but the array isn't modified.
     func updateDeck(_ deck: DeckModel) throws {
         logManager?.trackEvent(event: Event.updateDeckStart(deck: deck))
 
@@ -130,7 +189,9 @@ class FlashcardManager {
             throw error
         }
     }
-    
+
+    /// Deletes a deck from local storage and removes it from the in-memory array.
+    /// The remote deletion happens in the background via fire-and-forget.
     func deleteDeck(id: String) throws {
         logManager?.trackEvent(event: Event.deleteDeckStart(deckId: id))
 
@@ -144,9 +205,17 @@ class FlashcardManager {
             throw error
         }
     }
-    
+
     // MARK: - Image Operations
 
+    /// Saves JPEG image data to the app's Documents directory under `deck_images/`.
+    ///
+    /// Creates the `deck_images/` subdirectory if it doesn't exist. The file is
+    /// named with a UUID to avoid collisions.
+    ///
+    /// - Parameter data: Raw JPEG image data.
+    /// - Returns: The relative file path (e.g., `"deck_images/abc-123.jpg"`), suitable
+    ///   for storing in a `DeckModel.imageUrl` and resolving later against the Documents directory.
     func saveDeckImage(data: Data) throws -> String {
         let fileName = "deck_images/\(UUID().uuidString).jpg"
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -163,7 +232,17 @@ class FlashcardManager {
     }
 
     // MARK: - Flashcard Operations
-    
+
+    /// Adds a single flashcard to an existing deck.
+    ///
+    /// Because `DeckModel` is a value type, the entire deck is reconstructed
+    /// with the new flashcard appended to its `flashcards` array. The updated
+    /// deck is then saved locally and pushed to remote.
+    ///
+    /// - Parameters:
+    ///   - question: The flashcard's question text.
+    ///   - answer: The flashcard's answer text.
+    ///   - toDeckId: The parent deck's ID.
     func addFlashcard(question: String, answer: String, toDeckId: String) throws {
         logManager?.trackEvent(event: Event.addFlashcardStart(deckId: toDeckId))
 
@@ -172,7 +251,7 @@ class FlashcardManager {
         do {
             try local.addFlashcard(flashcard: flashcard, toDeckId: toDeckId)
 
-            // Update local state
+            // Reconstruct the DeckModel with the new flashcard appended
             if let deckIndex = decks.firstIndex(where: { $0.deckId == toDeckId }) {
                 let deck = decks[deckIndex]
                 let updatedDeck = DeckModel(
@@ -194,14 +273,23 @@ class FlashcardManager {
             throw error
         }
     }
-    
+
+    /// Removes a flashcard from its parent deck.
+    ///
+    /// The flashcard is deleted from local storage, then the parent `DeckModel`
+    /// is reconstructed with the flashcard filtered out. The updated deck
+    /// is saved locally and pushed to remote.
+    ///
+    /// - Parameters:
+    ///   - id: The flashcard's ID.
+    ///   - fromDeckId: The parent deck's ID (needed to locate and update the deck).
     func deleteFlashcard(id: String, fromDeckId: String) throws {
         logManager?.trackEvent(event: Event.deleteFlashcardStart(flashcardId: id))
 
         do {
             try local.deleteFlashcard(id: id)
 
-            // Update local state
+            // Reconstruct the DeckModel with the flashcard filtered out
             if let deckIndex = decks.firstIndex(where: { $0.deckId == fromDeckId }) {
                 let deck = decks[deckIndex]
                 let updatedDeck = DeckModel(
@@ -223,9 +311,12 @@ class FlashcardManager {
             throw error
         }
     }
-    
+
     // MARK: - Remote Sync Helpers
 
+    /// Pushes a deck to the remote service in the background.
+    /// Failures are logged but do not surface to the caller (fire-and-forget).
+    /// No-ops if the user is not signed in.
     private func pushDeckToRemote(_ deck: DeckModel) {
         guard let userId else { return }
         Task {
@@ -238,6 +329,9 @@ class FlashcardManager {
         }
     }
 
+    /// Deletes a deck from the remote service in the background.
+    /// Failures are logged but do not surface to the caller (fire-and-forget).
+    /// No-ops if the user is not signed in.
     private func deleteDeckFromRemote(deckId: String) {
         guard let userId else { return }
         Task {

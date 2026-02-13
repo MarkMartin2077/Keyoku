@@ -7,6 +7,21 @@
 
 import SwiftUI
 
+/// Manages quiz CRUD operations using a local-first architecture with remote backup.
+///
+/// **Data Flow:**
+/// 1. All writes go to local storage first (synchronous, immediate)
+/// 2. The in-memory `quizzes` array is updated to reflect the change
+/// 3. A fire-and-forget `Task` pushes the change to the remote service
+///
+/// **Login Sync:**
+/// On `logIn`, remote quizzes are fetched and merged into local storage.
+/// If the remote fetch fails, the manager falls back to whatever is cached locally.
+///
+/// **Dependencies:**
+/// - `QuizService` (local) — synchronous, file-based persistence
+/// - `RemoteQuizService` (remote) — async, typically Firestore-backed
+/// - `LogManager` — optional analytics tracking for every operation
 @MainActor
 @Observable
 class QuizManager {
@@ -16,6 +31,8 @@ class QuizManager {
     private let logManager: LogManager?
     private var userId: String?
 
+    /// The current user's quizzes, loaded from local storage.
+    /// Updated in-place on create/delete to avoid full reloads.
     private(set) var quizzes: [QuizModel] = []
 
     init(services: QuizServices, logManager: LogManager? = nil) {
@@ -26,6 +43,13 @@ class QuizManager {
 
     // MARK: - Auth Lifecycle
 
+    /// Syncs remote quizzes to local storage and loads them into memory.
+    ///
+    /// Remote quizzes are saved locally one at a time using `try?` so that a
+    /// single corrupt quiz doesn't prevent the rest from syncing. If the entire
+    /// remote fetch fails, the manager falls back to whatever is already cached locally.
+    ///
+    /// - Parameter userId: The authenticated user's ID, stored for remote operations.
     func logIn(userId: String) async throws {
         self.userId = userId
         logManager?.trackEvent(event: Event.logInStart(userId: userId))
@@ -43,6 +67,7 @@ class QuizManager {
         }
     }
 
+    /// Clears the userId and in-memory quizzes. Local storage is not deleted.
     func signOut() {
         logManager?.trackEvent(event: Event.signOut)
         userId = nil
@@ -51,6 +76,8 @@ class QuizManager {
 
     // MARK: - Quiz Operations
 
+    /// Reloads all quizzes from local storage into the in-memory `quizzes` array.
+    /// Errors are logged but do not throw — the array simply remains unchanged.
     func loadQuizzes() {
         logManager?.trackEvent(event: Event.loadQuizzesStart)
 
@@ -62,10 +89,20 @@ class QuizManager {
         }
     }
 
+    /// Returns a quiz from the in-memory array by its ID, or `nil` if not found.
     func getQuiz(id: String) -> QuizModel? {
         quizzes.first { $0.quizId == id }
     }
 
+    /// Creates an empty quiz (no questions) and persists it locally.
+    ///
+    /// The quiz is inserted at index 0 so it appears first in the list,
+    /// then pushed to remote in the background.
+    ///
+    /// - Parameters:
+    ///   - name: Display name for the quiz.
+    ///   - color: Theme color (defaults to `.blue`).
+    ///   - sourceText: The original text used to generate the quiz.
     func createQuiz(name: String, color: DeckColor = .blue, sourceText: String) throws {
         logManager?.trackEvent(event: Event.createQuizStart(name: name))
 
@@ -82,6 +119,17 @@ class QuizManager {
         }
     }
 
+    /// Creates a quiz with pre-generated questions.
+    ///
+    /// A new `quizId` is generated, and each question's `quizId` field is
+    /// remapped to match it. This ensures consistent parent-child relationships
+    /// even when questions were generated before the quiz existed (e.g., from AI generation).
+    ///
+    /// - Parameters:
+    ///   - name: Display name for the quiz.
+    ///   - color: Theme color (defaults to `.blue`).
+    ///   - sourceText: The original text used to generate the quiz.
+    ///   - questions: Pre-generated questions whose `quizId` will be overwritten.
     func createQuiz(name: String, color: DeckColor = .blue, sourceText: String, questions: [QuizQuestionModel]) throws {
         logManager?.trackEvent(event: Event.createQuizStart(name: name))
 
@@ -116,6 +164,8 @@ class QuizManager {
         }
     }
 
+    /// Deletes a quiz from local storage and removes it from the in-memory array.
+    /// The remote deletion happens in the background via fire-and-forget.
     func deleteQuiz(id: String) throws {
         logManager?.trackEvent(event: Event.deleteQuizStart(quizId: id))
 
@@ -132,6 +182,9 @@ class QuizManager {
 
     // MARK: - Remote Sync Helpers
 
+    /// Pushes a quiz to the remote service in the background.
+    /// Failures are logged but do not surface to the caller (fire-and-forget).
+    /// No-ops if the user is not signed in.
     private func pushQuizToRemote(_ quiz: QuizModel) {
         guard let userId else { return }
         Task {
@@ -144,6 +197,9 @@ class QuizManager {
         }
     }
 
+    /// Deletes a quiz from the remote service in the background.
+    /// Failures are logged but do not surface to the caller (fire-and-forget).
+    /// No-ops if the user is not signed in.
     private func deleteQuizFromRemote(quizId: String) {
         guard let userId else { return }
         Task {

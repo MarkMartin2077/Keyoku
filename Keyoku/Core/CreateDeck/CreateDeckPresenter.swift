@@ -15,25 +15,49 @@ import FoundationModels
 class CreateDeckPresenter {
 
     enum CreationMode: String, CaseIterable {
-        case generate = "Generate with AI"
-        case empty = "Start Empty"
+        case generate, empty
+
+        var displayName: String {
+            switch self {
+            case .generate: return String(localized: "Generate with AI")
+            case .empty: return String(localized: "Start Empty")
+            }
+        }
     }
 
     enum ContentType: String, CaseIterable {
-        case flashcards = "Flashcards"
-        case quiz = "Quiz"
-        case both = "Both"
+        case flashcards, quiz, both
+
+        var displayName: String {
+            switch self {
+            case .flashcards: return String(localized: "Flashcards")
+            case .quiz: return String(localized: "Quiz")
+            case .both: return String(localized: "Both")
+            }
+        }
     }
 
     enum QuizQuestionType: String, CaseIterable {
-        case multipleChoice = "Multiple Choice"
-        case trueFalse = "True & False"
-        case both = "Both"
+        case multipleChoice, trueFalse, both
+
+        var displayName: String {
+            switch self {
+            case .multipleChoice: return String(localized: "Multiple Choice")
+            case .trueFalse: return String(localized: "True & False")
+            case .both: return String(localized: "Both")
+            }
+        }
     }
 
     enum SourceInputMode: String, CaseIterable {
-        case text = "Paste Text"
-        case pdf = "Upload PDF"
+        case text, pdf
+
+        var displayName: String {
+            switch self {
+            case .text: return String(localized: "Paste Text")
+            case .pdf: return String(localized: "Upload PDF")
+            }
+        }
     }
 
     let interactor: CreateDeckInteractor
@@ -211,21 +235,21 @@ class CreateDeckPresenter {
                 switch error {
                 case .guardrailViolation:
                     router.showSimpleAlert(
-                        title: "Unable to Generate",
-                        subtitle: "The source material contains content that can't be processed. Try removing sensitive sections or rephrasing the content."
+                        title: String(localized: "Unable to Generate"),
+                        subtitle: String(localized: "The source material contains content that can't be processed. Try removing sensitive sections or rephrasing the content.")
                     )
                 case .refusal:
                     router.showSimpleAlert(
-                        title: "Unable to Generate",
-                        subtitle: "The AI model was unable to process this content. Try using different source material or simplifying your text."
+                        title: String(localized: "Unable to Generate"),
+                        subtitle: String(localized: "The AI model was unable to process this content. Try using different source material or simplifying your text.")
                     )
                 default:
-                    router.showSimpleAlert(title: "Generation Failed", subtitle: error.localizedDescription)
+                    router.showSimpleAlert(title: String(localized: "Generation Failed"), subtitle: error.localizedDescription)
                 }
             } catch {
                 interactor.trackEvent(event: Event.onGenerateFail(error: error))
                 isGenerating = false
-                router.showSimpleAlert(title: "Generation Failed", subtitle: error.localizedDescription)
+                router.showSimpleAlert(title: String(localized: "Generation Failed"), subtitle: error.localizedDescription)
             }
         }
     }

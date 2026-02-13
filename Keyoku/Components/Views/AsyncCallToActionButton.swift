@@ -10,7 +10,7 @@ import SwiftUI
 struct AsyncCallToActionButton: View {
     
     var isLoading: Bool = false
-    var title: String = "Save"
+    var title: String = String(localized: "Save")
     var action: () -> Void
     
     var body: some View {

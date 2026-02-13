@@ -44,19 +44,19 @@ extension CoreBuilder {
     func tabbarView() -> some View {
         TabBarView(
             tabs: [
-                TabBarScreen(title: "Home", systemImage: "house.fill", screen: {
+                TabBarScreen(title: String(localized: "Home"), systemImage: "house.fill", screen: {
                     RouterView { router in
                         homeView(router: router, delegate: HomeDelegate())
                     }
                     .any()
                 }),
-                TabBarScreen(title: "Decks", systemImage: "menucard.fill", screen: {
+                TabBarScreen(title: String(localized: "Decks"), systemImage: "menucard.fill", screen: {
                     RouterView { router in
                         decksView(router: router, delegate: DecksDelegate())
                     }
                     .any()
                 }),
-                TabBarScreen(title: "Quizzes", systemImage: "questionmark.circle.fill", screen: {
+                TabBarScreen(title: String(localized: "Quizzes"), systemImage: "questionmark.circle.fill", screen: {
                     RouterView { router in
                         quizzesView(router: router, delegate: QuizzesDelegate())
                     }

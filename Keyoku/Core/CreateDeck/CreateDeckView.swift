@@ -112,7 +112,7 @@ struct CreateDeckView: View {
                 set: { presenter.onCreationModeChanged($0) }
             )) {
                 ForEach(CreateDeckPresenter.CreationMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
+                    Text(mode.displayName).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
@@ -128,7 +128,7 @@ struct CreateDeckView: View {
                 set: { presenter.onContentTypeChanged($0) }
             )) {
                 ForEach(CreateDeckPresenter.ContentType.allCases, id: \.self) { type in
-                    Text(type.rawValue).tag(type)
+                    Text(type.displayName).tag(type)
                 }
             }
             .pickerStyle(.segmented)
@@ -146,7 +146,7 @@ struct CreateDeckView: View {
                 set: { presenter.onQuizQuestionTypeChanged($0) }
             )) {
                 ForEach(CreateDeckPresenter.QuizQuestionType.allCases, id: \.self) { type in
-                    Text(type.rawValue).tag(type)
+                    Text(type.displayName).tag(type)
                 }
             }
         } header: {
@@ -247,7 +247,7 @@ struct CreateDeckView: View {
                 set: { presenter.onSourceInputModeChanged($0) }
             )) {
                 ForEach(CreateDeckPresenter.SourceInputMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
+                    Text(mode.displayName).tag(mode)
                 }
             }
             .pickerStyle(.segmented)

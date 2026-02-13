@@ -39,13 +39,13 @@ class PushManager {
     }
 
     private let messages: [ScheduledMessage] = [
-        .init(title: "Hey you! Wanna study?", subtitle: "Open Keyoku to get started.", day: 1, action: "study"),
-        .init(title: "Time to practice!", subtitle: "Open Keyoku and try your best.", day: 2, action: "study"),
-        .init(title: "Hey stranger. We miss you!", subtitle: "Don't forget about us.", day: 3, action: "quiz"),
-        .init(title: "Knowledge awaits!", subtitle: "Your flashcards are waiting for you.", day: 4, action: "study"),
-        .init(title: "Quick quiz time?", subtitle: "Test what you've learned today.", day: 5, action: "quiz"),
-        .init(title: "Keep the streak going!", subtitle: "A few minutes of study goes a long way.", day: 6, action: "create"),
-        .init(title: "Your brain will thank you!", subtitle: "Open Keyoku and learn something new.", day: 7, action: "create")
+        .init(title: String(localized: "Hey you! Wanna study?"), subtitle: String(localized: "Open Keyoku to get started."), day: 1, action: "study"),
+        .init(title: String(localized: "Time to practice!"), subtitle: String(localized: "Open Keyoku and try your best."), day: 2, action: "study"),
+        .init(title: String(localized: "Hey stranger. We miss you!"), subtitle: String(localized: "Don't forget about us."), day: 3, action: "quiz"),
+        .init(title: String(localized: "Knowledge awaits!"), subtitle: String(localized: "Your flashcards are waiting for you."), day: 4, action: "study"),
+        .init(title: String(localized: "Quick quiz time?"), subtitle: String(localized: "Test what you've learned today."), day: 5, action: "quiz"),
+        .init(title: String(localized: "Keep the streak going!"), subtitle: String(localized: "A few minutes of study goes a long way."), day: 6, action: "create"),
+        .init(title: String(localized: "Your brain will thank you!"), subtitle: String(localized: "Open Keyoku and learn something new."), day: 7, action: "create")
     ]
 
     func schedulePushNotificationsForTheNextWeek() {
