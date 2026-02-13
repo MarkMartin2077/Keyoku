@@ -21,6 +21,9 @@ extension Notification.Name {
     
     /// Notification for when app is opened from a Push Notification
     static let pushNotification = Notification.Name("PushNotification")
+
+    /// Notification for when app is opened from a Quick Action
+    static let quickAction = Notification.Name("QuickAction")
 }
 
 // The below code, postFCMToken + getFCMToken are examples of this.

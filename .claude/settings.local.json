@@ -15,7 +15,8 @@
       "WebFetch(domain:nilcoalescing.com)",
       "WebFetch(domain:github.com)",
       "Bash(xcodebuild test:*)",
-      "Bash(xcodebuild:*)"
+      "Bash(xcodebuild:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

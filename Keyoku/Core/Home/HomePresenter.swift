@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreSpotlight
 
 @Observable
 @MainActor
@@ -58,6 +59,21 @@ class HomePresenter {
         }
 
         schedulePushNotifications()
+        checkPendingQuickAction()
+    }
+
+    private func checkPendingQuickAction() {
+        guard let actionType = AppDelegate.pendingQuickAction else { return }
+        AppDelegate.pendingQuickAction = nil
+
+        interactor.trackEvent(event: Event.quickActionOpen(actionType: actionType))
+
+        switch actionType {
+        case "com.keyoku.create":
+            router.showCreateContentView(defaultContentType: nil)
+        default:
+            break
+        }
     }
 
     func onViewDisappear(delegate: HomeDelegate) {
@@ -215,6 +231,41 @@ class HomePresenter {
     func onSettingsPressed() {
         router.showSettingsView()
     }
+
+    // MARK: - Spotlight
+
+    func handleSpotlightActivity(_ userActivity: NSUserActivity) {
+        guard let identifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String else {
+            interactor.trackEvent(event: Event.spotlightOpenFail)
+            return
+        }
+
+        guard let parsed = interactor.parseSpotlightIdentifier(identifier) else {
+            interactor.trackEvent(event: Event.spotlightOpenFail)
+            return
+        }
+
+        interactor.trackEvent(event: Event.spotlightOpen(type: parsed.type, id: parsed.id))
+        routeDeepLink(host: parsed.type, params: ["id": parsed.id])
+    }
+
+    // MARK: - Quick Actions
+
+    func handleQuickAction(notification: Notification) {
+        guard let actionType = notification.userInfo?["action_type"] as? String else {
+            interactor.trackEvent(event: Event.quickActionFail)
+            return
+        }
+
+        interactor.trackEvent(event: Event.quickActionOpen(actionType: actionType))
+
+        switch actionType {
+        case "com.keyoku.create":
+            router.showCreateContentView(defaultContentType: nil)
+        default:
+            break
+        }
+    }
 }
 
 extension HomePresenter {
@@ -238,6 +289,10 @@ extension HomePresenter {
         case pushNotifsStart
         case pushNotifsEnable(isAuthorized: Bool)
         case pushNotifsCancel
+        case spotlightOpen(type: String, id: String)
+        case spotlightOpenFail
+        case quickActionOpen(actionType: String)
+        case quickActionFail
 
         var eventName: String {
             switch self {
@@ -259,6 +314,10 @@ extension HomePresenter {
             case .pushNotifsStart:          return "HomeView_PushNotifs_Start"
             case .pushNotifsEnable:         return "HomeView_PushNotifs_Enable"
             case .pushNotifsCancel:         return "HomeView_PushNotifs_Cancel"
+            case .spotlightOpen:            return "HomeView_Spotlight_Open"
+            case .spotlightOpenFail:        return "HomeView_Spotlight_Open_Fail"
+            case .quickActionOpen:          return "HomeView_QuickAction_Open"
+            case .quickActionFail:          return "HomeView_QuickAction_Fail"
             }
         }
 
@@ -274,6 +333,10 @@ extension HomePresenter {
                 return ["is_authorized": isAuthorized]
             case .pushNotifAction(notificationId: let notificationId):
                 return ["notification_id": notificationId]
+            case .spotlightOpen(type: let type, id: let id):
+                return ["spotlight_type": type, "spotlight_id": id]
+            case .quickActionOpen(actionType: let actionType):
+                return ["action_type": actionType]
             default:
                 return nil
             }

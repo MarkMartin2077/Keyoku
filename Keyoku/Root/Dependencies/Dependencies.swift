@@ -24,6 +24,7 @@ struct Dependencies {
         let soundEffectManager: SoundEffectManager
         let flashcardManager: FlashcardManager
         let quizManager: QuizManager
+        let spotlightManager: SpotlightManager
 
         switch config {
         case .mock(isSignedIn: let isSignedIn):
@@ -85,6 +86,7 @@ struct Dependencies {
         }
         pushManager = PushManager(logManager: logManager)
         soundEffectManager = SoundEffectManager(logger: logManager)
+        spotlightManager = SpotlightManager(logManager: logManager)
         
         let container = DependencyContainer()
         container.register(AuthManager.self, service: authManager)
@@ -98,6 +100,7 @@ struct Dependencies {
         container.register(SoundEffectManager.self, service: soundEffectManager)
         container.register(FlashcardManager.self, service: flashcardManager)
         container.register(QuizManager.self, service: quizManager)
+        container.register(SpotlightManager.self, service: spotlightManager)
 
         self.container = container
         
@@ -122,6 +125,7 @@ class DevPreview {
         container.register(HapticManager.self, service: hapticManager)
         container.register(FlashcardManager.self, service: flashcardManager)
         container.register(QuizManager.self, service: quizManager)
+        container.register(SpotlightManager.self, service: spotlightManager)
         return container
     }
     
@@ -136,6 +140,7 @@ class DevPreview {
     let soundEffectManager: SoundEffectManager
     let flashcardManager: FlashcardManager
     let quizManager: QuizManager
+    let spotlightManager: SpotlightManager
 
     init(isSignedIn: Bool = true) {
         self.authManager = AuthManager(service: MockAuthService(user: isSignedIn ? .mock() : nil))
@@ -149,6 +154,7 @@ class DevPreview {
         self.soundEffectManager = SoundEffectManager()
         self.flashcardManager = FlashcardManager(services: MockFlashcardServices())
         self.quizManager = QuizManager(services: MockQuizServices())
+        self.spotlightManager = SpotlightManager()
     }
 
 }

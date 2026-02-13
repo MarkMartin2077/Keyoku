@@ -13,6 +13,7 @@ struct CoreInteractor: GlobalInteractor {
     private let soundEffectManager: SoundEffectManager
     private let flashcardManager: FlashcardManager
     private let quizManager: QuizManager
+    private let spotlightManager: SpotlightManager
 
     init(container: DependencyContainer) {
         self.appState = container.resolve(AppState.self)!
@@ -26,6 +27,7 @@ struct CoreInteractor: GlobalInteractor {
         self.soundEffectManager = container.resolve(SoundEffectManager.self)!
         self.flashcardManager = container.resolve(FlashcardManager.self)!
         self.quizManager = container.resolve(QuizManager.self)!
+        self.spotlightManager = container.resolve(SpotlightManager.self)!
     }
     
     // MARK: APP STATE
@@ -235,18 +237,26 @@ struct CoreInteractor: GlobalInteractor {
 
     func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String) throws {
         try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText)
+        if let deck = flashcardManager.decks.first(where: { $0.name == name }) {
+            spotlightManager.indexDeck(deck)
+        }
     }
 
     func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, flashcards: [FlashcardModel]) throws {
         try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, flashcards: flashcards)
+        if let deck = flashcardManager.decks.first(where: { $0.name == name }) {
+            spotlightManager.indexDeck(deck)
+        }
     }
 
     func updateDeck(_ deck: DeckModel) throws {
         try flashcardManager.updateDeck(deck)
+        spotlightManager.indexDeck(deck)
     }
 
     func deleteDeck(id: String) throws {
         try flashcardManager.deleteDeck(id: id)
+        spotlightManager.removeDeck(id: id)
     }
 
     func addFlashcard(question: String, answer: String, toDeckId: String) throws {
@@ -277,14 +287,27 @@ struct CoreInteractor: GlobalInteractor {
 
     func createQuiz(name: String, color: DeckColor = .blue, sourceText: String) throws {
         try quizManager.createQuiz(name: name, color: color, sourceText: sourceText)
+        if let quiz = quizManager.quizzes.first(where: { $0.name == name }) {
+            spotlightManager.indexQuiz(quiz)
+        }
     }
 
     func createQuiz(name: String, color: DeckColor = .blue, sourceText: String, questions: [QuizQuestionModel]) throws {
         try quizManager.createQuiz(name: name, color: color, sourceText: sourceText, questions: questions)
+        if let quiz = quizManager.quizzes.first(where: { $0.name == name }) {
+            spotlightManager.indexQuiz(quiz)
+        }
     }
 
     func deleteQuiz(id: String) throws {
         try quizManager.deleteQuiz(id: id)
+        spotlightManager.removeQuiz(id: id)
+    }
+
+    // MARK: SpotlightManager
+
+    func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)? {
+        spotlightManager.parseSpotlightIdentifier(identifier)
     }
 
     // MARK: SHARED
@@ -307,6 +330,9 @@ struct CoreInteractor: GlobalInteractor {
 
         // Add user properties
         logManager.addUserProperties(dict: Utilities.eventParameters, isHighPriority: false)
+
+        // Index all content for Spotlight search
+        spotlightManager.indexAllContent(decks: flashcardManager.decks, quizzes: quizManager.quizzes)
     }
 
     func signOut() async throws {
@@ -315,6 +341,7 @@ struct CoreInteractor: GlobalInteractor {
         userManager.signOut()
         flashcardManager.signOut()
         quizManager.signOut()
+        spotlightManager.removeAllItems()
     }
     
     func deleteAccount() async throws {

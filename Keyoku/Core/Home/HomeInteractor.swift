@@ -17,6 +17,8 @@ protocol HomeInteractor: GlobalInteractor {
     
     func canRequestPushAuthorization() async -> Bool
 
+    // Spotlight
+    func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)?
 }
 
 extension CoreInteractor: HomeInteractor { }

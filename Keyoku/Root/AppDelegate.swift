@@ -11,6 +11,7 @@ import FirebaseMessaging
 class AppDelegate: NSObject, UIApplicationDelegate {
     var dependencies: Dependencies!
     var builder: Builder!
+    static var pendingQuickAction: String?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         
@@ -40,6 +41,21 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        if let shortcutItem = options.shortcutItem {
+            // Cold launch: store for HomePresenter to pick up on appear
+            AppDelegate.pendingQuickAction = shortcutItem.type
+        }
+        let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
+
+    func handleQuickAction(_ shortcutItem: UIApplicationShortcutItem) {
+        let userInfo: [String: String] = ["action_type": shortcutItem.type]
+        NotificationCenter.default.post(name: .quickAction, object: nil, userInfo: userInfo)
+    }
+
     private func registerForRemotePushNotifications(application: UIApplication) {
         UNUserNotificationCenter.current().delegate = self
         #if !MOCK
@@ -80,6 +96,15 @@ extension AppDelegate: MessagingDelegate {
     
     nonisolated func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         NotificationCenter.default.postFCMToken(token: fcmToken ?? "")
+    }
+}
+
+class SceneDelegate: NSObject, UIWindowSceneDelegate {
+
+    func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+        let appDelegate = UIApplication.shared.delegate as? AppDelegate
+        appDelegate?.handleQuickAction(shortcutItem)
+        completionHandler(true)
     }
 }
 

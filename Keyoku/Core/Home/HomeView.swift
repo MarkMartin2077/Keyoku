@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftfulUI
+import CoreSpotlight
 
 struct HomeDelegate {
     var eventParameters: [String: Any]? {
@@ -78,6 +79,12 @@ struct HomeView: View {
         }
         .onNotificationRecieved(name: .pushNotification) { notification in
             presenter.handlePushNotificationRecieved(notification: notification)
+        }
+        .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
+            presenter.handleSpotlightActivity(userActivity)
+        }
+        .onNotificationRecieved(name: .quickAction) { notification in
+            presenter.handleQuickAction(notification: notification)
         }
     }
 
