@@ -54,6 +54,10 @@ struct CreateDeckView: View {
         .overlay {
             if presenter.isGenerating {
                 CreateDeckGeneratingOverlay(presenter: presenter)
+            } else if presenter.isGenerationComplete {
+                CreateDeckSuccessOverlay(presenter: presenter) {
+                    presenter.onSuccessDismissPressed()
+                }
             }
         }
         .navigationTitle("Create")
@@ -81,7 +85,7 @@ struct CreateDeckView: View {
                 presenter.onPDFFileSelected(result: .failure(error))
             }
         }
-        .interactiveDismissDisabled(presenter.isGenerating)
+        .interactiveDismissDisabled(presenter.isGenerating || presenter.isGenerationComplete)
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }

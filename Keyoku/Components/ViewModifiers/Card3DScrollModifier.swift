@@ -14,7 +14,7 @@ struct Card3DScrollModifier: ViewModifier {
                     .rotation3DEffect(
                         .degrees(phase.value * 45),
                         axis: (x: 0, y: 1, z: 0),
-                        perspective: 0.5
+                        perspective: 0.8
                     )
                     .scaleEffect(1 - abs(phase.value) * 0.2)
             }

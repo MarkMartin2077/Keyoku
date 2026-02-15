@@ -9,8 +9,10 @@ import SwiftUI
 
 struct GenerationProgressData {
     let title: String
-    let progress: Int
-    let total: Int
+    let batchProgress: Int
+    let batchTotal: Int
+    let itemsGenerated: Int
+    let itemsTarget: Int
     let statusText: String?
     let skipped: Int
     let tint: Color
@@ -50,8 +52,10 @@ struct CreateDeckGeneratingOverlay: View {
                             progressSection(
                                 data: GenerationProgressData(
                                     title: "Flashcards",
-                                    progress: presenter.flashcardProgress,
-                                    total: presenter.flashcardTotal,
+                                    batchProgress: presenter.flashcardProgress,
+                                    batchTotal: presenter.flashcardTotal,
+                                    itemsGenerated: presenter.flashcardItemsGenerated,
+                                    itemsTarget: presenter.cardCount,
                                     statusText: presenter.flashcardStatusText,
                                     skipped: presenter.flashcardSkippedBatches,
                                     tint: .accent
@@ -63,8 +67,10 @@ struct CreateDeckGeneratingOverlay: View {
                             progressSection(
                                 data: GenerationProgressData(
                                     title: "Quiz",
-                                    progress: presenter.quizProgress,
-                                    total: presenter.quizTotal,
+                                    batchProgress: presenter.quizProgress,
+                                    batchTotal: presenter.quizTotal,
+                                    itemsGenerated: presenter.quizItemsGenerated,
+                                    itemsTarget: presenter.questionCount,
                                     statusText: presenter.quizStatusText,
                                     skipped: presenter.quizSkippedBatches,
                                     tint: .green
@@ -103,13 +109,15 @@ struct CreateDeckGeneratingOverlay: View {
                     .font(.caption)
                     .fontWeight(.medium)
                 Spacer()
-                Text("\(data.progress) of \(data.total)")
+                Text("\(data.itemsGenerated) of \(data.itemsTarget)")
                     .font(.caption)
                     .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.smooth, value: data.itemsGenerated)
             }
             .foregroundStyle(.secondary)
 
-            ProgressView(value: Double(data.progress), total: Double(data.total))
+            ProgressView(value: Double(data.batchProgress), total: Double(data.batchTotal))
                 .tint(data.tint)
 
             if let statusText = data.statusText {
@@ -117,15 +125,18 @@ struct CreateDeckGeneratingOverlay: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentTransition(.numericText())
-                    .animation(.smooth, value: data.progress)
             }
 
             if data.skipped > 0 {
-                Text("\(data.skipped) section(s) skipped — restricted")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text("\(data.skipped) section(s) skipped — restricted")
+                }
+                .font(.caption2)
+                .foregroundStyle(.orange)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentTransition(.numericText())
+                .animation(.smooth, value: data.skipped)
             }
         }
     }

@@ -73,6 +73,7 @@ class CreateDeckPresenter {
     var selectedImage: UIImage?
     var sourceText: String = ""
     var isGenerating: Bool = false
+    var isGenerationComplete: Bool = false
     var generationStartTime: Date?
     var estimatedSecondsRemaining: Int?
 
@@ -81,12 +82,20 @@ class CreateDeckPresenter {
     var flashcardTotal: Int = 0
     var flashcardStatusText: String?
     var flashcardSkippedBatches: Int = 0
+    var flashcardItemsGenerated: Int = 0
 
     // Quiz progress
     var quizProgress: Int = 0
     var quizTotal: Int = 0
     var quizStatusText: String?
     var quizSkippedBatches: Int = 0
+    var quizItemsGenerated: Int = 0
+
+    // Generation results
+    var generatedFlashcardCount: Int = 0
+    var generatedMCCount: Int = 0
+    var generatedTFCount: Int = 0
+    var generationNote: String?
 
     var skippedBatches: Int {
         flashcardSkippedBatches + quizSkippedBatches
@@ -242,7 +251,6 @@ class CreateDeckPresenter {
         Task {
             do {
                 try await performGeneration()
-                isGenerating = false
                 handleGenerationSuccess()
             } catch {
                 interactor.trackEvent(event: Event.onGenerateFail(error: error))
@@ -252,42 +260,49 @@ class CreateDeckPresenter {
         }
     }
 
+    func onSuccessDismissPressed() {
+        interactor.trackEvent(event: Event.onSuccessDismissPressed)
+        isGenerationComplete = false
+        router.dismiss()
+    }
+
     private func resetGenerationState() {
         isGenerating = true
+        isGenerationComplete = false
         generationStartTime = Date()
         estimatedSecondsRemaining = nil
         flashcardProgress = 0
         flashcardTotal = 0
         flashcardStatusText = nil
         flashcardSkippedBatches = 0
+        flashcardItemsGenerated = 0
         quizProgress = 0
         quizTotal = 0
         quizStatusText = nil
         quizSkippedBatches = 0
+        quizItemsGenerated = 0
+        generatedFlashcardCount = 0
+        generatedMCCount = 0
+        generatedTFCount = 0
+        generationNote = nil
     }
 
     private func handleGenerationSuccess() {
+        isGenerating = false
+        isGenerationComplete = true
         interactor.playHaptic(option: .achievementUnlocked())
-
-        router.dismiss()
-
-        if skippedBatches > 0 {
-            router.showSimpleAlert(
-                title: String(localized: "Partially Generated"),
-                subtitle: String(localized: "\(skippedBatches) section(s) were skipped due to content restrictions, but the rest was generated successfully.")
-            )
-        }
     }
 
     private func performGeneration() async throws {
         let trimmedName = deckName.trimmingCharacters(in: .whitespacesAndNewlines)
         let savedImageUrl = try saveImageIfNeeded()
 
-        async let flashcardResult = generateFlashcardsIfNeeded(name: trimmedName, imageUrl: savedImageUrl)
-        async let quizResult = generateQuizIfNeeded(name: trimmedName)
+        // Run sequentially — the on-device model can only handle
+        // one session at a time, so parallel requests cause failures.
+        let flashcardResult = await generateFlashcardsIfNeeded(name: trimmedName, imageUrl: savedImageUrl)
+        let quizResult = await generateQuizIfNeeded(name: trimmedName)
 
-        let (cards, quiz) = await (flashcardResult, quizResult)
-        try evaluateGenerationOutcome(flashcardResult: cards, quizResult: quiz)
+        try evaluateGenerationOutcome(flashcardResult: flashcardResult, quizResult: quizResult)
     }
 
     private func generateFlashcardsIfNeeded(name: String, imageUrl: String?) async -> Result<Void, Error>? {
@@ -295,6 +310,7 @@ class CreateDeckPresenter {
 
         do {
             let flashcards = try await generateFlashcards()
+            generatedFlashcardCount = flashcards.count
             interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
 
             try interactor.createDeck(
@@ -316,6 +332,8 @@ class CreateDeckPresenter {
 
         do {
             let questions = try await generateQuizQuestions()
+            generatedMCCount = questions.filter { $0.questionType == .multipleChoice }.count
+            generatedTFCount = questions.filter { $0.questionType == .trueFalse }.count
             interactor.trackEvent(event: Event.onQuizGenerateSuccess(questionCount: questions.count))
 
             try interactor.createQuiz(
@@ -341,21 +359,13 @@ class CreateDeckPresenter {
         // Both succeeded (or only one type was requested and it succeeded)
         if flashcardsOk && quizOk { return }
 
-        // "Both" mode — one succeeded, one failed: dismiss and inform
+        // "Both" mode — one succeeded, one failed: show success screen with note
         if flashcardResult != nil && quizResult != nil {
             if flashcardsOk {
-                router.dismiss()
-                router.showSimpleAlert(
-                    title: String(localized: "Partially Generated"),
-                    subtitle: String(localized: "Flashcards were created successfully, but quiz generation failed. You can try generating the quiz separately.")
-                )
+                generationNote = String(localized: "Quiz generation failed. You can try generating the quiz separately.")
                 return
             } else if quizOk {
-                router.dismiss()
-                router.showSimpleAlert(
-                    title: String(localized: "Partially Generated"),
-                    subtitle: String(localized: "Quiz was created successfully, but flashcard generation failed. You can try generating flashcards separately.")
-                )
+                generationNote = String(localized: "Flashcard generation failed. You can try generating flashcards separately.")
                 return
             }
         }

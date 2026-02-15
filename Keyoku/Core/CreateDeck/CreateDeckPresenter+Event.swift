@@ -32,6 +32,7 @@ extension CreateDeckPresenter {
         case onQuestionCountChanged(count: Int)
         case onQuizQuestionTypeChanged(questionType: String)
         case onQuizGenerateSuccess(questionCount: Int)
+        case onSuccessDismissPressed
         case onCreateEmptyPressed
         case onCreateEmptySuccess
         case onCreateEmptyFail(error: Error)
@@ -60,6 +61,7 @@ extension CreateDeckPresenter {
             case .onQuestionCountChanged:   return "CreateDeckView_QuestionCount_Changed"
             case .onQuizQuestionTypeChanged: return "CreateDeckView_QuizQuestionType_Changed"
             case .onQuizGenerateSuccess:    return "CreateDeckView_QuizGenerate_Success"
+            case .onSuccessDismissPressed:   return "CreateDeckView_SuccessDismiss_Pressed"
             case .onCreateEmptyPressed:     return "CreateDeckView_CreateEmpty_Pressed"
             case .onCreateEmptySuccess:     return "CreateDeckView_CreateEmpty_Success"
             case .onCreateEmptyFail:        return "CreateDeckView_CreateEmpty_Fail"

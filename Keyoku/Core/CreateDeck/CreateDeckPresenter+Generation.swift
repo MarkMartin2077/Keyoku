@@ -56,6 +56,16 @@ extension CreateDeckPresenter {
         return chunks
     }
 
+    /// Splits source text into chunks, ensuring at least `minBatches` chunks
+    /// exist so every requested item has a batch slot.
+    func makeChunks(maxTextPerBatch: Int, itemCount: Int, maxItemsPerBatch: Int) -> [String] {
+        let minBatches = Int(ceil(Double(itemCount) / Double(maxItemsPerBatch)))
+        let textChunks = splitTextByMaxSize(sourceText, maxChars: maxTextPerBatch)
+        return textChunks.count < minBatches
+            ? splitText(sourceText, into: minBatches)
+            : textChunks
+    }
+
     /// Splits text into chunks where no chunk exceeds maxChars.
     /// This guarantees every chunk stays within the context budget.
     func splitTextByMaxSize(_ text: String, maxChars: Int) -> [String] {
@@ -149,38 +159,6 @@ extension CreateDeckPresenter {
 
 extension CreateDeckPresenter {
 
-    func makeBatches() -> [(text: String, cards: Int)] {
-        // ~12,000 char context limit (input + output)
-        // ~1,200 chars for instructions/prompt/schema, ~1,000 chars for 5 card outputs
-        // Leaves ~5,000 chars safely for source text per session
-        let maxTextPerBatch = 5000
-        let maxCardsPerBatch = 5
-
-        let textChunks = splitTextByMaxSize(sourceText, maxChars: maxTextPerBatch)
-        var batches = [(text: String, cards: Int)]()
-        var cardsRemaining = cardCount
-
-        for (index, chunk) in textChunks.enumerated() {
-            let batchesLeft = textChunks.count - index
-            let cardsInBatch = min(cardsRemaining / batchesLeft, maxCardsPerBatch)
-            batches.append((text: chunk, cards: cardsInBatch))
-            cardsRemaining -= cardsInBatch
-        }
-
-        // Distribute any leftover cards from rounding
-        if cardsRemaining > 0 {
-            for index in batches.indices {
-                guard cardsRemaining > 0 else { break }
-                if batches[index].cards < maxCardsPerBatch {
-                    batches[index].cards += 1
-                    cardsRemaining -= 1
-                }
-            }
-        }
-
-        return batches
-    }
-
     func flashcardSchema(count: Int) throws -> GenerationSchema {
         let cardSchema = DynamicGenerationSchema(
             name: "Card",
@@ -208,107 +186,86 @@ extension CreateDeckPresenter {
     }
 
     func generateFlashcards() async throws -> [FlashcardModel] {
-        let batches = makeBatches()
-        flashcardTotal = batches.count
+        let maxCardsPerBatch = 5
+        let chunks = makeChunks(maxTextPerBatch: 5000, itemCount: cardCount, maxItemsPerBatch: maxCardsPerBatch)
+
+        flashcardTotal = chunks.count
         flashcardProgress = 0
         flashcardSkippedBatches = 0
-
         var allFlashcards: [FlashcardModel] = []
 
-        for batch in batches {
+        for chunk in chunks {
             flashcardProgress += 1
 
-            // Validate chunk before generating
-            flashcardStatusText = "Checking section \(flashcardProgress) of \(flashcardTotal)..."
-            let isValid = await validateChunk(batch.text)
+            let cardsStillNeeded = cardCount - allFlashcards.count
+            guard cardsStillNeeded > 0 else { break }
+            let batchCards = min(cardsStillNeeded, maxCardsPerBatch)
 
-            if !isValid {
+            flashcardStatusText = "Validating..."
+            guard await validateChunk(chunk) else {
                 flashcardSkippedBatches += 1
-                flashcardStatusText = "Section \(flashcardProgress) skipped"
+                flashcardStatusText = "Skipped"
                 continue
             }
 
-            flashcardStatusText = "Generating \(flashcardProgress) of \(flashcardTotal)..."
-            interactor.trackEvent(event: Event.onBatchStart(batchNumber: flashcardProgress, totalBatches: flashcardTotal, cardCount: batch.cards))
+            flashcardStatusText = "Generating..."
+            interactor.trackEvent(event: Event.onBatchStart(batchNumber: flashcardProgress, totalBatches: flashcardTotal, cardCount: batchCards))
 
-            let session = makeSession()
-            let prompt = """
-            You are creating educational study flashcards for a student. \
-            Generate exactly \(batch.cards) flashcards from the following academic study material. \
-            Create cards that help students learn effectively using these techniques:
-            - Key definitions and terminology
-            - Cause and effect relationships
-            - Compare and contrast important concepts
-            - Important dates, timelines, or sequences
-            - Formulas, rules, or principles
-            - Key facts and their significance
-
-            Each card should have a clear, specific question and a concise but \
-            complete answer. Make sure there is no weird mid sentence cut off and \
-            the answers also do not have a weird cutoff.
-
-            Also make sure answers are as accurate as possible, double-check if \
-            necessary.
-
-            Academic study material:
-            \(batch.text)
-            """
-
-            let schema = try flashcardSchema(count: batch.cards)
-            let response = try await session.respond(to: prompt, schema: schema)
-            let cards = try response.content.value([GeneratedContent].self, forProperty: "cards")
-
-            let flashcards = try cards.map { card in
-                let question = try card.value(String.self, forProperty: "question")
-                let answer = try card.value(String.self, forProperty: "answer")
-                return FlashcardModel(question: question, answer: answer)
+            do {
+                let flashcards = try await generateFlashcardBatch(text: chunk, count: batchCards)
+                allFlashcards.append(contentsOf: flashcards)
+                flashcardItemsGenerated = allFlashcards.count
+            } catch {
+                flashcardSkippedBatches += 1
+                flashcardStatusText = "Skipped"
+                continue
             }
 
-            allFlashcards.append(contentsOf: flashcards)
             updateTimeEstimate()
         }
 
         return allFlashcards
+    }
+
+    private func generateFlashcardBatch(text: String, count: Int) async throws -> [FlashcardModel] {
+        let session = makeSession()
+        let prompt = """
+        You are creating educational study flashcards for a student. \
+        Generate exactly \(count) flashcards from the following academic study material. \
+        Create cards that help students learn effectively using these techniques:
+        - Key definitions and terminology
+        - Cause and effect relationships
+        - Compare and contrast important concepts
+        - Important dates, timelines, or sequences
+        - Formulas, rules, or principles
+        - Key facts and their significance
+
+        Each card should have a clear, specific question and a concise but \
+        complete answer. Make sure there is no weird mid sentence cut off and \
+        the answers also do not have a weird cutoff.
+
+        Also make sure answers are as accurate as possible, double-check if \
+        necessary.
+
+        Academic study material:
+        \(text)
+        """
+
+        let schema = try flashcardSchema(count: count)
+        let response = try await session.respond(to: prompt, schema: schema)
+        let cards = try response.content.value([GeneratedContent].self, forProperty: "cards")
+
+        return try cards.map { card in
+            let question = try card.value(String.self, forProperty: "question")
+            let answer = try card.value(String.self, forProperty: "answer")
+            return FlashcardModel(question: question, answer: answer)
+        }
     }
 }
 
 // MARK: - Quiz Generation
 
 extension CreateDeckPresenter {
-
-    func makeQuizBatches() -> [(text: String, questions: Int)] {
-        // ~12,000 char context limit (input + output)
-        // MC questions have much larger output than flashcards:
-        //   - Each MC question has 6 fields (questionText + 4 options + correctIndex) ~600 chars
-        //   - Each TF statement has 2 fields ~200 chars
-        // Budget: ~1,500 chars overhead (instructions/prompt/schema) + text + output ≤ 12,000
-        // With 3 MC questions: ~1,800 chars output → leaves ~7,700 for overhead + text
-        let maxTextPerBatch = 3000
-        let maxQuestionsPerBatch = 3
-
-        let textChunks = splitTextByMaxSize(sourceText, maxChars: maxTextPerBatch)
-        var batches = [(text: String, questions: Int)]()
-        var questionsRemaining = questionCount
-
-        for (index, chunk) in textChunks.enumerated() {
-            let batchesLeft = textChunks.count - index
-            let questionsInBatch = min(questionsRemaining / batchesLeft, maxQuestionsPerBatch)
-            batches.append((text: chunk, questions: questionsInBatch))
-            questionsRemaining -= questionsInBatch
-        }
-
-        if questionsRemaining > 0 {
-            for index in batches.indices {
-                guard questionsRemaining > 0 else { break }
-                if batches[index].questions < maxQuestionsPerBatch {
-                    batches[index].questions += 1
-                    questionsRemaining -= 1
-                }
-            }
-        }
-
-        return batches
-    }
 
     func multipleChoiceSchema(count: Int) throws -> GenerationSchema {
         let questionSchema = DynamicGenerationSchema(
@@ -367,60 +324,111 @@ extension CreateDeckPresenter {
     }
 
     func generateQuizQuestions() async throws -> [QuizQuestionModel] {
-        let batches = makeQuizBatches()
-        quizTotal = batches.count
+        let maxQuestionsPerBatch = 3
+        let chunks = makeChunks(maxTextPerBatch: 3000, itemCount: questionCount, maxItemsPerBatch: maxQuestionsPerBatch)
+
+        quizTotal = chunks.count
         quizProgress = 0
         quizSkippedBatches = 0
         var allQuestions: [QuizQuestionModel] = []
 
-        for batch in batches {
+        for chunk in chunks {
             quizProgress += 1
 
-            // Validate chunk before generating
-            quizStatusText = "Checking section \(quizProgress) of \(quizTotal)..."
-            let isValid = await validateChunk(batch.text)
+            let questionsStillNeeded = questionCount - allQuestions.count
+            guard questionsStillNeeded > 0 else { break }
+            let batchQuestions = min(questionsStillNeeded, maxQuestionsPerBatch)
 
-            if !isValid {
+            quizStatusText = "Validating..."
+            guard await validateChunk(chunk) else {
                 quizSkippedBatches += 1
-                quizStatusText = "Section \(quizProgress) skipped"
+                quizStatusText = "Skipped"
                 continue
             }
 
-            quizStatusText = "Generating \(quizProgress) of \(quizTotal)..."
-            interactor.trackEvent(event: Event.onBatchStart(batchNumber: quizProgress, totalBatches: quizTotal, cardCount: batch.questions))
+            quizStatusText = "Generating..."
+            interactor.trackEvent(event: Event.onBatchStart(batchNumber: quizProgress, totalBatches: quizTotal, cardCount: batchQuestions))
 
-            switch quizQuestionType {
-            case .multipleChoice:
-                let session = makeSession()
-                let questions = try await generateMCQuestions(session: session, text: batch.text, count: batch.questions)
-                allQuestions.append(contentsOf: questions)
+            let result = await generateQuizBatch(text: chunk, count: batchQuestions)
+            allQuestions.append(contentsOf: result.questions)
 
-            case .trueFalse:
-                let session = makeSession()
-                let questions = try await generateTFQuestions(session: session, text: batch.text, count: batch.questions)
-                allQuestions.append(contentsOf: questions)
-
-            case .both:
-                let mcCount = batch.questions / 2
-                let tfCount = batch.questions - mcCount
-
-                if mcCount > 0 {
-                    let mcSession = makeSession()
-                    let mcQuestions = try await generateMCQuestions(session: mcSession, text: batch.text, count: mcCount)
-                    allQuestions.append(contentsOf: mcQuestions)
-                }
-                if tfCount > 0 {
-                    let tfSession = makeSession()
-                    let tfQuestions = try await generateTFQuestions(session: tfSession, text: batch.text, count: tfCount)
-                    allQuestions.append(contentsOf: tfQuestions)
-                }
+            if result.skipped {
+                quizSkippedBatches += 1
+                quizStatusText = "Skipped"
             }
 
+            quizItemsGenerated = allQuestions.count
             updateTimeEstimate()
         }
 
         allQuestions.shuffle()
         return allQuestions
+    }
+
+    private func generateQuizBatch(text: String, count: Int) async -> (questions: [QuizQuestionModel], skipped: Bool) {
+        switch quizQuestionType {
+        case .multipleChoice:
+            do {
+                let session = makeSession()
+                let questions = try await generateMCQuestions(session: session, text: text, count: count)
+                return (questions, false)
+            } catch {
+                return ([], true)
+            }
+
+        case .trueFalse:
+            do {
+                let session = makeSession()
+                let questions = try await generateTFQuestions(session: session, text: text, count: count)
+                return (questions, false)
+            } catch {
+                return ([], true)
+            }
+
+        case .both:
+            return await generateMixedQuizBatch(text: text, count: count)
+        }
+    }
+
+    private func generateMixedQuizBatch(text: String, count: Int) async -> (questions: [QuizQuestionModel], skipped: Bool) {
+        let mcCount: Int
+        let tfCount: Int
+
+        if count <= 1 {
+            let preferMC = quizProgress % 2 == 1
+            mcCount = preferMC ? 1 : 0
+            tfCount = preferMC ? 0 : 1
+        } else {
+            mcCount = count / 2
+            tfCount = count - mcCount
+        }
+
+        var questions: [QuizQuestionModel] = []
+        var succeeded = false
+
+        if mcCount > 0 {
+            do {
+                let mcSession = makeSession()
+                let mcQuestions = try await generateMCQuestions(session: mcSession, text: text, count: mcCount)
+                questions.append(contentsOf: mcQuestions)
+                succeeded = true
+            } catch {
+                // MC failed, continue to TF
+            }
+        }
+
+        if tfCount > 0 {
+            do {
+                let tfSession = makeSession()
+                let tfQuestions = try await generateTFQuestions(session: tfSession, text: text, count: tfCount)
+                questions.append(contentsOf: tfQuestions)
+                succeeded = true
+            } catch {
+                // TF failed
+            }
+        }
+
+        return (questions, !succeeded)
     }
 
     func generateMCQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
