@@ -73,10 +73,28 @@ class CreateDeckPresenter {
     var selectedImage: UIImage?
     var sourceText: String = ""
     var isGenerating: Bool = false
-    var generationProgress: Int = 0
-    var generationTotal: Int = 0
     var generationStartTime: Date?
     var estimatedSecondsRemaining: Int?
+
+    // Flashcard progress
+    var flashcardProgress: Int = 0
+    var flashcardTotal: Int = 0
+    var flashcardStatusText: String?
+    var flashcardSkippedBatches: Int = 0
+
+    // Quiz progress
+    var quizProgress: Int = 0
+    var quizTotal: Int = 0
+    var quizStatusText: String?
+    var quizSkippedBatches: Int = 0
+
+    var skippedBatches: Int {
+        flashcardSkippedBatches + quizSkippedBatches
+    }
+
+    var hasProgress: Bool {
+        flashcardTotal > 0 || quizTotal > 0
+    }
 
     var sourceInputMode: SourceInputMode = .text
     var pdfFileName: String?
@@ -219,33 +237,13 @@ class CreateDeckPresenter {
 
         guard canGenerate else { return }
 
-        isGenerating = true
-        generationStartTime = Date()
-        estimatedSecondsRemaining = nil
+        resetGenerationState()
 
         Task {
             do {
                 try await performGeneration()
                 isGenerating = false
-                interactor.playHaptic(option: .achievementUnlocked())
-                router.dismiss()
-            } catch let error as LanguageModelSession.GenerationError {
-                interactor.trackEvent(event: Event.onGenerateFail(error: error))
-                isGenerating = false
-                switch error {
-                case .guardrailViolation:
-                    router.showSimpleAlert(
-                        title: String(localized: "Unable to Generate"),
-                        subtitle: String(localized: "The source material contains content that can't be processed. Try removing sensitive sections or rephrasing the content.")
-                    )
-                case .refusal:
-                    router.showSimpleAlert(
-                        title: String(localized: "Unable to Generate"),
-                        subtitle: String(localized: "The AI model was unable to process this content. Try using different source material or simplifying your text.")
-                    )
-                default:
-                    router.showSimpleAlert(title: String(localized: "Generation Failed"), subtitle: error.localizedDescription)
-                }
+                handleGenerationSuccess()
             } catch {
                 interactor.trackEvent(event: Event.onGenerateFail(error: error))
                 isGenerating = false
@@ -254,34 +252,118 @@ class CreateDeckPresenter {
         }
     }
 
+    private func resetGenerationState() {
+        isGenerating = true
+        generationStartTime = Date()
+        estimatedSecondsRemaining = nil
+        flashcardProgress = 0
+        flashcardTotal = 0
+        flashcardStatusText = nil
+        flashcardSkippedBatches = 0
+        quizProgress = 0
+        quizTotal = 0
+        quizStatusText = nil
+        quizSkippedBatches = 0
+    }
+
+    private func handleGenerationSuccess() {
+        interactor.playHaptic(option: .achievementUnlocked())
+
+        router.dismiss()
+
+        if skippedBatches > 0 {
+            router.showSimpleAlert(
+                title: String(localized: "Partially Generated"),
+                subtitle: String(localized: "\(skippedBatches) section(s) were skipped due to content restrictions, but the rest was generated successfully.")
+            )
+        }
+    }
+
     private func performGeneration() async throws {
         let trimmedName = deckName.trimmingCharacters(in: .whitespacesAndNewlines)
         let savedImageUrl = try saveImageIfNeeded()
 
-        if contentType == .flashcards || contentType == .both {
+        async let flashcardResult = generateFlashcardsIfNeeded(name: trimmedName, imageUrl: savedImageUrl)
+        async let quizResult = generateQuizIfNeeded(name: trimmedName)
+
+        let (cards, quiz) = await (flashcardResult, quizResult)
+        try evaluateGenerationOutcome(flashcardResult: cards, quizResult: quiz)
+    }
+
+    private func generateFlashcardsIfNeeded(name: String, imageUrl: String?) async -> Result<Void, Error>? {
+        guard contentType == .flashcards || contentType == .both else { return nil }
+
+        do {
             let flashcards = try await generateFlashcards()
             interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
 
             try interactor.createDeck(
-                name: trimmedName,
+                name: name,
                 color: selectedColor,
-                imageUrl: savedImageUrl,
+                imageUrl: imageUrl,
                 sourceText: sourceText,
                 flashcards: flashcards
             )
+            return .success(())
+        } catch {
+            interactor.trackEvent(event: Event.onGenerateFail(error: error))
+            return .failure(error)
         }
+    }
 
-        if contentType == .quiz || contentType == .both {
+    private func generateQuizIfNeeded(name: String) async -> Result<Void, Error>? {
+        guard contentType == .quiz || contentType == .both else { return nil }
+
+        do {
             let questions = try await generateQuizQuestions()
             interactor.trackEvent(event: Event.onQuizGenerateSuccess(questionCount: questions.count))
 
             try interactor.createQuiz(
-                name: trimmedName,
+                name: name,
                 color: selectedColor,
                 sourceText: sourceText,
                 questions: questions
             )
+            return .success(())
+        } catch {
+            interactor.trackEvent(event: Event.onGenerateFail(error: error))
+            return .failure(error)
         }
+    }
+
+    private func evaluateGenerationOutcome(
+        flashcardResult: Result<Void, Error>?,
+        quizResult: Result<Void, Error>?
+    ) throws {
+        let flashcardsOk: Bool = if case .success = flashcardResult { true } else { flashcardResult == nil }
+        let quizOk: Bool = if case .success = quizResult { true } else { quizResult == nil }
+
+        // Both succeeded (or only one type was requested and it succeeded)
+        if flashcardsOk && quizOk { return }
+
+        // "Both" mode — one succeeded, one failed: dismiss and inform
+        if flashcardResult != nil && quizResult != nil {
+            if flashcardsOk {
+                router.dismiss()
+                router.showSimpleAlert(
+                    title: String(localized: "Partially Generated"),
+                    subtitle: String(localized: "Flashcards were created successfully, but quiz generation failed. You can try generating the quiz separately.")
+                )
+                return
+            } else if quizOk {
+                router.dismiss()
+                router.showSimpleAlert(
+                    title: String(localized: "Partially Generated"),
+                    subtitle: String(localized: "Quiz was created successfully, but flashcard generation failed. You can try generating flashcards separately.")
+                )
+                return
+            }
+        }
+
+        // Single type failed or both failed — stay on screen with error
+        if case .failure(let error) = flashcardResult { throw error }
+        if case .failure(let error) = quizResult { throw error }
+        throw AppError("Generation failed.")
     }
 
     func onCreateEmptyPressed() {

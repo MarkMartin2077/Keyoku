@@ -53,7 +53,7 @@ struct CreateDeckView: View {
         }
         .overlay {
             if presenter.isGenerating {
-                generatingOverlay
+                CreateDeckGeneratingOverlay(presenter: presenter)
             }
         }
         .navigationTitle("Create")
@@ -426,107 +426,6 @@ struct CreateDeckView: View {
         .disabled(!presenter.canCreateEmpty)
     }
     
-    // MARK: - Generating Overlay
-    
-    private var generatingOverlay: some View {
-        ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                Spacer()
-                
-                Image(systemName: "apple.intelligence")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.accent)
-                    .symbolEffect(.pulse, isActive: true)
-                
-                VStack(spacing: 8) {
-                    Text(generatingTitle)
-                        .font(.title2)
-                        .fontWeight(.bold)
-
-                    Text(generatingSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                
-                if presenter.generationTotal > 0 {
-                    VStack(spacing: 12) {
-                        ProgressView(
-                            value: Double(presenter.generationProgress),
-                            total: Double(presenter.generationTotal)
-                        )
-                        .tint(.accent)
-                        .frame(maxWidth: 220)
-                        
-                        Text("Batch \(presenter.generationProgress) of \(presenter.generationTotal)")
-                            .font(.caption)
-                            .contentTransition(.numericText())
-                            .animation(.smooth, value: presenter.generationProgress)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    ProgressView()
-                        .controlSize(.large)
-                }
-                
-                Spacer()
-
-                Text(estimatedTimeText ?? "This may take a moment depending on the amount of source text.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .contentTransition(.numericText())
-                    .animation(.smooth, value: presenter.estimatedSecondsRemaining)
-                    .padding(.bottom, 32)
-            }
-            .padding()
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(generatingAccessibilityLabel)
-        }
-    }
-
-    private var generatingAccessibilityLabel: String {
-        var label = "\(generatingTitle). \(generatingSubtitle)."
-        if presenter.generationTotal > 0 {
-            label += " Batch \(presenter.generationProgress) of \(presenter.generationTotal)."
-        }
-        if let timeText = estimatedTimeText {
-            label += " \(timeText)."
-        }
-        return label
-    }
-
-    private var estimatedTimeText: String? {
-        guard let seconds = presenter.estimatedSecondsRemaining, seconds > 0 else { return nil }
-        if seconds < 60 {
-            return "About \(seconds) seconds remaining"
-        } else {
-            let minutes = Int(ceil(Double(seconds) / 60.0))
-            return "About \(minutes) minute\(minutes == 1 ? "" : "s") remaining"
-        }
-    }
-
-    private var generatingTitle: String {
-        switch presenter.contentType {
-        case .flashcards: return "Generating Flashcards"
-        case .quiz: return "Generating Quiz"
-        case .both: return "Generating Content"
-        }
-    }
-
-    private var generatingSubtitle: String {
-        switch presenter.contentType {
-        case .flashcards:
-            return "Creating \(presenter.cardCount) cards for **\(presenter.deckName)**"
-        case .quiz:
-            return "Creating \(presenter.questionCount) questions for **\(presenter.deckName)**"
-        case .both:
-            return "Creating \(presenter.cardCount) cards and \(presenter.questionCount) questions for **\(presenter.deckName)**"
-        }
-    }
 }
 
 #Preview {

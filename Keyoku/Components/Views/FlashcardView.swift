@@ -70,6 +70,7 @@ struct FlashcardView: View {
                         Capsule()
                             .fill(showingAnswer ? Color.green : accentColor)
                     )
+                    .scaleEffect(x: showingAnswer ? -1 : 1, y: 1)
                     .accessibilityHidden(true)
                 
                 Spacer()
@@ -90,6 +91,7 @@ struct FlashcardView: View {
                 }
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+                .scaleEffect(x: showingAnswer ? -1 : 1, y: 1)
                 .accessibilityHidden(true)
             }
             .padding(24)

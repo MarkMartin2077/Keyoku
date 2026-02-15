@@ -16,7 +16,8 @@
       "WebFetch(domain:github.com)",
       "Bash(xcodebuild test:*)",
       "Bash(xcodebuild:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

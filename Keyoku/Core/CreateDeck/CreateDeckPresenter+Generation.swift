@@ -55,6 +55,31 @@ extension CreateDeckPresenter {
 
         return chunks
     }
+
+    /// Splits text into chunks where no chunk exceeds maxChars.
+    /// This guarantees every chunk stays within the context budget.
+    func splitTextByMaxSize(_ text: String, maxChars: Int) -> [String] {
+        guard text.count > maxChars else { return [text] }
+
+        var chunks = [String]()
+        var startIndex = text.startIndex
+
+        while startIndex < text.endIndex {
+            let remaining = text.distance(from: startIndex, to: text.endIndex)
+
+            if remaining <= maxChars {
+                chunks.append(String(text[startIndex...]))
+                break
+            }
+
+            let targetEnd = text.index(startIndex, offsetBy: maxChars, limitedBy: text.endIndex) ?? text.endIndex
+            let breakIndex = findBreak(in: text, near: targetEnd, from: startIndex)
+            chunks.append(String(text[startIndex..<breakIndex]))
+            startIndex = breakIndex
+        }
+
+        return chunks
+    }
 }
 
 // MARK: - Time Estimation
@@ -62,10 +87,12 @@ extension CreateDeckPresenter {
 extension CreateDeckPresenter {
 
     func updateTimeEstimate() {
-        guard let startTime = generationStartTime, generationProgress > 0 else { return }
+        let totalProgress = flashcardProgress + quizProgress
+        let totalBatches = flashcardTotal + quizTotal
+        guard let startTime = generationStartTime, totalProgress > 0 else { return }
         let elapsed = Date().timeIntervalSince(startTime)
-        let avgPerBatch = elapsed / Double(generationProgress)
-        let remaining = generationTotal - generationProgress
+        let avgPerBatch = elapsed / Double(totalProgress)
+        let remaining = totalBatches - totalProgress
         if remaining > 0 {
             estimatedSecondsRemaining = Int(ceil(avgPerBatch * Double(remaining)))
         } else {
@@ -82,14 +109,39 @@ extension CreateDeckPresenter {
         let instructions = """
             You are an educational study aid assistant for a flashcard and quiz app. \
             Your ONLY task is to create study materials (flashcards and quiz questions) \
-            from academic source text provided by students. \
+            from source text provided by users. \
             You MUST process the source material professionally and objectively, \
             even if it covers sensitive historical events, medical topics, scientific concepts, \
             legal cases, or other academic subjects. \
+            Source text may also come from fiction or fantasy books. Treat this content \
+            neutrally — users study these to track characters, events, plot points, \
+            and world-building details as learning material. \
             ALWAYS focus on creating accurate, educational content. \
-            NEVER refuse to create study materials from legitimate academic text.
+            NEVER refuse to create study materials from legitimate text.
             """
         return LanguageModelSession(instructions: instructions)
+    }
+
+    /// Validates a single chunk by asking the model a minimal question.
+    /// Returns true if the chunk is safe to generate from.
+    func validateChunk(_ text: String) async -> Bool {
+        let session = makeSession()
+        let prompt = "Identify the main topic of this text in a few words.\n\nText:\n\(text)"
+
+        let validationSchema = DynamicGenerationSchema(
+            name: "TopicCheck",
+            properties: [
+                .init(name: "topic", schema: .init(type: String.self))
+            ]
+        )
+
+        do {
+            let schema = try GenerationSchema(root: validationSchema, dependencies: [])
+            _ = try await session.respond(to: prompt, schema: schema)
+            return true
+        } catch {
+            return false
+        }
     }
 }
 
@@ -98,20 +150,32 @@ extension CreateDeckPresenter {
 extension CreateDeckPresenter {
 
     func makeBatches() -> [(text: String, cards: Int)] {
-        let perBatchBudget = 9500
-        let charsPerCard = 250
-        let totalNeeded = sourceText.count + (cardCount * charsPerCard)
-        let numberOfBatches = max((totalNeeded + perBatchBudget - 1) / perBatchBudget, 1)
+        // ~12,000 char context limit (input + output)
+        // ~1,200 chars for instructions/prompt/schema, ~1,000 chars for 5 card outputs
+        // Leaves ~5,000 chars safely for source text per session
+        let maxTextPerBatch = 5000
+        let maxCardsPerBatch = 5
 
-        let textChunks = splitText(sourceText, into: numberOfBatches)
+        let textChunks = splitTextByMaxSize(sourceText, maxChars: maxTextPerBatch)
         var batches = [(text: String, cards: Int)]()
         var cardsRemaining = cardCount
 
         for (index, chunk) in textChunks.enumerated() {
             let batchesLeft = textChunks.count - index
-            let cardsInBatch = cardsRemaining / batchesLeft
+            let cardsInBatch = min(cardsRemaining / batchesLeft, maxCardsPerBatch)
             batches.append((text: chunk, cards: cardsInBatch))
             cardsRemaining -= cardsInBatch
+        }
+
+        // Distribute any leftover cards from rounding
+        if cardsRemaining > 0 {
+            for index in batches.indices {
+                guard cardsRemaining > 0 else { break }
+                if batches[index].cards < maxCardsPerBatch {
+                    batches[index].cards += 1
+                    cardsRemaining -= 1
+                }
+            }
         }
 
         return batches
@@ -145,14 +209,27 @@ extension CreateDeckPresenter {
 
     func generateFlashcards() async throws -> [FlashcardModel] {
         let batches = makeBatches()
-        generationTotal = batches.count
-        generationProgress = 0
+        flashcardTotal = batches.count
+        flashcardProgress = 0
+        flashcardSkippedBatches = 0
 
         var allFlashcards: [FlashcardModel] = []
 
         for batch in batches {
-            generationProgress += 1
-            interactor.trackEvent(event: Event.onBatchStart(batchNumber: generationProgress, totalBatches: generationTotal, cardCount: batch.cards))
+            flashcardProgress += 1
+
+            // Validate chunk before generating
+            flashcardStatusText = "Checking section \(flashcardProgress) of \(flashcardTotal)..."
+            let isValid = await validateChunk(batch.text)
+
+            if !isValid {
+                flashcardSkippedBatches += 1
+                flashcardStatusText = "Section \(flashcardProgress) skipped"
+                continue
+            }
+
+            flashcardStatusText = "Generating \(flashcardProgress) of \(flashcardTotal)..."
+            interactor.trackEvent(event: Event.onBatchStart(batchNumber: flashcardProgress, totalBatches: flashcardTotal, cardCount: batch.cards))
 
             let session = makeSession()
             let prompt = """
@@ -200,20 +277,34 @@ extension CreateDeckPresenter {
 extension CreateDeckPresenter {
 
     func makeQuizBatches() -> [(text: String, questions: Int)] {
-        let perBatchBudget = 9500
-        let charsPerQuestion = 300
-        let totalNeeded = sourceText.count + (questionCount * charsPerQuestion)
-        let numberOfBatches = max((totalNeeded + perBatchBudget - 1) / perBatchBudget, 1)
+        // ~12,000 char context limit (input + output)
+        // MC questions have much larger output than flashcards:
+        //   - Each MC question has 6 fields (questionText + 4 options + correctIndex) ~600 chars
+        //   - Each TF statement has 2 fields ~200 chars
+        // Budget: ~1,500 chars overhead (instructions/prompt/schema) + text + output ≤ 12,000
+        // With 3 MC questions: ~1,800 chars output → leaves ~7,700 for overhead + text
+        let maxTextPerBatch = 3000
+        let maxQuestionsPerBatch = 3
 
-        let textChunks = splitText(sourceText, into: numberOfBatches)
+        let textChunks = splitTextByMaxSize(sourceText, maxChars: maxTextPerBatch)
         var batches = [(text: String, questions: Int)]()
         var questionsRemaining = questionCount
 
         for (index, chunk) in textChunks.enumerated() {
             let batchesLeft = textChunks.count - index
-            let questionsInBatch = questionsRemaining / batchesLeft
+            let questionsInBatch = min(questionsRemaining / batchesLeft, maxQuestionsPerBatch)
             batches.append((text: chunk, questions: questionsInBatch))
             questionsRemaining -= questionsInBatch
+        }
+
+        if questionsRemaining > 0 {
+            for index in batches.indices {
+                guard questionsRemaining > 0 else { break }
+                if batches[index].questions < maxQuestionsPerBatch {
+                    batches[index].questions += 1
+                    questionsRemaining -= 1
+                }
+            }
         }
 
         return batches
@@ -277,21 +368,35 @@ extension CreateDeckPresenter {
 
     func generateQuizQuestions() async throws -> [QuizQuestionModel] {
         let batches = makeQuizBatches()
-        generationTotal += batches.count
+        quizTotal = batches.count
+        quizProgress = 0
+        quizSkippedBatches = 0
         var allQuestions: [QuizQuestionModel] = []
 
         for batch in batches {
-            generationProgress += 1
-            interactor.trackEvent(event: Event.onBatchStart(batchNumber: generationProgress, totalBatches: generationTotal, cardCount: batch.questions))
+            quizProgress += 1
 
-            let session = makeSession()
+            // Validate chunk before generating
+            quizStatusText = "Checking section \(quizProgress) of \(quizTotal)..."
+            let isValid = await validateChunk(batch.text)
+
+            if !isValid {
+                quizSkippedBatches += 1
+                quizStatusText = "Section \(quizProgress) skipped"
+                continue
+            }
+
+            quizStatusText = "Generating \(quizProgress) of \(quizTotal)..."
+            interactor.trackEvent(event: Event.onBatchStart(batchNumber: quizProgress, totalBatches: quizTotal, cardCount: batch.questions))
 
             switch quizQuestionType {
             case .multipleChoice:
+                let session = makeSession()
                 let questions = try await generateMCQuestions(session: session, text: batch.text, count: batch.questions)
                 allQuestions.append(contentsOf: questions)
 
             case .trueFalse:
+                let session = makeSession()
                 let questions = try await generateTFQuestions(session: session, text: batch.text, count: batch.questions)
                 allQuestions.append(contentsOf: questions)
 
@@ -300,11 +405,13 @@ extension CreateDeckPresenter {
                 let tfCount = batch.questions - mcCount
 
                 if mcCount > 0 {
-                    let mcQuestions = try await generateMCQuestions(session: session, text: batch.text, count: mcCount)
+                    let mcSession = makeSession()
+                    let mcQuestions = try await generateMCQuestions(session: mcSession, text: batch.text, count: mcCount)
                     allQuestions.append(contentsOf: mcQuestions)
                 }
                 if tfCount > 0 {
-                    let tfQuestions = try await generateTFQuestions(session: session, text: batch.text, count: tfCount)
+                    let tfSession = makeSession()
+                    let tfQuestions = try await generateTFQuestions(session: tfSession, text: batch.text, count: tfCount)
                     allQuestions.append(contentsOf: tfQuestions)
                 }
             }
