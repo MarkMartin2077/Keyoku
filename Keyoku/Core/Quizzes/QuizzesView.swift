@@ -20,21 +20,23 @@ struct QuizzesView: View {
     let delegate: QuizzesDelegate
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                if presenter.quizzes.isEmpty {
-                    emptyStateView
-                } else {
-                    quizzesSection
-                }
+        List {
+            if presenter.quizzes.isEmpty {
+                emptyStateView
+            } else {
+                quizzesSection
             }
         }
+        .listStyle(.plain)
         .navigationTitle("Quizzes")
         .searchable(text: $presenter.searchText, prompt: "Search quizzes")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 addButton
             }
+        }
+        .onFirstAppear {
+            presenter.onFirstAppear(delegate: delegate)
         }
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
@@ -62,66 +64,53 @@ struct QuizzesView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private var quizzesSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("^[\(presenter.filteredQuizzes.count) quiz](inflect: true)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .padding(.horizontal)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-                .animation(.none, value: presenter.searchText)
-
+        Section {
             ForEach(presenter.filteredQuizzes) { quiz in
                 quizRow(quiz: quiz)
-                    .bouncyScroll()
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-
-                if quiz.id != presenter.filteredQuizzes.last?.id {
-                    Divider()
-                        .padding(.leading)
-                }
             }
+            .onDelete { indexSet in
+                presenter.onDeleteQuizzes(at: indexSet)
+            }
+        } header: {
+            Text("^[\(presenter.filteredQuizzes.count) quiz](inflect: true)")
         }
-        .animation(.spring(duration: 0.4, bounce: 0.3), value: presenter.searchText)
     }
 
     private func quizRow(quiz: QuizModel) -> some View {
-        HStack {
-            Circle()
-                .fill(quiz.color.color.gradient)
-                .frame(width: 10, height: 10)
-                .accessibilityHidden(true)
+        Button {
+            presenter.onQuizPressed(quiz: quiz)
+        } label: {
+            HStack {
+                Circle()
+                    .fill(quiz.color.color.gradient)
+                    .frame(width: 10, height: 10)
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(quiz.name)
-                    .font(.headline)
-                Text("\(quiz.questions.count) question\(quiz.questions.count == 1 ? "" : "s")")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(quiz.name)
+                        .font(.headline)
+                    Text("\(quiz.questions.count) question\(quiz.questions.count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
+            .padding(.vertical, 4)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(quiz.name), \(quiz.questions.count) \(quiz.questions.count == 1 ? "question" : "questions")")
         .accessibilityHint("Opens quiz")
-        .anyButton(.highlight) {
-            presenter.onQuizPressed(quiz: quiz)
-        }
     }
 
     private var addButton: some View {

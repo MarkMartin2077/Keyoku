@@ -31,9 +31,12 @@ class DecksPresenter {
         self.router = router
     }
     
+    func onFirstAppear(delegate: DecksDelegate) {
+        interactor.loadDecks()
+    }
+
     func onViewAppear(delegate: DecksDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
-        interactor.loadDecks()
     }
     
     func onViewDisappear(delegate: DecksDelegate) {

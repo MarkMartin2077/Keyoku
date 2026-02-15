@@ -9,7 +9,7 @@ import SwiftUI
 
 @MainActor
 protocol QuizzesRouter: GlobalRouter {
-    func showQuizView(quiz: QuizModel)
+    func showQuizDetailView(quiz: QuizModel)
     func showCreateContentView(defaultContentType: CreateDeckPresenter.ContentType?)
 }
 

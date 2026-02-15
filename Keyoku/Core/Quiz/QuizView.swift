@@ -159,12 +159,13 @@ struct QuizView: View {
 
 extension CoreBuilder {
 
-    func quizView(router: AnyRouter, delegate: QuizDelegate) -> some View {
+    func quizView(router: AnyRouter, delegate: QuizDelegate, startingAt: Int = 0) -> some View {
         QuizView(
             presenter: QuizPresenter(
                 interactor: interactor,
                 router: CoreRouter(router: router, builder: self),
-                quiz: delegate.quiz
+                quiz: delegate.quiz,
+                startingIndex: startingAt
             ),
             delegate: delegate
         )
@@ -175,9 +176,13 @@ extension CoreBuilder {
 extension CoreRouter {
 
     func showQuizView(quiz: QuizModel) {
+        showQuizView(quiz: quiz, startingAt: 0)
+    }
+
+    func showQuizView(quiz: QuizModel, startingAt: Int) {
         let delegate = QuizDelegate(quiz: quiz)
         router.showScreen(.push) { router in
-            builder.quizView(router: router, delegate: delegate)
+            builder.quizView(router: router, delegate: delegate, startingAt: startingAt)
         }
     }
 

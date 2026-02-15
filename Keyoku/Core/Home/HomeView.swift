@@ -68,6 +68,9 @@ struct HomeView: View {
                 }
             }
         }
+        .onFirstAppear {
+            presenter.onFirstAppear(delegate: delegate)
+        }
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }

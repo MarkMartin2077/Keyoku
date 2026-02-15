@@ -38,12 +38,13 @@ class QuizPresenter {
         return Double(correctAnswers) / Double(questions.count) * 100
     }
 
-    init(interactor: QuizInteractor, router: QuizRouter, quiz: QuizModel) {
+    init(interactor: QuizInteractor, router: QuizRouter, quiz: QuizModel, startingIndex: Int = 0) {
         self.interactor = interactor
         self.router = router
         self.quizName = quiz.name
         self.quizColor = quiz.color
         self.questions = quiz.questions
+        self.currentIndex = min(startingIndex, max(quiz.questions.count - 1, 0))
     }
 
     func onViewAppear(delegate: QuizDelegate) {

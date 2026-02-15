@@ -55,21 +55,23 @@ struct DecksView: View {
     let delegate: DecksDelegate
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                if presenter.decks.isEmpty {
-                    emptyStateView
-                } else {
-                    decksSection
-                }
+        List {
+            if presenter.decks.isEmpty {
+                emptyStateView
+            } else {
+                decksSection
             }
         }
+        .listStyle(.plain)
         .navigationTitle("Decks")
         .searchable(text: $presenter.searchText, prompt: "Search decks")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 addButton
             }
+        }
+        .onFirstAppear {
+            presenter.onFirstAppear(delegate: delegate)
         }
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
@@ -97,61 +99,48 @@ struct DecksView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
     
     private var decksSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("^[\(presenter.filteredDecks.count) deck](inflect: true)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .padding(.horizontal)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-                .animation(.none, value: presenter.searchText)
-
+        Section {
             ForEach(presenter.filteredDecks) { deck in
                 deckRow(deck: deck)
-                    .bouncyScroll()
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-
-                if deck.id != presenter.filteredDecks.last?.id {
-                    Divider()
-                        .padding(.leading)
-                }
             }
+            .onDelete { indexSet in
+                presenter.onDeleteDecks(at: indexSet)
+            }
+        } header: {
+            Text("^[\(presenter.filteredDecks.count) deck](inflect: true)")
         }
-        .animation(.spring(duration: 0.4, bounce: 0.3), value: presenter.searchText)
     }
 
     private func deckRow(deck: DeckModel) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(deck.name)
-                    .font(.headline)
-                Text("\(deck.flashcards.count) card\(deck.flashcards.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        Button {
+            presenter.onDeckPressed(deck: deck)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(deck.name)
+                        .font(.headline)
+                    Text("\(deck.flashcards.count) card\(deck.flashcards.count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .padding(.vertical, 4)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(deck.name), \(deck.flashcards.count) \(deck.flashcards.count == 1 ? "card" : "cards")")
         .accessibilityHint("Opens deck details")
-        .anyButton(.highlight) {
-            presenter.onDeckPressed(deck: deck)
-        }
     }
     
     private var addButton: some View {

@@ -180,6 +180,43 @@ class QuizManager {
         }
     }
 
+    /// Deletes a single question from a quiz by filtering it out and saving the updated quiz.
+    ///
+    /// - Parameters:
+    ///   - questionId: The ID of the question to remove.
+    ///   - quizId: The ID of the quiz containing the question.
+    func deleteQuizQuestion(questionId: String, fromQuizId quizId: String) throws {
+        logManager?.trackEvent(event: Event.deleteQuestionStart(questionId: questionId, quizId: quizId))
+
+        guard let quiz = getQuiz(id: quizId) else {
+            let error = AppError("Quiz not found")
+            logManager?.trackEvent(event: Event.deleteQuestionFail(error: error))
+            throw error
+        }
+
+        let updatedQuestions = quiz.questions.filter { $0.questionId != questionId }
+        let updatedQuiz = QuizModel(
+            quizId: quiz.quizId,
+            name: quiz.name,
+            color: quiz.color,
+            sourceText: quiz.sourceText,
+            createdAt: quiz.createdAt,
+            questions: updatedQuestions
+        )
+
+        do {
+            try local.saveQuiz(quiz: updatedQuiz)
+            if let index = quizzes.firstIndex(where: { $0.quizId == quizId }) {
+                quizzes[index] = updatedQuiz
+            }
+            logManager?.trackEvent(event: Event.deleteQuestionSuccess(questionId: questionId, quizId: quizId))
+            pushQuizToRemote(updatedQuiz)
+        } catch {
+            logManager?.trackEvent(event: Event.deleteQuestionFail(error: error))
+            throw error
+        }
+    }
+
     // MARK: - Remote Sync Helpers
 
     /// Pushes a quiz to the remote service in the background.
@@ -232,6 +269,9 @@ class QuizManager {
         case remotePushFail(error: Error)
         case remoteDeleteSuccess(quizId: String)
         case remoteDeleteFail(error: Error)
+        case deleteQuestionStart(questionId: String, quizId: String)
+        case deleteQuestionSuccess(questionId: String, quizId: String)
+        case deleteQuestionFail(error: Error)
 
         var eventName: String {
             switch self {
@@ -252,6 +292,9 @@ class QuizManager {
             case .remotePushFail:           return "QuizMan_RemotePush_Fail"
             case .remoteDeleteSuccess:      return "QuizMan_RemoteDelete_Success"
             case .remoteDeleteFail:         return "QuizMan_RemoteDelete_Fail"
+            case .deleteQuestionStart:      return "QuizMan_DeleteQuestion_Start"
+            case .deleteQuestionSuccess:    return "QuizMan_DeleteQuestion_Success"
+            case .deleteQuestionFail:       return "QuizMan_DeleteQuestion_Fail"
             }
         }
 
@@ -269,7 +312,9 @@ class QuizManager {
                 return quiz.eventParameters
             case .deleteQuizStart(quizId: let id), .deleteQuizSuccess(quizId: let id), .remotePushSuccess(quizId: let id), .remoteDeleteSuccess(quizId: let id):
                 return ["quiz_id": id]
-            case .loadQuizzesFail(error: let error), .createQuizFail(error: let error), .deleteQuizFail(error: let error), .logInFail(error: let error), .remotePushFail(error: let error), .remoteDeleteFail(error: let error):
+            case .deleteQuestionStart(questionId: let qId, quizId: let quizId), .deleteQuestionSuccess(questionId: let qId, quizId: let quizId):
+                return ["question_id": qId, "quiz_id": quizId]
+            case .loadQuizzesFail(error: let error), .createQuizFail(error: let error), .deleteQuizFail(error: let error), .logInFail(error: let error), .remotePushFail(error: let error), .remoteDeleteFail(error: let error), .deleteQuestionFail(error: let error):
                 return error.eventParameters
             default:
                 return nil
@@ -278,7 +323,7 @@ class QuizManager {
 
         var type: LogType {
             switch self {
-            case .loadQuizzesFail, .createQuizFail, .deleteQuizFail, .logInFail, .remotePushFail, .remoteDeleteFail:
+            case .loadQuizzesFail, .createQuizFail, .deleteQuizFail, .logInFail, .remotePushFail, .remoteDeleteFail, .deleteQuestionFail:
                 return .severe
             default:
                 return .analytic

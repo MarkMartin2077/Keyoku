@@ -104,18 +104,20 @@ struct QuizQuestionView: View {
 
             Text(text)
                 .font(.body)
-                .fontWeight(selectedIndex == index ? .semibold : .regular)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            if isRevealed, index == correctAnswerIndex {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .accessibilityHidden(true)
-            } else if isRevealed, selectedIndex == index, index != correctAnswerIndex {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.red)
-                    .accessibilityHidden(true)
-            }
+            Image(systemName: "checkmark.circle.fill")
+                .hidden()
+                .overlay {
+                    if isRevealed, index == correctAnswerIndex {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    } else if isRevealed, selectedIndex == index, index != correctAnswerIndex {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

@@ -304,6 +304,10 @@ struct CoreInteractor: GlobalInteractor {
         spotlightManager.removeQuiz(id: id)
     }
 
+    func deleteQuizQuestion(questionId: String, fromQuizId: String) throws {
+        try quizManager.deleteQuizQuestion(questionId: questionId, fromQuizId: fromQuizId)
+    }
+
     // MARK: SpotlightManager
 
     func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)? {

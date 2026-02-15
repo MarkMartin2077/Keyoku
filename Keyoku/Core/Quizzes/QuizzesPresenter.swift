@@ -31,9 +31,12 @@ class QuizzesPresenter {
         self.router = router
     }
 
+    func onFirstAppear(delegate: QuizzesDelegate) {
+        interactor.loadQuizzes()
+    }
+
     func onViewAppear(delegate: QuizzesDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
-        interactor.loadQuizzes()
     }
 
     func onViewDisappear(delegate: QuizzesDelegate) {
@@ -47,7 +50,7 @@ class QuizzesPresenter {
 
     func onQuizPressed(quiz: QuizModel) {
         interactor.trackEvent(event: Event.onQuizPressed(quiz: quiz))
-        router.showQuizView(quiz: quiz)
+        router.showQuizDetailView(quiz: quiz)
     }
 
     func onDeleteQuizzes(at indexSet: IndexSet) {

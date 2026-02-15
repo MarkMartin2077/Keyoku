@@ -49,8 +49,7 @@ class HomePresenter {
 
     // MARK: - Lifecycle
 
-    func onViewAppear(delegate: HomeDelegate) {
-        interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
+    func onFirstAppear(delegate: HomeDelegate) {
         interactor.loadDecks()
         interactor.loadQuizzes()
 
@@ -60,6 +59,10 @@ class HomePresenter {
 
         schedulePushNotifications()
         checkPendingQuickAction()
+    }
+
+    func onViewAppear(delegate: HomeDelegate) {
+        interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
     }
 
     private func checkPendingQuickAction() {

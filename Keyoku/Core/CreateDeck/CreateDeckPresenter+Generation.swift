@@ -119,7 +119,12 @@ extension CreateDeckPresenter {
         let instructions = """
             You are an educational study aid assistant for a flashcard and quiz app. \
             Your ONLY task is to create study materials (flashcards and quiz questions) \
-            from source text provided by users. \
+            EXCLUSIVELY from the source text provided by the user. \
+            EVERY question, answer, and flashcard you generate MUST be directly \
+            based on information found in the provided source text. \
+            NEVER use outside knowledge, general trivia, or unrelated facts. \
+            If a concept is not mentioned in the source text, do NOT create \
+            a question about it. \
             You MUST process the source material professionally and objectively, \
             even if it covers sensitive historical events, medical topics, scientific concepts, \
             legal cases, or other academic subjects. \
@@ -230,15 +235,17 @@ extension CreateDeckPresenter {
     private func generateFlashcardBatch(text: String, count: Int) async throws -> [FlashcardModel] {
         let session = makeSession()
         let prompt = """
-        You are creating educational study flashcards for a student. \
-        Generate exactly \(count) flashcards from the following academic study material. \
+        Generate exactly \(count) flashcards ONLY from the source text below. \
+        Every question and answer MUST come directly from information in this text. \
+        Do NOT include any questions about topics, events, or facts not explicitly \
+        covered in the source text. \
         Create cards that help students learn effectively using these techniques:
-        - Key definitions and terminology
-        - Cause and effect relationships
-        - Compare and contrast important concepts
-        - Important dates, timelines, or sequences
-        - Formulas, rules, or principles
-        - Key facts and their significance
+        - Key definitions and terminology from the text
+        - Cause and effect relationships described in the text
+        - Compare and contrast concepts mentioned in the text
+        - Important dates, timelines, or sequences from the text
+        - Formulas, rules, or principles stated in the text
+        - Key facts and their significance as presented in the text
 
         Each card should have a clear, specific question and a concise but \
         complete answer. Make sure there is no weird mid sentence cut off and \
@@ -247,7 +254,7 @@ extension CreateDeckPresenter {
         Also make sure answers are as accurate as possible, double-check if \
         necessary.
 
-        Academic study material:
+        Source text:
         \(text)
         """
 
@@ -433,10 +440,11 @@ extension CreateDeckPresenter {
 
     func generateMCQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
         let prompt = """
-        You are creating an educational quiz for a student. \
-        Generate exactly \(count) multiple choice questions from the following academic study material. \
+        Generate exactly \(count) multiple choice questions ONLY from the source text below. \
+        Every question MUST be about a topic, fact, or concept explicitly mentioned in this text. \
+        Do NOT generate questions about anything not covered in the source text. \
         Each question should:
-        - Have a clear, specific question
+        - Have a clear, specific question derived from the text
         - Have exactly 4 answer options (one correct, three plausible distractors)
         - The correctOptionIndex should be 0, 1, 2, or 3 indicating which option is correct
         - Vary the position of the correct answer across questions
@@ -447,7 +455,7 @@ extension CreateDeckPresenter {
         Also make sure answers are as accurate as possible, double-check if \
         necessary.
 
-        Academic study material:
+        Source text:
         \(text)
         """
 
@@ -474,14 +482,15 @@ extension CreateDeckPresenter {
 
     func generateTFQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
         let prompt = """
-        You are creating an educational quiz for a student. \
-        Generate exactly \(count) true or false statements from the following academic study material. \
+        Generate exactly \(count) true or false statements ONLY from the source text below. \
+        Every statement MUST be about a topic, fact, or concept explicitly mentioned in this text. \
+        Do NOT generate statements about anything not covered in the source text. \
         Each statement should:
         - Be a clear, factual claim that is either true or false based on the text
         - Have a mix of true and false statements
         - isTrue should be true if the statement is correct, false if it's incorrect
 
-        Academic study material:
+        Source text:
         \(text)
         """
 
