@@ -27,6 +27,7 @@
 		02B62BB02E662E60008FB7FF /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 02B62BAF2E662E60008FB7FF /* FirebaseRemoteConfig */; };
 		02B62BB22E662E85008FB7FF /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 02B62BB12E662E85008FB7FF /* FirebaseStorage */; };
 		9FA4C8992F3A966F00709A1E /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 9FA4C8982F3A966F00709A1E /* CLAUDE.md */; };
+		9FA62FC32F42A9EA00E48C0C /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9FA62FC22F42A9EA00E48C0C /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,7 @@
 		0229583F2CEE7FF900765488 /* KeyokuUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeyokuUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		028F9B532CECF2C2009B9F48 /* Keyoku.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Keyoku.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9FA4C8982F3A966F00709A1E /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
+		9FA62FC22F42A9EA00E48C0C /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -110,6 +112,7 @@
 				02B62BA52E662DD7008FB7FF /* SwiftfulAuthenticatingFirebase in Frameworks */,
 				028744482D33A58F00C2C3E1 /* SwiftfulSoundEffects in Frameworks */,
 				0229588C2CEE932F00765488 /* SDWebImageSwiftUI in Frameworks */,
+				9FA62FC32F42A9EA00E48C0C /* StoreKit.framework in Frameworks */,
 				028F9B862CECF666009B9F48 /* SwiftfulUtilities in Frameworks */,
 				028F9BD72CED155A009B9F48 /* SwiftfulAuthUI in Frameworks */,
 				02B62BB22E662E85008FB7FF /* FirebaseStorage in Frameworks */,
@@ -153,6 +156,7 @@
 		028F9C2B2CED2D0D009B9F48 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9FA62FC22F42A9EA00E48C0C /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

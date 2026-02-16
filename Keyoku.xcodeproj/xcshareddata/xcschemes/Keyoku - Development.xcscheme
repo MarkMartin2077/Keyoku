@@ -74,6 +74,9 @@
             ReferencedContainer = "container:Keyoku.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <StoreKitConfigurationFileReference
+         identifier = "../../Keyoku/Core/Paywall/KeyokuPurchaseConfiguration.storekit">
+      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Debug"
