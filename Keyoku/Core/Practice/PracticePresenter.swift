@@ -99,7 +99,7 @@ class PracticePresenter {
                     "deck_name": .string(deckName),
                     "cards_count": .int(flashcards.count)
                 ]
-                let _ = try await interactor.addStreakEvent(metadata: metadata)
+                _ = try await interactor.addStreakEvent(metadata: metadata)
                 interactor.trackEvent(event: Event.onStreakEventRecorded(deckName: deckName))
 
                 let updatedStreak = interactor.currentStreakData.currentStreak ?? 0
