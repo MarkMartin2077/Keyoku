@@ -82,6 +82,14 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
             .appendingPathComponent(imageUrl)
     }
 
+    var displayImageUrlString: String? {
+        guard let imageUrl else { return nil }
+        if imageUrl.hasPrefix("http") {
+            return imageUrl
+        }
+        return imageFileURL?.absoluteString
+    }
+
     func toEntity() -> DeckEntity {
         let entity = DeckEntity(id: deckId, name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, createdAt: createdAt)
         entity.flashcards = flashcards.map { flashcard in

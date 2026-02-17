@@ -27,6 +27,7 @@ import SwiftUI
 /// - `DeckService` (local) — synchronous, file-based persistence for decks and flashcards
 /// - `RemoteDeckService` (remote) — async, typically Firestore-backed
 /// - `LogManager` — optional analytics tracking for every operation
+/// - `FirebaseImageUploadService` (optional) — background image upload to Firebase Storage
 @MainActor
 @Observable
 class FlashcardManager {
@@ -34,15 +35,17 @@ class FlashcardManager {
     private let local: DeckService
     private let remote: RemoteDeckService
     private let logManager: LogManager?
+    private let imageUploadService: FirebaseImageUploadService?
     private var userId: String?
 
     /// The current user's decks (including their flashcards), loaded from local storage.
     /// Updated in-place on create/update/delete to avoid full reloads.
     private(set) var decks: [DeckModel] = []
 
-    init(services: FlashcardServices, logManager: LogManager? = nil) {
+    init(services: FlashcardServices, imageUploadService: FirebaseImageUploadService? = nil, logManager: LogManager? = nil) {
         self.local = services.local
         self.remote = services.remote
+        self.imageUploadService = imageUploadService
         self.logManager = logManager
     }
 
@@ -138,6 +141,7 @@ class FlashcardManager {
             decks.insert(deck, at: 0)
             logManager?.trackEvent(event: Event.createDeckSuccess(deck: deck))
             pushDeckToRemote(deck)
+            uploadDeckImageInBackground(deck: deck)
         } catch {
             logManager?.trackEvent(event: Event.createDeckFail(error: error))
             throw error
@@ -183,6 +187,7 @@ class FlashcardManager {
             decks.insert(deck, at: 0)
             logManager?.trackEvent(event: Event.createDeckSuccess(deck: deck))
             pushDeckToRemote(deck)
+            uploadDeckImageInBackground(deck: deck)
         } catch {
             logManager?.trackEvent(event: Event.createDeckFail(error: error))
             throw error
@@ -363,6 +368,40 @@ class FlashcardManager {
         }
     }
 
+    /// Uploads a deck's local cover image to Firebase Storage in the background.
+    ///
+    /// No-ops if the deck has no image, the image is already a remote URL,
+    /// no `imageUploadService` is configured, or the user is not signed in.
+    /// On success, the deck's `imageUrl` is updated to the download URL
+    /// and persisted both locally and remotely.
+    private func uploadDeckImageInBackground(deck: DeckModel) {
+        guard let imageUploadService, let userId else { return }
+        guard let imageUrl = deck.imageUrl, !imageUrl.hasPrefix("http") else { return }
+        guard let imageFileURL = deck.imageFileURL,
+              let imageData = try? Data(contentsOf: imageFileURL),
+              let image = UIImage(data: imageData) else { return }
+
+        Task {
+            do {
+                let storagePath = "users/\(userId)/deck_images/\(deck.deckId)"
+                let downloadURL = try await imageUploadService.uploadImage(image: image, path: storagePath)
+
+                var updatedDeck = deck
+                updatedDeck.updateDeckImage(imageName: downloadURL.absoluteString)
+
+                try? local.saveDeck(deck: updatedDeck)
+                if let index = decks.firstIndex(where: { $0.deckId == deck.deckId }) {
+                    decks[index] = updatedDeck
+                }
+                try? await remote.saveDeck(userId: userId, deck: updatedDeck)
+
+                logManager?.trackEvent(event: Event.uploadDeckImageSuccess(deckId: deck.deckId))
+            } catch {
+                logManager?.trackEvent(event: Event.uploadDeckImageFail(error: error))
+            }
+        }
+    }
+
     // MARK: - Events
     
     enum Event: LoggableEvent {
@@ -396,6 +435,8 @@ class FlashcardManager {
         case remotePushFail(error: Error)
         case remoteDeleteSuccess(deckId: String)
         case remoteDeleteFail(error: Error)
+        case uploadDeckImageSuccess(deckId: String)
+        case uploadDeckImageFail(error: Error)
 
         var eventName: String {
             switch self {
@@ -429,6 +470,8 @@ class FlashcardManager {
             case .remotePushFail:           return "FlashcardMan_RemotePush_Fail"
             case .remoteDeleteSuccess:      return "FlashcardMan_RemoteDelete_Success"
             case .remoteDeleteFail:         return "FlashcardMan_RemoteDelete_Fail"
+            case .uploadDeckImageSuccess:   return "FlashcardMan_UploadDeckImage_Success"
+            case .uploadDeckImageFail:      return "FlashcardMan_UploadDeckImage_Fail"
             }
         }
 
@@ -444,7 +487,7 @@ class FlashcardManager {
                 return ["deck_name": name]
             case .createDeckSuccess(deck: let deck), .updateDeckStart(deck: let deck), .updateDeckSuccess(deck: let deck):
                 return deck.eventParameters
-            case .deleteDeckStart(deckId: let id), .deleteDeckSuccess(deckId: let id), .remotePushSuccess(deckId: let id), .remoteDeleteSuccess(deckId: let id):
+            case .deleteDeckStart(deckId: let id), .deleteDeckSuccess(deckId: let id), .remotePushSuccess(deckId: let id), .remoteDeleteSuccess(deckId: let id), .uploadDeckImageSuccess(deckId: let id):
                 return ["deck_id": id]
             case .addFlashcardStart(deckId: let id):
                 return ["deck_id": id]
@@ -463,7 +506,8 @@ class FlashcardManager {
                     .deleteAllDecksFail(error: let error),
                     .logInFail(error: let error),
                     .remotePushFail(error: let error),
-                    .remoteDeleteFail(error: let error):
+                    .remoteDeleteFail(error: let error),
+                    .uploadDeckImageFail(error: let error):
                 return error.eventParameters
             default:
                 return nil
@@ -472,7 +516,7 @@ class FlashcardManager {
 
         var type: LogType {
             switch self {
-            case .loadDecksFail, .createDeckFail, .updateDeckFail, .deleteDeckFail, .addFlashcardFail, .deleteFlashcardFail, .deleteAllDecksFail, .logInFail, .remotePushFail, .remoteDeleteFail:
+            case .loadDecksFail, .createDeckFail, .updateDeckFail, .deleteDeckFail, .addFlashcardFail, .deleteFlashcardFail, .deleteAllDecksFail, .logInFail, .remotePushFail, .remoteDeleteFail, .uploadDeckImageFail:
                 return .severe
             default:
                 return .analytic

@@ -55,6 +55,12 @@ struct FirebaseUserService: RemoteUserService {
             UserModel.CodingKeys.didCompleteOnboarding.rawValue: true
         ])
     }
+
+    func markFirstDeckCreated(userId: String) async throws {
+        try await collection.document(userId).updateData([
+            UserModel.CodingKeys.didCreateFirstDeck.rawValue: true
+        ])
+    }
     
     func streamUser(userId: String) -> AsyncThrowingStream<UserModel, Error> {
         collection.streamDocument(id: userId)

@@ -48,8 +48,17 @@ class MockUserService: RemoteUserService {
         guard var currentUser else {
             throw URLError(.unknown)
         }
-        
+
         currentUser.markDidCompleteOnboarding()
+        self.currentUser = currentUser
+    }
+
+    func markFirstDeckCreated(userId: String) async throws {
+        guard var currentUser else {
+            throw URLError(.unknown)
+        }
+
+        currentUser.markDidCreateFirstDeck()
         self.currentUser = currentUser
     }
     

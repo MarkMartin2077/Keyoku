@@ -32,6 +32,7 @@ extension CreateDeckPresenter {
         case onCreateEmptyPressed
         case onCreateEmptySuccess
         case onCreateEmptyFail(error: Error)
+        case onFirstDeckCelebrationDismissed
 
         var eventName: String {
             switch self {
@@ -57,6 +58,7 @@ extension CreateDeckPresenter {
             case .onCreateEmptyPressed:     return "CreateDeckView_CreateEmpty_Pressed"
             case .onCreateEmptySuccess:     return "CreateDeckView_CreateEmpty_Success"
             case .onCreateEmptyFail:        return "CreateDeckView_CreateEmpty_Fail"
+            case .onFirstDeckCelebrationDismissed: return "CreateDeckView_FirstDeckCelebration_Dismissed"
             }
         }
 

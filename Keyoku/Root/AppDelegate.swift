@@ -31,7 +31,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
         
         config.configure()
-        
+
         // Must be called AFTER configuring Firebase
         registerForRemotePushNotifications(application: application)
         

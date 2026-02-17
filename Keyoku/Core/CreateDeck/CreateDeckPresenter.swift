@@ -63,6 +63,14 @@ class CreateDeckPresenter {
     // Generation results
     var generatedFlashcardCount: Int = 0
 
+    // First deck celebration
+    var showFirstDeckCelebration: Bool = false
+    private var wasFirstDeck: Bool = false
+
+    private var hasCreatedFirstDeck: Bool {
+        interactor.currentUser?.didCreateFirstDeck == true
+    }
+
     var skippedBatches: Int {
         flashcardSkippedBatches
     }
@@ -76,6 +84,15 @@ class CreateDeckPresenter {
     var pdfPageCount: Int?
     var isExtractingPDF: Bool = false
     var pdfError: String?
+
+    private static let charsPerCard: Int = 150
+
+    var maxCardCount: Int {
+        let trimmedLength = sourceText.trimmingCharacters(in: .whitespacesAndNewlines).count
+        let rawMax = trimmedLength / Self.charsPerCard
+        let roundedToStep = (rawMax / 5) * 5 // Round down to nearest step of 5
+        return min(max(roundedToStep, 10), 50)
+    }
 
     var canGenerate: Bool {
         !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -112,6 +129,12 @@ class CreateDeckPresenter {
     func onCardCountChanged(_ count: Int) {
         interactor.trackEvent(event: Event.onCardCountChanged(count: count))
         cardCount = count
+    }
+
+    func clampCardCountIfNeeded() {
+        if cardCount > maxCardCount {
+            cardCount = maxCardCount
+        }
     }
 
     func onCreationModeChanged(_ mode: CreationMode) {
@@ -194,6 +217,7 @@ class CreateDeckPresenter {
 
         guard canGenerate else { return }
 
+        wasFirstDeck = !hasCreatedFirstDeck && interactor.decks.isEmpty
         resetGenerationState()
 
         Task {
@@ -211,7 +235,22 @@ class CreateDeckPresenter {
     func onSuccessDismissPressed() {
         interactor.trackEvent(event: Event.onSuccessDismissPressed)
         isGenerationComplete = false
+
+        if wasFirstDeck {
+            showFirstDeckCelebration = true
+        } else {
+            router.dismiss()
+        }
+    }
+
+    func onFirstDeckCelebrationDismissed() {
+        interactor.trackEvent(event: Event.onFirstDeckCelebrationDismissed)
+        showFirstDeckCelebration = false
         router.dismiss()
+
+        Task {
+            try? await interactor.saveFirstDeckCreated()
+        }
     }
 
     private func resetGenerationState() {
@@ -257,6 +296,8 @@ class CreateDeckPresenter {
 
         guard canCreateEmpty else { return }
 
+        let isFirstDeck = !hasCreatedFirstDeck && interactor.decks.isEmpty
+
         do {
             let savedImageUrl = try saveImageIfNeeded()
 
@@ -269,7 +310,13 @@ class CreateDeckPresenter {
 
             interactor.trackEvent(event: Event.onCreateEmptySuccess)
             interactor.playHaptic(option: .success)
-            router.dismiss()
+
+            if isFirstDeck {
+                wasFirstDeck = true
+                showFirstDeckCelebration = true
+            } else {
+                router.dismiss()
+            }
         } catch {
             interactor.trackEvent(event: Event.onCreateEmptyFail(error: error))
             router.showAlert(error: error)

@@ -75,6 +75,11 @@ class UserManager {
         let uid = try currentUserId()
         try await remote.markOnboardingCompleted(userId: uid)
     }
+
+    func saveFirstDeckCreatedForCurrentUser() async throws {
+        let uid = try currentUserId()
+        try await remote.markFirstDeckCreated(userId: uid)
+    }
     
     func saveUserName(name: String) async throws {
         let uid = try currentUserId()

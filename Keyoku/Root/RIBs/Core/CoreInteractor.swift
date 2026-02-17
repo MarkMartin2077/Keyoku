@@ -74,6 +74,10 @@ struct CoreInteractor: GlobalInteractor {
     func saveOnboardingComplete() async throws {
         try await userManager.saveOnboardingCompleteForCurrentUser()
     }
+
+    func saveFirstDeckCreated() async throws {
+        try await userManager.saveFirstDeckCreatedForCurrentUser()
+    }
     
     func saveUserName(name: String) async throws {
         try await userManager.saveUserName(name: name)

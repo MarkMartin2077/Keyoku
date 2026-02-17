@@ -76,11 +76,22 @@ struct FlashcardView: View {
                 Spacer()
                 
                 // Main text
-                Text(showingAnswer ? answer : question)
-                    .font(.title3)
-                    .fontWeight(showingAnswer ? .regular : .bold)
-                    .multilineTextAlignment(.center)
-                    .scaleEffect(x: showingAnswer ? -1 : 1, y: 1) // Counter the flip
+                if showingAnswer {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        Text(answer)
+                            .font(.title3)
+                            .fontWeight(.regular)
+                            .multilineTextAlignment(.center)
+                            .scaleEffect(x: -1, y: 1)
+                            .frame(maxWidth: .infinity)
+                    }
+                } else {
+                    Text(question)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.7)
+                }
                 
                 Spacer()
                 

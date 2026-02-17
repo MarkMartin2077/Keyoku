@@ -51,6 +51,13 @@ class PracticePresenter {
 
     func onViewAppear(delegate: PracticeDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
+
+        if flashcards.count == 1, !hasRecordedCompletion {
+            hasRecordedCompletion = true
+            interactor.trackEvent(event: Event.onPracticeSessionComplete(deckName: deckName, cardsCount: flashcards.count))
+            interactor.playHaptic(option: .lessonComplete())
+            recordStreakEvent()
+        }
     }
 
     func onViewDisappear(delegate: PracticeDelegate) {

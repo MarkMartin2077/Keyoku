@@ -22,10 +22,11 @@ struct DeckItem: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            if let imageUrl = deck.imageUrl {
-                ImageLoaderView(urlString: imageUrl, resizingMode: .fit)
-                    .scaledToFit()
+            if let imageUrl = deck.displayImageUrlString {
+                ImageLoaderView(urlString: imageUrl)
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: itemSize, height: itemSize)
+                    .clipped()
             } else {
                 Image(systemName: "rectangle.on.rectangle")
                     .font(.system(size: 64))
@@ -120,7 +121,18 @@ struct DecksView: View {
         Button {
             presenter.onDeckPressed(deck: deck)
         } label: {
-            HStack {
+            HStack(spacing: 12) {
+                if let imageUrl = deck.displayImageUrlString {
+                    ImageLoaderView(urlString: imageUrl)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(deck.color.color.gradient)
+                        .frame(width: 44, height: 44)
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(deck.name)
                         .font(.headline)

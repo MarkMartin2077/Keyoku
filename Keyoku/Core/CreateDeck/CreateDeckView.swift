@@ -26,6 +26,7 @@ struct CreateDeckView: View {
 
     var body: some View {
         Form {
+            deckPreviewSection
             deckInfoSection
             creationModePicker
 
@@ -47,6 +48,10 @@ struct CreateDeckView: View {
             } else if presenter.isGenerationComplete {
                 CreateDeckSuccessOverlay(presenter: presenter) {
                     presenter.onSuccessDismissPressed()
+                }
+            } else if presenter.showFirstDeckCelebration {
+                FirstDeckCelebrationView {
+                    presenter.onFirstDeckCelebrationDismissed()
                 }
             }
         }
@@ -75,7 +80,10 @@ struct CreateDeckView: View {
                 presenter.onPDFFileSelected(result: .failure(error))
             }
         }
-        .interactiveDismissDisabled(presenter.isGenerating || presenter.isGenerationComplete)
+        .interactiveDismissDisabled(presenter.isGenerating || presenter.isGenerationComplete || presenter.showFirstDeckCelebration)
+        .onChange(of: presenter.sourceText) {
+            presenter.clampCardCountIfNeeded()
+        }
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }
@@ -84,13 +92,78 @@ struct CreateDeckView: View {
         }
     }
     
+    // MARK: - Live Preview
+
+    private var deckPreviewSection: some View {
+        Section {
+            deckPreviewCard
+                .frame(maxWidth: .infinity, alignment: .center)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        }
+    }
+
+    private var deckPreviewCard: some View {
+        let displayName = presenter.deckName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasName = !displayName.isEmpty
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(hasName ? displayName : "Deck Name")
+                .font(.headline)
+                .foregroundStyle(.white.opacity(hasName ? 1.0 : 0.5))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 4) {
+                Image(systemName: "rectangle.on.rectangle")
+                    .font(.caption2)
+                Text(presenter.creationMode == .generate ? "\(presenter.cardCount) cards" : "Empty")
+                    .font(.caption)
+            }
+            .foregroundStyle(.white.opacity(0.8))
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(height: 130)
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [presenter.selectedColor.color, presenter.selectedColor.color.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                if let image = presenter.selectedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 130)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.black.opacity(0.35))
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .animation(.smooth(duration: 0.3), value: presenter.selectedColor)
+        .animation(.smooth(duration: 0.3), value: presenter.selectedImage != nil)
+    }
+
     // MARK: - Deck Info Section
-    
+
     private var deckInfoSection: some View {
         Section {
             TextField("Name", text: $presenter.deckName)
 
             colorPicker
+
+            coverImagePicker
 
         } header: {
             Text("Details")
@@ -117,11 +190,15 @@ struct CreateDeckView: View {
 
     private var cardAmountSection: some View {
         Section {
-            Stepper("\(presenter.cardCount) cards", value: $presenter.cardCount, in: 10...50, step: 5)
+            Stepper("\(presenter.cardCount) cards", value: $presenter.cardCount, in: 10...presenter.maxCardCount, step: 5)
         } header: {
             Text("Number of Cards")
         } footer: {
-            Text("More cards require more source text for best results.")
+            if presenter.maxCardCount < 50 {
+                Text("Add more source text to unlock up to 50 cards. Current max: \(presenter.maxCardCount).")
+            } else {
+                Text("You have enough source text for up to 50 cards.")
+            }
         }
     }
     
@@ -146,17 +223,19 @@ struct CreateDeckView: View {
         let isSelected = presenter.selectedColor == deckColor
         return Circle()
             .fill(deckColor.color)
-            .frame(width: 32, height: 32)
+            .frame(width: 36, height: 36)
             .overlay {
                 if isSelected {
                     Circle()
-                        .strokeBorder(.white, lineWidth: 2)
+                        .strokeBorder(.white, lineWidth: 2.5)
                     Image(systemName: "checkmark")
                         .font(.caption.bold())
                         .foregroundStyle(.white)
                 }
             }
-            .shadow(color: deckColor.color.opacity(0.4), radius: 2, y: 1)
+            .scaleEffect(isSelected ? 1.15 : 1.0)
+            .shadow(color: deckColor.color.opacity(isSelected ? 0.6 : 0.3), radius: isSelected ? 4 : 2, y: 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
             .accessibilityLabel(isSelected ? "\(deckColor.displayName), selected" : deckColor.displayName)
             .anyButton(.press) {
                 presenter.onColorSelected(deckColor)
@@ -180,16 +259,37 @@ struct CreateDeckView: View {
                         .frame(height: 160)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                    Button {
-                        selectedPhotoItem = nil
-                        presenter.onRemoveImage()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, .black.opacity(0.5))
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .black.opacity(0.5))
+                        .padding(8)
+                        .anyButton(.press) {
+                            selectedPhotoItem = nil
+                            presenter.onRemoveImage()
+                        }
+                }
+            } else {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                        Text("Add Cover Image")
                     }
-                    .padding(8)
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.ultraThinMaterial)
+                    }
+                }
+            }
+        }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    presenter.onImageDataLoaded(data)
                 }
             }
         }
@@ -326,56 +426,58 @@ struct CreateDeckView: View {
     
     @ViewBuilder
     private var generateButton: some View {
-        Button {
-            presenter.onGeneratePressed()
-        } label: {
-            HStack {
-                Spacer()
-                
-                Image(systemName: "apple.intelligence")
-                Text(generateButtonLabel)
-
-                Spacer()
-            }
-            .font(.headline)
-            .foregroundStyle(.white)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(presenter.canGenerate ? Color.accentColor : Color.gray)
-            )
+        HStack(spacing: 8) {
+            Image(systemName: "apple.intelligence")
+            Text("Generate")
         }
-        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    presenter.canGenerate
+                    ? AnyShapeStyle(LinearGradient(
+                        colors: [.accent, .accent.opacity(0.8)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
+                    : AnyShapeStyle(Color.gray)
+                )
+        }
+        .anyButton(.press) {
+            presenter.onGeneratePressed()
+        }
         .disabled(!presenter.canGenerate)
         .accessibilityHint(presenter.canGenerate ? "" : "Enter a deck name and source text to generate")
     }
 
-    private var generateButtonLabel: String {
-        "Generate"
-    }
-    
     @ViewBuilder
     private var createEmptyButton: some View {
-        Button {
-            presenter.onCreateEmptyPressed()
-        } label: {
-            HStack {
-                Spacer()
-                
-                Image(systemName: "rectangle.stack.badge.plus")
-                Text("Create Empty Deck")
-                
-                Spacer()
-            }
-            .font(.headline)
-            .foregroundStyle(.white)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(presenter.canCreateEmpty ? Color.accentColor : Color.gray)
-            )
+        HStack(spacing: 8) {
+            Image(systemName: "rectangle.stack.badge.plus")
+            Text("Create Empty Deck")
         }
-        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    presenter.canCreateEmpty
+                    ? AnyShapeStyle(LinearGradient(
+                        colors: [.accent, .accent.opacity(0.8)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
+                    : AnyShapeStyle(Color.gray)
+                )
+        }
+        .anyButton(.press) {
+            presenter.onCreateEmptyPressed()
+        }
         .disabled(!presenter.canCreateEmpty)
     }
     

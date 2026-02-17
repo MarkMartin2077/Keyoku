@@ -71,7 +71,7 @@ struct Dependencies {
             )
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
-            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
+            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), imageUploadService: FirebaseImageUploadService(), logManager: logManager)
             streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
         case .prod:
             logManager = LogManager(services: [
@@ -89,7 +89,7 @@ struct Dependencies {
             )
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
-            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
+            flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), imageUploadService: FirebaseImageUploadService(), logManager: logManager)
             streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
         }
         pushManager = PushManager(logManager: logManager)

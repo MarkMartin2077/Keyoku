@@ -207,14 +207,26 @@ struct HomeView: View {
         .padding()
         .frame(width: deckCardWidth, height: deckCardHeight, alignment: .topLeading)
         .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [deck.color.color, deck.color.color.opacity(0.7)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [deck.color.color, deck.color.color.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
+
+                if let imageUrl = deck.displayImageUrlString {
+                    ImageLoaderView(urlString: imageUrl)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: deckCardWidth, height: deckCardHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.black.opacity(0.35))
+                }
+            }
         }
         .accessibilityLabel("\(deck.name), \(deck.flashcards.count) \(deck.flashcards.count == 1 ? "card" : "cards")")
         .accessibilityHint("Opens deck")

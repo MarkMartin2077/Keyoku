@@ -33,6 +33,7 @@ struct UserModel: StringIdentifiable, Codable {
     let submittedProfileImage: String?
     let fcmToken: String?
     private(set) var didCompleteOnboarding: Bool?
+    private(set) var didCreateFirstDeck: Bool?
     
     init(
         userId: String,
@@ -51,7 +52,8 @@ struct UserModel: StringIdentifiable, Codable {
         submittedName: String? = nil,
         submittedProfileImage: String? = nil,
         fcmToken: String? = nil,
-        didCompleteOnboarding: Bool? = nil
+        didCompleteOnboarding: Bool? = nil,
+        didCreateFirstDeck: Bool? = nil
     ) {
         self.userId = userId
         self.email = email
@@ -70,6 +72,7 @@ struct UserModel: StringIdentifiable, Codable {
         self.submittedProfileImage = submittedProfileImage
         self.fcmToken = fcmToken
         self.didCompleteOnboarding = didCompleteOnboarding
+        self.didCreateFirstDeck = didCreateFirstDeck
     }
     
     init(auth: UserAuthInfo, creationVersion: String?) {
@@ -107,6 +110,7 @@ struct UserModel: StringIdentifiable, Codable {
         case submittedProfileImage = "submitted_profile_image"
         case fcmToken = "fcm_token"
         case didCompleteOnboarding = "did_complete_onboarding"
+        case didCreateFirstDeck = "did_create_first_deck"
     }
     
     var eventParameters: [String: Any] {
@@ -129,7 +133,8 @@ struct UserModel: StringIdentifiable, Codable {
             "user_\(CodingKeys.submittedEmail.rawValue)": submittedEmail,
             "user_\(CodingKeys.submittedProfileImage.rawValue)": submittedProfileImage,
             "user_has_\(CodingKeys.fcmToken.rawValue)": (fcmToken?.count ?? 0) > 0,
-            "user_\(CodingKeys.didCompleteOnboarding.rawValue)": didCompleteOnboarding
+            "user_\(CodingKeys.didCompleteOnboarding.rawValue)": didCompleteOnboarding,
+            "user_\(CodingKeys.didCreateFirstDeck.rawValue)": didCreateFirstDeck
         ]
         return dict.compactMapValues({ $0 })
     }
@@ -204,6 +209,10 @@ struct UserModel: StringIdentifiable, Codable {
     
     mutating func markDidCompleteOnboarding() {
         didCompleteOnboarding = true
+    }
+
+    mutating func markDidCreateFirstDeck() {
+        didCreateFirstDeck = true
     }
     
     static var mock: Self {

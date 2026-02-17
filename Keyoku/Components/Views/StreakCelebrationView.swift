@@ -81,8 +81,52 @@ struct StreakCelebrationView: View {
 
     // MARK: - Subtitle
 
+    private var subtitleText: String {
+        let count = streakCount ?? 1
+        let phrases: [String]
+
+        switch count {
+        case 1:
+            phrases = [
+                "And so it begins!",
+                "The first step is the hardest!",
+                "A great start!"
+            ]
+        case 2...4:
+            phrases = [
+                "You're building momentum!",
+                "Consistency is key!",
+                "Keep showing up!",
+                "One day at a time!"
+            ]
+        case 5...9:
+            phrases = [
+                "You're on fire! Keep it up.",
+                "Impressive dedication!",
+                "You're in the zone!",
+                "Nothing can stop you now!"
+            ]
+        case 10...29:
+            phrases = [
+                "Double digits! Incredible!",
+                "You're unstoppable!",
+                "What a streak!",
+                "Consistency pays off!"
+            ]
+        default:
+            phrases = [
+                "Legendary commitment!",
+                "You're a studying machine!",
+                "Absolutely unstoppable!",
+                "Your dedication is inspiring!"
+            ]
+        }
+
+        return phrases[count % phrases.count]
+    }
+
     private var subtitleLabel: some View {
-        Text("You're on fire! Keep it up.")
+        Text(subtitleText)
             .font(.body)
             .foregroundStyle(.white.opacity(0.7))
             .multilineTextAlignment(.center)
