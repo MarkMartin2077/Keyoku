@@ -189,13 +189,7 @@ struct CreateDeckGeneratingOverlay: View {
                 .foregroundStyle(.orange)
             }
 
-            if let statusText = currentStatusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text(estimatedTimeText ?? "This may take a moment depending on the amount of source text.")
+            Text(estimatedTimeText)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -206,28 +200,22 @@ struct CreateDeckGeneratingOverlay: View {
 
     // MARK: - Text Helpers
 
-    private var currentStatusText: String? {
-        guard let flashcardStatus = presenter.flashcardStatusText, presenter.flashcardTotal > 0 else {
-            return nil
-        }
-        return "Batch \(presenter.flashcardProgress)/\(presenter.flashcardTotal) — \(flashcardStatus)"
-    }
-
     private var accessibilityLabel: String {
         var label = "Generating Flashcards. \(totalGenerated) of \(totalTarget) generated."
         if presenter.skippedBatches > 0 {
             label += " \(presenter.skippedBatches) sections skipped."
         }
-        if let timeText = estimatedTimeText {
-            label += " \(timeText)."
-        }
         return label
     }
 
-    private var estimatedTimeText: String? {
-        guard let seconds = presenter.estimatedSecondsRemaining, seconds > 0 else { return nil }
-        if seconds < 60 {
-            return "About \(seconds) seconds remaining"
+    private var estimatedTimeText: String {
+        guard let seconds = presenter.estimatedSecondsRemaining, seconds > 0 else {
+            return "This may take a moment depending on the amount of source text."
+        }
+        if seconds <= 10 {
+            return "Almost done..."
+        } else if seconds < 60 {
+            return "Less than a minute remaining"
         } else {
             let minutes = Int(ceil(Double(seconds) / 60.0))
             return "About \(minutes) minute\(minutes == 1 ? "" : "s") remaining"
