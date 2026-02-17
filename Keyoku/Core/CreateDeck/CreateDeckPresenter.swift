@@ -91,6 +91,10 @@ class CreateDeckPresenter {
     var quizSkippedBatches: Int = 0
     var quizItemsGenerated: Int = 0
 
+    // Streaming state — items appear here as they're generated
+    var streamedFlashcards: [FlashcardModel] = []
+    var streamedQuizQuestions: [QuizQuestionModel] = []
+
     // Generation results
     var generatedFlashcardCount: Int = 0
     var generatedMCCount: Int = 0
@@ -281,6 +285,8 @@ class CreateDeckPresenter {
         quizStatusText = nil
         quizSkippedBatches = 0
         quizItemsGenerated = 0
+        streamedFlashcards = []
+        streamedQuizQuestions = []
         generatedFlashcardCount = 0
         generatedMCCount = 0
         generatedTFCount = 0
@@ -309,7 +315,8 @@ class CreateDeckPresenter {
         guard contentType == .flashcards || contentType == .both else { return nil }
 
         do {
-            let flashcards = try await generateFlashcards()
+            try await generateFlashcards()
+            let flashcards = streamedFlashcards
             generatedFlashcardCount = flashcards.count
             interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
 
@@ -331,7 +338,8 @@ class CreateDeckPresenter {
         guard contentType == .quiz || contentType == .both else { return nil }
 
         do {
-            let questions = try await generateQuizQuestions()
+            try await generateQuizQuestions()
+            let questions = streamedQuizQuestions
             generatedMCCount = questions.filter { $0.questionType == .multipleChoice }.count
             generatedTFCount = questions.filter { $0.questionType == .trueFalse }.count
             interactor.trackEvent(event: Event.onQuizGenerateSuccess(questionCount: questions.count))

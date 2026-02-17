@@ -143,16 +143,8 @@ extension CreateDeckPresenter {
         let session = makeSession()
         let prompt = "Identify the main topic of this text in a few words.\n\nText:\n\(text)"
 
-        let validationSchema = DynamicGenerationSchema(
-            name: "TopicCheck",
-            properties: [
-                .init(name: "topic", schema: .init(type: String.self))
-            ]
-        )
-
         do {
-            let schema = try GenerationSchema(root: validationSchema, dependencies: [])
-            _ = try await session.respond(to: prompt, schema: schema)
+            _ = try await session.respond(to: prompt, generating: TopicCheckResult.self)
             return true
         } catch {
             return false
@@ -164,45 +156,18 @@ extension CreateDeckPresenter {
 
 extension CreateDeckPresenter {
 
-    func flashcardSchema(count: Int) throws -> GenerationSchema {
-        let cardSchema = DynamicGenerationSchema(
-            name: "Card",
-            properties: [
-                .init(name: "question", schema: .init(type: String.self)),
-                .init(name: "answer", schema: .init(type: String.self))
-            ]
-        )
-
-        let deckSchema = DynamicGenerationSchema(
-            name: "Flashcards",
-            properties: [
-                .init(
-                    name: "cards",
-                    schema: .init(
-                        arrayOf: cardSchema,
-                        minimumElements: count,
-                        maximumElements: count
-                    )
-                )
-            ]
-        )
-
-        return try GenerationSchema(root: deckSchema, dependencies: [cardSchema])
-    }
-
-    func generateFlashcards() async throws -> [FlashcardModel] {
+    func generateFlashcards() async throws {
         let maxCardsPerBatch = 5
         let chunks = makeChunks(maxTextPerBatch: 5000, itemCount: cardCount, maxItemsPerBatch: maxCardsPerBatch)
 
         flashcardTotal = chunks.count
         flashcardProgress = 0
         flashcardSkippedBatches = 0
-        var allFlashcards: [FlashcardModel] = []
 
         for chunk in chunks {
             flashcardProgress += 1
 
-            let cardsStillNeeded = cardCount - allFlashcards.count
+            let cardsStillNeeded = cardCount - streamedFlashcards.count
             guard cardsStillNeeded > 0 else { break }
             let batchCards = min(cardsStillNeeded, maxCardsPerBatch)
 
@@ -217,9 +182,7 @@ extension CreateDeckPresenter {
             interactor.trackEvent(event: Event.onBatchStart(batchNumber: flashcardProgress, totalBatches: flashcardTotal, cardCount: batchCards))
 
             do {
-                let flashcards = try await generateFlashcardBatch(text: chunk, count: batchCards)
-                allFlashcards.append(contentsOf: flashcards)
-                flashcardItemsGenerated = allFlashcards.count
+                try await streamFlashcardBatch(text: chunk, count: batchCards)
             } catch {
                 flashcardSkippedBatches += 1
                 flashcardStatusText = "Skipped"
@@ -228,11 +191,9 @@ extension CreateDeckPresenter {
 
             updateTimeEstimate()
         }
-
-        return allFlashcards
     }
 
-    private func generateFlashcardBatch(text: String, count: Int) async throws -> [FlashcardModel] {
+    private func streamFlashcardBatch(text: String, count: Int) async throws {
         let session = makeSession()
         let prompt = """
         Generate exactly \(count) flashcards ONLY from the source text below. \
@@ -258,14 +219,29 @@ extension CreateDeckPresenter {
         \(text)
         """
 
-        let schema = try flashcardSchema(count: count)
-        let response = try await session.respond(to: prompt, schema: schema)
-        let cards = try response.content.value([GeneratedContent].self, forProperty: "cards")
+        let stream = session.streamResponse(to: prompt, generating: GeneratedFlashcardBatch.self)
+        let countBeforeBatch = streamedFlashcards.count
+        var batchIds: [String] = []
 
-        return try cards.map { card in
-            let question = try card.value(String.self, forProperty: "question")
-            let answer = try card.value(String.self, forProperty: "answer")
-            return FlashcardModel(question: question, answer: answer)
+        for try await snapshot in stream {
+            let completedCards = snapshot.content.cards?.compactMap { partialCard -> FlashcardModel? in
+                guard let question = partialCard.question,
+                      let answer = partialCard.answer else { return nil }
+                return FlashcardModel(question: question, answer: answer)
+            } ?? []
+
+            let cappedCards = Array(completedCards.prefix(count))
+
+            // Assign stable IDs so SwiftUI doesn't re-animate existing cards
+            while batchIds.count < cappedCards.count {
+                batchIds.append(UUID().uuidString)
+            }
+            let stableCards = cappedCards.enumerated().map { index, card in
+                FlashcardModel(flashcardId: batchIds[index], question: card.question, answer: card.answer)
+            }
+
+            streamedFlashcards = Array(streamedFlashcards.prefix(countBeforeBatch)) + stableCards
+            flashcardItemsGenerated = streamedFlashcards.count
         }
     }
 }
@@ -274,75 +250,18 @@ extension CreateDeckPresenter {
 
 extension CreateDeckPresenter {
 
-    func multipleChoiceSchema(count: Int) throws -> GenerationSchema {
-        let questionSchema = DynamicGenerationSchema(
-            name: "MCQuestion",
-            properties: [
-                .init(name: "questionText", schema: .init(type: String.self)),
-                .init(name: "option1", schema: .init(type: String.self)),
-                .init(name: "option2", schema: .init(type: String.self)),
-                .init(name: "option3", schema: .init(type: String.self)),
-                .init(name: "option4", schema: .init(type: String.self)),
-                .init(name: "correctOptionIndex", schema: .init(type: Int.self))
-            ]
-        )
-
-        let rootSchema = DynamicGenerationSchema(
-            name: "MCQuestions",
-            properties: [
-                .init(
-                    name: "questions",
-                    schema: .init(
-                        arrayOf: questionSchema,
-                        minimumElements: count,
-                        maximumElements: count
-                    )
-                )
-            ]
-        )
-
-        return try GenerationSchema(root: rootSchema, dependencies: [questionSchema])
-    }
-
-    func trueFalseSchema(count: Int) throws -> GenerationSchema {
-        let statementSchema = DynamicGenerationSchema(
-            name: "TFStatement",
-            properties: [
-                .init(name: "statement", schema: .init(type: String.self)),
-                .init(name: "isTrue", schema: .init(type: Bool.self))
-            ]
-        )
-
-        let rootSchema = DynamicGenerationSchema(
-            name: "TFStatements",
-            properties: [
-                .init(
-                    name: "statements",
-                    schema: .init(
-                        arrayOf: statementSchema,
-                        minimumElements: count,
-                        maximumElements: count
-                    )
-                )
-            ]
-        )
-
-        return try GenerationSchema(root: rootSchema, dependencies: [statementSchema])
-    }
-
-    func generateQuizQuestions() async throws -> [QuizQuestionModel] {
+    func generateQuizQuestions() async throws {
         let maxQuestionsPerBatch = 3
         let chunks = makeChunks(maxTextPerBatch: 3000, itemCount: questionCount, maxItemsPerBatch: maxQuestionsPerBatch)
 
         quizTotal = chunks.count
         quizProgress = 0
         quizSkippedBatches = 0
-        var allQuestions: [QuizQuestionModel] = []
 
         for chunk in chunks {
             quizProgress += 1
 
-            let questionsStillNeeded = questionCount - allQuestions.count
+            let questionsStillNeeded = questionCount - streamedQuizQuestions.count
             guard questionsStillNeeded > 0 else { break }
             let batchQuestions = min(questionsStillNeeded, maxQuestionsPerBatch)
 
@@ -356,40 +275,36 @@ extension CreateDeckPresenter {
             quizStatusText = "Generating..."
             interactor.trackEvent(event: Event.onBatchStart(batchNumber: quizProgress, totalBatches: quizTotal, cardCount: batchQuestions))
 
-            let result = await generateQuizBatch(text: chunk, count: batchQuestions)
-            allQuestions.append(contentsOf: result.questions)
+            let skipped = await generateQuizBatch(text: chunk, count: batchQuestions)
 
-            if result.skipped {
+            if skipped {
                 quizSkippedBatches += 1
                 quizStatusText = "Skipped"
             }
 
-            quizItemsGenerated = allQuestions.count
+            quizItemsGenerated = streamedQuizQuestions.count
             updateTimeEstimate()
         }
 
-        allQuestions.shuffle()
-        return allQuestions
+        streamedQuizQuestions.shuffle()
     }
 
-    private func generateQuizBatch(text: String, count: Int) async -> (questions: [QuizQuestionModel], skipped: Bool) {
+    private func generateQuizBatch(text: String, count: Int) async -> Bool {
         switch quizQuestionType {
         case .multipleChoice:
             do {
-                let session = makeSession()
-                let questions = try await generateMCQuestions(session: session, text: text, count: count)
-                return (questions, false)
+                try await streamMCQuestions(text: text, count: count)
+                return false
             } catch {
-                return ([], true)
+                return true
             }
 
         case .trueFalse:
             do {
-                let session = makeSession()
-                let questions = try await generateTFQuestions(session: session, text: text, count: count)
-                return (questions, false)
+                try await streamTFQuestions(text: text, count: count)
+                return false
             } catch {
-                return ([], true)
+                return true
             }
 
         case .both:
@@ -397,7 +312,7 @@ extension CreateDeckPresenter {
         }
     }
 
-    private func generateMixedQuizBatch(text: String, count: Int) async -> (questions: [QuizQuestionModel], skipped: Bool) {
+    private func generateMixedQuizBatch(text: String, count: Int) async -> Bool {
         let mcCount: Int
         let tfCount: Int
 
@@ -410,14 +325,11 @@ extension CreateDeckPresenter {
             tfCount = count - mcCount
         }
 
-        var questions: [QuizQuestionModel] = []
         var succeeded = false
 
         if mcCount > 0 {
             do {
-                let mcSession = makeSession()
-                let mcQuestions = try await generateMCQuestions(session: mcSession, text: text, count: mcCount)
-                questions.append(contentsOf: mcQuestions)
+                try await streamMCQuestions(text: text, count: mcCount)
                 succeeded = true
             } catch {
                 // MC failed, continue to TF
@@ -426,19 +338,18 @@ extension CreateDeckPresenter {
 
         if tfCount > 0 {
             do {
-                let tfSession = makeSession()
-                let tfQuestions = try await generateTFQuestions(session: tfSession, text: text, count: tfCount)
-                questions.append(contentsOf: tfQuestions)
+                try await streamTFQuestions(text: text, count: tfCount)
                 succeeded = true
             } catch {
                 // TF failed
             }
         }
 
-        return (questions, !succeeded)
+        return !succeeded
     }
 
-    func generateMCQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
+    private func streamMCQuestions(text: String, count: Int) async throws {
+        let session = makeSession()
         let prompt = """
         Generate exactly \(count) multiple choice questions ONLY from the source text below. \
         Every question MUST be about a topic, fact, or concept explicitly mentioned in this text. \
@@ -459,28 +370,48 @@ extension CreateDeckPresenter {
         \(text)
         """
 
-        let schema = try multipleChoiceSchema(count: count)
-        let response = try await session.respond(to: prompt, schema: schema)
-        let items = try response.content.value([GeneratedContent].self, forProperty: "questions")
+        let stream = session.streamResponse(to: prompt, generating: GeneratedMCBatch.self)
+        let countBeforeBatch = streamedQuizQuestions.count
+        var batchIds: [String] = []
 
-        return try items.map { item in
-            let questionText = try item.value(String.self, forProperty: "questionText")
-            let opt1 = try item.value(String.self, forProperty: "option1")
-            let opt2 = try item.value(String.self, forProperty: "option2")
-            let opt3 = try item.value(String.self, forProperty: "option3")
-            let opt4 = try item.value(String.self, forProperty: "option4")
-            let correctIndex = try item.value(Int.self, forProperty: "correctOptionIndex")
+        for try await snapshot in stream {
+            let completedQuestions = snapshot.content.questions?.compactMap { partialQ -> QuizQuestionModel? in
+                guard let questionText = partialQ.questionText,
+                      let opt1 = partialQ.optionOne,
+                      let opt2 = partialQ.optionTwo,
+                      let opt3 = partialQ.optionThree,
+                      let opt4 = partialQ.optionFour,
+                      let correctIndex = partialQ.correctOptionIndex else { return nil }
+                return QuizQuestionModel(
+                    questionType: .multipleChoice,
+                    questionText: questionText,
+                    options: [opt1, opt2, opt3, opt4],
+                    correctAnswerIndex: min(max(correctIndex, 0), 3)
+                )
+            } ?? []
 
-            return QuizQuestionModel(
-                questionType: .multipleChoice,
-                questionText: questionText,
-                options: [opt1, opt2, opt3, opt4],
-                correctAnswerIndex: min(max(correctIndex, 0), 3)
-            )
+            let cappedQuestions = Array(completedQuestions.prefix(count))
+
+            while batchIds.count < cappedQuestions.count {
+                batchIds.append(UUID().uuidString)
+            }
+            let stableQuestions = cappedQuestions.enumerated().map { index, question in
+                QuizQuestionModel(
+                    questionId: batchIds[index],
+                    questionType: question.questionType,
+                    questionText: question.questionText,
+                    options: question.options,
+                    correctAnswerIndex: question.correctAnswerIndex
+                )
+            }
+
+            streamedQuizQuestions = Array(streamedQuizQuestions.prefix(countBeforeBatch)) + stableQuestions
+            quizItemsGenerated = streamedQuizQuestions.count
         }
     }
 
-    func generateTFQuestions(session: LanguageModelSession, text: String, count: Int) async throws -> [QuizQuestionModel] {
+    private func streamTFQuestions(text: String, count: Int) async throws {
+        let session = makeSession()
         let prompt = """
         Generate exactly \(count) true or false statements ONLY from the source text below. \
         Every statement MUST be about a topic, fact, or concept explicitly mentioned in this text. \
@@ -494,20 +425,39 @@ extension CreateDeckPresenter {
         \(text)
         """
 
-        let schema = try trueFalseSchema(count: count)
-        let response = try await session.respond(to: prompt, schema: schema)
-        let items = try response.content.value([GeneratedContent].self, forProperty: "statements")
+        let stream = session.streamResponse(to: prompt, generating: GeneratedTFBatch.self)
+        let countBeforeBatch = streamedQuizQuestions.count
+        var batchIds: [String] = []
 
-        return try items.map { item in
-            let statement = try item.value(String.self, forProperty: "statement")
-            let isTrue = try item.value(Bool.self, forProperty: "isTrue")
+        for try await snapshot in stream {
+            let completedStatements = snapshot.content.statements?.compactMap { partialStmt -> QuizQuestionModel? in
+                guard let statement = partialStmt.statement,
+                      let isTrue = partialStmt.isTrue else { return nil }
+                return QuizQuestionModel(
+                    questionType: .trueFalse,
+                    questionText: statement,
+                    options: ["True", "False"],
+                    correctAnswerIndex: isTrue ? 0 : 1
+                )
+            } ?? []
 
-            return QuizQuestionModel(
-                questionType: .trueFalse,
-                questionText: statement,
-                options: ["True", "False"],
-                correctAnswerIndex: isTrue ? 0 : 1
-            )
+            let cappedStatements = Array(completedStatements.prefix(count))
+
+            while batchIds.count < cappedStatements.count {
+                batchIds.append(UUID().uuidString)
+            }
+            let stableStatements = cappedStatements.enumerated().map { index, question in
+                QuizQuestionModel(
+                    questionId: batchIds[index],
+                    questionType: question.questionType,
+                    questionText: question.questionText,
+                    options: question.options,
+                    correctAnswerIndex: question.correctAnswerIndex
+                )
+            }
+
+            streamedQuizQuestions = Array(streamedQuizQuestions.prefix(countBeforeBatch)) + stableStatements
+            quizItemsGenerated = streamedQuizQuestions.count
         }
     }
 }

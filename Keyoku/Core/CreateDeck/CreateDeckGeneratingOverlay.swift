@@ -7,152 +7,241 @@
 
 import SwiftUI
 
-struct GenerationProgressData {
-    let title: String
-    let batchProgress: Int
-    let batchTotal: Int
-    let itemsGenerated: Int
-    let itemsTarget: Int
-    let statusText: String?
-    let skipped: Int
-    let tint: Color
-}
-
 struct CreateDeckGeneratingOverlay: View {
 
     let presenter: CreateDeckPresenter
+
+    private var streamedItems: [StreamedCardItem] {
+        var items: [StreamedCardItem] = []
+
+        for card in presenter.streamedFlashcards {
+            items.append(StreamedCardItem(
+                id: card.flashcardId,
+                label: "Flashcard",
+                content: card.question
+            ))
+        }
+
+        for question in presenter.streamedQuizQuestions {
+            let label = question.questionType == .multipleChoice ? "Multiple Choice" : "True & False"
+            items.append(StreamedCardItem(
+                id: question.questionId,
+                label: label,
+                content: question.questionText
+            ))
+        }
+
+        return items
+    }
+
+    private var totalGenerated: Int {
+        presenter.flashcardItemsGenerated + presenter.quizItemsGenerated
+    }
+
+    private var totalTarget: Int {
+        switch presenter.contentType {
+        case .flashcards: return presenter.cardCount
+        case .quiz: return presenter.questionCount
+        case .both: return presenter.cardCount + presenter.questionCount
+        }
+    }
 
     var body: some View {
         ZStack {
             Color(.systemBackground)
                 .ignoresSafeArea()
 
-            VStack(spacing: 24) {
-                Spacer()
-
-                Image(systemName: "apple.intelligence")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.accent)
-                    .symbolEffect(.pulse, isActive: true)
-
-                VStack(spacing: 8) {
-                    Text(generatingTitle)
-                        .font(.title2)
-                        .fontWeight(.bold)
-
-                    Text(generatingSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                if presenter.hasProgress {
-                    VStack(spacing: 16) {
-                        if presenter.flashcardTotal > 0 {
-                            progressSection(
-                                data: GenerationProgressData(
-                                    title: "Flashcards",
-                                    batchProgress: presenter.flashcardProgress,
-                                    batchTotal: presenter.flashcardTotal,
-                                    itemsGenerated: presenter.flashcardItemsGenerated,
-                                    itemsTarget: presenter.cardCount,
-                                    statusText: presenter.flashcardStatusText,
-                                    skipped: presenter.flashcardSkippedBatches,
-                                    tint: .accent
-                                )
-                            )
-                        }
-
-                        if presenter.quizTotal > 0 {
-                            progressSection(
-                                data: GenerationProgressData(
-                                    title: "Quiz",
-                                    batchProgress: presenter.quizProgress,
-                                    batchTotal: presenter.quizTotal,
-                                    itemsGenerated: presenter.quizItemsGenerated,
-                                    itemsTarget: presenter.questionCount,
-                                    statusText: presenter.quizStatusText,
-                                    skipped: presenter.quizSkippedBatches,
-                                    tint: .green
-                                )
-                            )
-                        }
-                    }
-                    .frame(maxWidth: 260)
-                } else {
-                    ProgressView()
-                        .controlSize(.large)
-                }
+            VStack(spacing: 0) {
+                headerSection
+                    .padding(.top, 40)
 
                 Spacer()
 
-                Text(estimatedTimeText ?? "This may take a moment depending on the amount of source text.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .contentTransition(.numericText())
-                    .animation(.smooth, value: presenter.estimatedSecondsRemaining)
+                cardStackSection
+                    .padding(.horizontal, 32)
+
+                Spacer()
+
+                footerSection
                     .padding(.bottom, 32)
             }
             .padding()
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(accessibilityLabel)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    // MARK: - Header
+
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "apple.intelligence")
+                .font(.system(size: 40))
+                .foregroundStyle(.accent)
+                .symbolEffect(.pulse, isActive: true)
+
+            Text(generatingTitle)
+                .font(.title3)
+                .fontWeight(.bold)
+
+            Text("\(totalGenerated) of \(totalTarget)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText())
+                .animation(.smooth, value: totalGenerated)
         }
     }
 
-    // MARK: - Progress Section
+    // MARK: - Card Stack
 
-    private func progressSection(data: GenerationProgressData) -> some View {
-        VStack(spacing: 6) {
-            HStack {
-                Text(data.title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                Spacer()
-                Text("\(data.itemsGenerated) of \(data.itemsTarget)")
-                    .font(.caption)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                    .animation(.smooth, value: data.itemsGenerated)
+    private var cardStackSection: some View {
+        let visibleItems = Array(streamedItems.suffix(4))
+
+        return ZStack {
+            if visibleItems.isEmpty {
+                placeholderCard
+            } else {
+                ForEach(Array(visibleItems.enumerated()), id: \.element.id) { offset, item in
+                    let distanceFromTop = visibleItems.count - 1 - offset
+                    streamedCard(item: item, depth: distanceFromTop)
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.8).combined(with: .opacity),
+                            removal: .identity
+                        ))
+                }
             }
-            .foregroundStyle(.secondary)
+        }
+        .frame(height: 200)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: streamedItems.count)
+    }
 
-            ProgressView(value: Double(data.batchProgress), total: Double(data.batchTotal))
-                .tint(data.tint)
+    private func streamedCard(item: StreamedCardItem, depth: Int) -> some View {
+        let yOffset = Double(depth) * -8
+        let scaleValue = 1.0 - Double(depth) * 0.04
+        let opacityValue = depth == 0 ? 1.0 : max(1.0 - Double(depth) * 0.2, 0.4)
 
-            if let statusText = data.statusText {
-                Text(statusText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+        return VStack(spacing: 12) {
+            Text(item.label)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(presenter.selectedColor.color)
+                )
 
-            if data.skipped > 0 {
+            Text(item.content)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .padding(.horizontal, 8)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 160)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.background)
+                .shadow(color: presenter.selectedColor.color.opacity(0.15), radius: 8, y: 4)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            presenter.selectedColor.color.opacity(0.5),
+                            presenter.selectedColor.color.opacity(0.2)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+        }
+        .rotationEffect(.degrees(item.rotation))
+        .scaleEffect(scaleValue)
+        .offset(y: yOffset)
+        .opacity(opacityValue)
+        .zIndex(Double(100 - depth))
+    }
+
+    private var placeholderCard: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.large)
+
+            Text("Preparing...")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 160)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.background)
+                .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(Color(.separator), lineWidth: 1)
+        }
+    }
+
+    // MARK: - Footer
+
+    private var footerSection: some View {
+        VStack(spacing: 8) {
+            if presenter.skippedBatches > 0 {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                    Text("\(data.skipped) section(s) skipped — restricted")
+                    Text("\(presenter.skippedBatches) section(s) skipped")
                 }
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.orange)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentTransition(.numericText())
-                .animation(.smooth, value: data.skipped)
             }
+
+            if let statusText = currentStatusText {
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(estimatedTimeText ?? "This may take a moment depending on the amount of source text.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .contentTransition(.numericText())
+                .animation(.smooth, value: presenter.estimatedSecondsRemaining)
         }
     }
 
     // MARK: - Text Helpers
 
+    private var currentStatusText: String? {
+        if let flashcardStatus = presenter.flashcardStatusText, presenter.flashcardTotal > 0 {
+            if presenter.quizTotal > 0, let quizStatus = presenter.quizStatusText {
+                return "Flashcards: \(flashcardStatus) | Quiz: \(quizStatus)"
+            }
+            return "Batch \(presenter.flashcardProgress)/\(presenter.flashcardTotal) — \(flashcardStatus)"
+        }
+
+        if let quizStatus = presenter.quizStatusText, presenter.quizTotal > 0 {
+            return "Batch \(presenter.quizProgress)/\(presenter.quizTotal) — \(quizStatus)"
+        }
+
+        return nil
+    }
+
     private var accessibilityLabel: String {
-        var label = "\(generatingTitle). \(generatingSubtitle)."
-        if let statusText = presenter.flashcardStatusText {
-            label += " Flashcards: \(statusText)."
-        }
-        if let statusText = presenter.quizStatusText {
-            label += " Quiz: \(statusText)."
-        }
+        var label = "\(generatingTitle). \(totalGenerated) of \(totalTarget) generated."
         if presenter.skippedBatches > 0 {
-            label += " \(presenter.skippedBatches) sections trimmed due to content restrictions."
+            label += " \(presenter.skippedBatches) sections skipped."
         }
         if let timeText = estimatedTimeText {
             label += " \(timeText)."
@@ -177,15 +266,24 @@ struct CreateDeckGeneratingOverlay: View {
         case .both: return "Generating Content"
         }
     }
+}
 
-    private var generatingSubtitle: String {
-        switch presenter.contentType {
-        case .flashcards:
-            return "Creating \(presenter.cardCount) cards for **\(presenter.deckName)**"
-        case .quiz:
-            return "Creating \(presenter.questionCount) questions for **\(presenter.deckName)**"
-        case .both:
-            return "Creating \(presenter.cardCount) cards and \(presenter.questionCount) questions for **\(presenter.deckName)**"
-        }
+// MARK: - Streamed Card Item
+
+private struct StreamedCardItem: Identifiable {
+    let id: String
+    let label: String
+    let content: String
+    let rotation: Double
+
+    init(id: String, label: String, content: String) {
+        self.id = id
+        self.label = label
+        self.content = content
+        // Deterministic rotation based on id hash so it doesn't change on re-render
+        var hasher = Hasher()
+        hasher.combine(id)
+        let hashValue = hasher.finalize()
+        self.rotation = Double(hashValue % 7) - 3.0 // Range: -3 to +3 degrees
     }
 }
