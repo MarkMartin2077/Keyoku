@@ -28,6 +28,7 @@ struct OnboardingCompletedView: View {
                     page1.tag(0)
                     page2.tag(1)
                     page3.tag(2)
+                    page4.tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: presenter.currentPage)
@@ -107,7 +108,8 @@ struct OnboardingCompletedView: View {
         case 0:  return CGPoint(x: -80, y: 0)
         case 1:  return CGPoint(x: 60, y: 0)
         case 2:  return CGPoint(x: -20, y: 0)
-        default: return CGPoint(x: -20, y: 0)
+        case 3:  return CGPoint(x: 40, y: 0)
+        default: return CGPoint(x: 40, y: 0)
         }
     }
 
@@ -360,6 +362,78 @@ struct OnboardingCompletedView: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    // MARK: - Page 4: Build a Study Habit
+
+    private var page4: some View {
+        OnboardingPageView(
+            illustration: AnyView(page4Illustration),
+            title: String(localized: "Build a Study Habit"),
+            subtitle: String(localized: "Complete a study session each day to build your streak. Stay consistent and watch your flame grow!")
+        )
+    }
+
+    private var page4Illustration: some View {
+        ZStack {
+            // Glow behind flame
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color.orange.opacity(0.3), Color.clear],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 100
+                    )
+                )
+                .frame(width: 200, height: 200)
+
+            // Flame icon
+            Image(systemName: "flame.fill")
+                .font(.system(size: 90))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.orange, .red],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .shadow(color: .orange.opacity(0.4), radius: 20, y: 8)
+
+            // Streak badge
+            VStack(spacing: 2) {
+                Text("7")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("days")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background {
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [.orange, .red.opacity(0.9)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: .orange.opacity(0.3), radius: 8, y: 4)
+            }
+            .offset(x: 60, y: 50)
+
+            // Mini calendar dots showing consistency
+            HStack(spacing: 6) {
+                ForEach(0..<7, id: \.self) { index in
+                    Circle()
+                        .fill(index < 5 ? Color.orange : Color.secondary.opacity(0.2))
+                        .frame(width: 10, height: 10)
+                }
+            }
+            .offset(y: 100)
         }
     }
 

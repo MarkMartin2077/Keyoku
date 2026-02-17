@@ -339,16 +339,21 @@ struct CoreInteractor: GlobalInteractor {
         
         // Delete auth
         try await authManager.deleteAccountWithReauthentication(option: option, revokeToken: false) {
-            // Delete User profile (Firestore)
-            // Note: this must be done within this closure
-            // So that it completes before auth is revoked
-            // Once auth is revoked, security rules may restrict user from reading/writing to Firestore
+            // Delete all Firestore data within this closure
+            // so it completes before auth is revoked.
+            // Once auth is revoked, security rules block Firestore access.
             try await userManager.deleteCurrentUser()
+            try await flashcardManager.deleteAllDecks()
         }
-        
+
+        // Log out managers with active listeners
+        flashcardManager.signOut()
+        streakManager.logOut()
+        spotlightManager.removeAllItems()
+
         // Delete Purchases (RevenueCat)
         try await purchaseManager.logOut()
-        
+
         // Delete logs (Mixpanel)
         logManager.deleteUserProfile()
     }

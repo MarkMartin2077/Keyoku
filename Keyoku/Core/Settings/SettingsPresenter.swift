@@ -16,7 +16,19 @@ class SettingsPresenter {
 
     private(set) var isPremium: Bool = false
     private(set) var isAnonymousUser: Bool = false
-    
+
+    var profileName: String? {
+        interactor.currentUser?.commonNameCalculated
+    }
+
+    var profileEmail: String? {
+        interactor.currentUser?.emailCalculated
+    }
+
+    var profileImageUrl: String? {
+        interactor.currentUser?.profileImageNameCalculated
+    }
+
     init(interactor: SettingsInteractor, router: SettingsRouter) {
         self.interactor = interactor
         self.router = router
@@ -35,18 +47,30 @@ class SettingsPresenter {
         isAnonymousUser = interactor.auth?.isAnonymous == true
     }
     
-    func onContactUsPressed() {
-        interactor.trackEvent(event: Event.contactUsPressed)
-        let email = "hello@swiftful-thinking.com"
-        let emailString = "mailto:\(email)"
-        
-        guard let url = URL(string: emailString), UIApplication.shared.canOpenURL(url) else {
-            return
+    func onNotificationsPressed() {
+        interactor.trackEvent(event: Event.notificationsPressed)
+
+        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+            UIApplication.shared.open(url)
         }
-        
-        UIApplication.shared.open(url)
     }
-    
+
+    func onPrivacyPolicyPressed() {
+        interactor.trackEvent(event: Event.privacyPolicyPressed)
+
+        if let url = URL(string: "https://boatneck-pickle-bfa.notion.site/Privacy-Policy-4c140d62f69d406eb2906db09dad1781") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    func onTermsOfServicePressed() {
+        interactor.trackEvent(event: Event.termsOfServicePressed)
+
+        if let url = URL(string: "https://boatneck-pickle-bfa.notion.site/Terms-of-Service-ef9a22b727d74a07afd8a50a7b3e8e6c") {
+            UIApplication.shared.open(url)
+        }
+    }
+
     func onRatingsButtonPressed() {
         interactor.trackEvent(event: Event.ratingsPressed)
         
@@ -159,7 +183,9 @@ extension SettingsPresenter {
         case deleteAccountSuccess
         case deleteAccountFail(error: Error)
         case createAccountPressed
-        case contactUsPressed
+        case notificationsPressed
+        case privacyPolicyPressed
+        case termsOfServicePressed
         case ratingsPressed
         case ratingsYesPressed
         case ratingsNoPressed
@@ -176,7 +202,9 @@ extension SettingsPresenter {
             case .deleteAccountSuccess:         return "SettingsView_DeleteAccount_Success"
             case .deleteAccountFail:            return "SettingsView_DeleteAccount_Fail"
             case .createAccountPressed:         return "SettingsView_CreateAccount_Pressed"
-            case .contactUsPressed:             return "SettingsView_ContactUs_Pressed"
+            case .notificationsPressed:         return "SettingsView_Notifications_Pressed"
+            case .privacyPolicyPressed:         return "SettingsView_PrivacyPolicy_Pressed"
+            case .termsOfServicePressed:        return "SettingsView_TermsOfService_Pressed"
             case .ratingsPressed:               return "SettingsView_Ratings_Pressed"
             case .ratingsYesPressed:            return "SettingsView_RatingsYes_Pressed"
             case .ratingsNoPressed:             return "SettingsView_RatingsNo_Pressed"

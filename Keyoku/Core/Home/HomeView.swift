@@ -40,11 +40,13 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                welcomeHeader
-                recentDecksSection
-                quickActionsSection
+                heroSection
+                yourDecksSection
             }
             .padding()
+        }
+        .safeAreaInset(edge: .bottom) {
+            floatingCreateButton
         }
         .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.inline)
@@ -94,78 +96,62 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Welcome Header
+    // MARK: - Hero Section
 
-    private var welcomeHeader: some View {
-        Text(greeting)
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var statsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "rectangle.stack.fill")
-                    .font(.title2)
-                    .foregroundStyle(.accent)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(presenter.decks.count)")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .contentTransition(.numericText())
-
-                    Text(presenter.decks.count == 1 ? "deck" : "decks")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Divider()
-
-            HStack {
-                Image(systemName: "doc.text.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text("\(presenter.totalCardCount) cards")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(
-                            Color.accentColor.opacity(0.2),
-                            lineWidth: 1
-                        )
-                }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks"), \(presenter.totalCardCount) \(presenter.totalCardCount == 1 ? "card" : "cards")")
-    }
-
-    // MARK: - Recent Decks Section
-
-    private var recentDecksSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Decks")
-                .font(.title3)
-                .fontWeight(.semibold)
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(greeting)
+                .font(.largeTitle)
+                .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            if presenter.recentDecks.isEmpty {
+            HStack(spacing: 12) {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .foregroundStyle(presenter.currentStreak > 0 ? .orange : .gray)
+                    Text("\(presenter.currentStreak) day streak")
+                }
+
+                Text("·")
+                    .foregroundStyle(.tertiary)
+
+                Text("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks")")
+
+                Text("·")
+                    .foregroundStyle(.tertiary)
+
+                Text("\(presenter.totalCardCount) \(presenter.totalCardCount == 1 ? "card" : "cards")")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Your Decks Section
+
+    private var yourDecksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Your Decks")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text("View All")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.accent)
+                    .anyButton(.press) {
+                        presenter.onViewAllDecksPressed()
+                    }
+            }
+
+            if presenter.sortedDecks.isEmpty {
                 emptyDecksCard
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        ForEach(presenter.recentDecks) { deck in
+                        ForEach(presenter.sortedDecks) { deck in
                             deckCard(deck: deck)
                                 .card3DScroll()
                         }
@@ -237,40 +223,34 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Quick Actions
+    // MARK: - Floating Create Button
 
-    private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Actions")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private var floatingCreateButton: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .font(.headline)
 
-            HStack(spacing: 12) {
-                Image(systemName: "sparkles")
-                    .font(.title3)
-                    .foregroundStyle(.white)
-
-                Text("Create New")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [.accent, .accent.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+            Text("Create New")
+                .font(.headline)
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [.accent, .accent.opacity(0.8)],
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
-            }
-            .accessibilityHint("Create a new deck")
-            .anyButton(.press) {
-                presenter.onCreatePressed()
-            }
+                )
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 12)
+        .accessibilityHint("Create a new deck")
+        .anyButton(.press) {
+            presenter.onCreatePressed()
         }
     }
 

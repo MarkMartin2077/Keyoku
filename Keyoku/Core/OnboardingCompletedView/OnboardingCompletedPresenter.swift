@@ -10,7 +10,7 @@ import SwiftUI
 @MainActor
 class OnboardingCompletedPresenter {
 
-    static let totalPages = 3
+    static let totalPages = 4
 
     private let interactor: OnboardingCompletedInteractor
     private let router: OnboardingCompletedRouter

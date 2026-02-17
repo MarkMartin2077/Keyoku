@@ -79,6 +79,25 @@ class FlashcardManager {
         decks = []
     }
 
+    /// Deletes all decks from both remote (Firestore) and local storage.
+    /// Must be called BEFORE auth is revoked so remote deletions succeed.
+    func deleteAllDecks() async throws {
+        logManager?.trackEvent(event: Event.deleteAllDecksStart)
+
+        guard let userId else {
+            logManager?.trackEvent(event: Event.deleteAllDecksFail(error: AppError("No userId for deleteAllDecks")))
+            return
+        }
+
+        for deck in decks {
+            try await remote.deleteDeck(userId: userId, deckId: deck.deckId)
+            try? local.deleteDeck(id: deck.deckId)
+        }
+
+        decks = []
+        logManager?.trackEvent(event: Event.deleteAllDecksSuccess)
+    }
+
     // MARK: - Deck Operations
 
     /// Reloads all decks from local storage into the in-memory `decks` array.
@@ -370,6 +389,9 @@ class FlashcardManager {
         case logInSuccess(userId: String, count: Int)
         case logInFail(error: Error)
         case signOut
+        case deleteAllDecksStart
+        case deleteAllDecksSuccess
+        case deleteAllDecksFail(error: Error)
         case remotePushSuccess(deckId: String)
         case remotePushFail(error: Error)
         case remoteDeleteSuccess(deckId: String)
@@ -400,6 +422,9 @@ class FlashcardManager {
             case .logInSuccess:             return "FlashcardMan_LogIn_Success"
             case .logInFail:                return "FlashcardMan_LogIn_Fail"
             case .signOut:                  return "FlashcardMan_SignOut"
+            case .deleteAllDecksStart:      return "FlashcardMan_DeleteAllDecks_Start"
+            case .deleteAllDecksSuccess:    return "FlashcardMan_DeleteAllDecks_Success"
+            case .deleteAllDecksFail:       return "FlashcardMan_DeleteAllDecks_Fail"
             case .remotePushSuccess:        return "FlashcardMan_RemotePush_Success"
             case .remotePushFail:           return "FlashcardMan_RemotePush_Fail"
             case .remoteDeleteSuccess:      return "FlashcardMan_RemoteDelete_Success"
@@ -435,6 +460,7 @@ class FlashcardManager {
                     .deleteDeckFail(error: let error),
                     .addFlashcardFail(error: let error),
                     .deleteFlashcardFail(error: let error),
+                    .deleteAllDecksFail(error: let error),
                     .logInFail(error: let error),
                     .remotePushFail(error: let error),
                     .remoteDeleteFail(error: let error):
@@ -446,7 +472,7 @@ class FlashcardManager {
 
         var type: LogType {
             switch self {
-            case .loadDecksFail, .createDeckFail, .updateDeckFail, .deleteDeckFail, .addFlashcardFail, .deleteFlashcardFail, .logInFail, .remotePushFail, .remoteDeleteFail:
+            case .loadDecksFail, .createDeckFail, .updateDeckFail, .deleteDeckFail, .addFlashcardFail, .deleteFlashcardFail, .deleteAllDecksFail, .logInFail, .remotePushFail, .remoteDeleteFail:
                 return .severe
             default:
                 return .analytic

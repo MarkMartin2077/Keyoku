@@ -5,15 +5,18 @@
 //  
 //
 import SwiftUI
+import SwiftfulUI
 
 struct SettingsView: View {
-        
+
     @State var presenter: SettingsPresenter
 
     var body: some View {
         List {
+            profileSection
             accountSection
             purchaseSection
+            generalSection
             applicationSection
         }
         .lineLimit(1)
@@ -26,102 +29,168 @@ struct SettingsView: View {
             presenter.onViewDisappear()
         }
     }
-    
+
+    // MARK: - Profile
+
+    private var profileSection: some View {
+        Section {
+            HStack(spacing: 14) {
+                if let imageUrl = presenter.profileImageUrl {
+                    ImageLoaderView(urlString: imageUrl)
+                        .aspectRatio(1, contentMode: .fill)
+                        .frame(width: 56, height: 56)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .frame(width: 56, height: 56)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(presenter.profileName ?? "Guest")
+                        .font(.headline)
+
+                    if let email = presenter.profileEmail {
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else if presenter.isAnonymousUser {
+                        Text("Anonymous account")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .removeListRowFormatting()
+        }
+    }
+
+    // MARK: - Account
+
     private var accountSection: some View {
         Section {
             if presenter.isAnonymousUser {
-                Text("Save & back-up account")
-                    .rowFormatting()
-                    .anyButton(.highlight) {
-                        presenter.onCreateAccountPressed()
-                    }
-                    .removeListRowFormatting()
-            } else {
-                Text("Sign out")
-                    .rowFormatting()
-                    .anyButton(.highlight) {
-                        presenter.onSignOutPressed()
-                    }
-                    .removeListRowFormatting()
-            }
-            
-            Text("Delete account")
-                .foregroundStyle(.red)
-                .rowFormatting()
-                .anyButton(.highlight) {
-                    presenter.onDeleteAccountPressed()
+                settingsRow(icon: "person.badge.plus", title: "Save & back-up account") {
+                    presenter.onCreateAccountPressed()
                 }
-                .removeListRowFormatting()
+            } else {
+                settingsRow(icon: "rectangle.portrait.and.arrow.right", title: "Sign out") {
+                    presenter.onSignOutPressed()
+                }
+            }
+
+            settingsRow(icon: "trash", title: "Delete account", tint: .red) {
+                presenter.onDeleteAccountPressed()
+            }
         } header: {
             Text("Account")
         }
     }
-    
+
+    // MARK: - Purchases
+
     private var purchaseSection: some View {
         let isPremium = presenter.isPremium
-        
+
         return Section {
-            HStack(spacing: 8) {
-                Text("Account status: \(isPremium ? "PREMIUM" : "FREE")")
-                Spacer(minLength: 0)
+            HStack(spacing: 12) {
+                Image(systemName: "crown.fill")
+                    .foregroundStyle(isPremium ? .yellow : .secondary)
+                    .frame(width: 24)
+
+                Text(isPremium ? "Premium" : "Free plan")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                 if isPremium {
                     Text("MANAGE")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.accent)
                 }
             }
             .rowFormatting()
-            .anyButton(.highlight) {
-
-            }
+            .anyButton(.highlight) {}
             .disabled(!isPremium)
             .removeListRowFormatting()
         } header: {
             Text("Purchases")
         }
     }
-    
-    private var applicationSection: some View {
+
+    // MARK: - General
+
+    private var generalSection: some View {
         Section {
-            HStack(spacing: 8) {
-                Text("Version")
-                Spacer(minLength: 0)
-                Text(Utilities.appVersion ?? "")
-                    .foregroundStyle(.secondary)
+            settingsRow(icon: "bell.badge", title: "Notifications") {
+                presenter.onNotificationsPressed()
             }
-            .rowFormatting()
-            .removeListRowFormatting()
-            
-            HStack(spacing: 8) {
-                Text("Build Number")
-                Spacer(minLength: 0)
-                Text(Utilities.buildNumber ?? "")
-                    .foregroundStyle(.secondary)
-            }
-            .rowFormatting()
-            .removeListRowFormatting()
-            
-            Text("Rate us on the App Store!")
-                .foregroundStyle(.blue)
-                .rowFormatting()
-                .anyButton(.highlight, action: {
-                    presenter.onRatingsButtonPressed()
-                })
-                .removeListRowFormatting()
-            
-            Text("Contact us")
-                .foregroundStyle(.blue)
-                .rowFormatting()
-                .anyButton(.highlight, action: {
-                    presenter.onContactUsPressed()
-                })
-                .removeListRowFormatting()
         } header: {
-            Text("Application")
-        } footer: {
-            Text("Markyminaj, LLC")
-                .baselineOffset(6)
+            Text("General")
         }
     }
-    
+
+    // MARK: - Application
+
+    private var applicationSection: some View {
+        Section {
+            settingsRow(icon: "star", title: "Rate us on the App Store") {
+                presenter.onRatingsButtonPressed()
+            }
+
+            settingsRow(icon: "hand.raised", title: "Privacy Policy") {
+                presenter.onPrivacyPolicyPressed()
+            }
+
+            settingsRow(icon: "doc.text", title: "Terms of Service") {
+                presenter.onTermsOfServicePressed()
+            }
+
+            HStack(spacing: 12) {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24)
+
+                Text("Version")
+
+                Spacer(minLength: 0)
+
+                Text("\(Utilities.appVersion ?? "") (\(Utilities.buildNumber ?? ""))")
+                    .foregroundStyle(.secondary)
+            }
+            .rowFormatting()
+            .removeListRowFormatting()
+        } header: {
+            Text("Application")
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func settingsRow(
+        icon: String,
+        title: String,
+        tint: Color = .primary,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(tint == .primary ? .secondary : tint)
+                .frame(width: 24)
+
+            Text(title)
+                .foregroundStyle(tint)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .rowFormatting()
+        .anyButton(.highlight) {
+            action()
+        }
+        .removeListRowFormatting()
+    }
 }
 
 private struct RowFormattingViewModifier: ViewModifier {

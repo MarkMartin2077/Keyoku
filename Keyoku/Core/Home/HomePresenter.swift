@@ -22,11 +22,8 @@ class HomePresenter {
         interactor.decks
     }
 
-    var recentDecks: [DeckModel] {
-        Array(
-            decks.sorted { $0.createdAt > $1.createdAt }
-                .prefix(3)
-        )
+    var sortedDecks: [DeckModel] {
+        decks.sorted { $0.createdAt > $1.createdAt }
     }
 
     var totalCardCount: Int {
@@ -141,7 +138,7 @@ class HomePresenter {
         interactor.trackEvent(event: Event.pushNotifAction(notificationId: id))
 
         if id.hasPrefix("study") {
-            if let deck = recentDecks.first {
+            if let deck = sortedDecks.first {
                 router.showDeckDetailView(deck: deck)
             }
         } else if id.hasPrefix("create") {
