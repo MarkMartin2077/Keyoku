@@ -25,30 +25,6 @@ class CreateDeckPresenter {
         }
     }
 
-    enum ContentType: String, CaseIterable {
-        case flashcards, quiz, both
-
-        var displayName: String {
-            switch self {
-            case .flashcards: return String(localized: "Flashcards")
-            case .quiz: return String(localized: "Quiz")
-            case .both: return String(localized: "Both")
-            }
-        }
-    }
-
-    enum QuizQuestionType: String, CaseIterable {
-        case multipleChoice, trueFalse, both
-
-        var displayName: String {
-            switch self {
-            case .multipleChoice: return String(localized: "Multiple Choice")
-            case .trueFalse: return String(localized: "True & False")
-            case .both: return String(localized: "Both")
-            }
-        }
-    }
-
     enum SourceInputMode: String, CaseIterable {
         case text, pdf
 
@@ -64,10 +40,7 @@ class CreateDeckPresenter {
     private let router: CreateDeckRouter
 
     var creationMode: CreationMode = .generate
-    var contentType: ContentType = .flashcards
     var cardCount: Int = 10
-    var questionCount: Int = 10
-    var quizQuestionType: QuizQuestionType = .both
     var deckName: String = ""
     var selectedColor: DeckColor = .blue
     var selectedImage: UIImage?
@@ -84,29 +57,18 @@ class CreateDeckPresenter {
     var flashcardSkippedBatches: Int = 0
     var flashcardItemsGenerated: Int = 0
 
-    // Quiz progress
-    var quizProgress: Int = 0
-    var quizTotal: Int = 0
-    var quizStatusText: String?
-    var quizSkippedBatches: Int = 0
-    var quizItemsGenerated: Int = 0
-
     // Streaming state — items appear here as they're generated
     var streamedFlashcards: [FlashcardModel] = []
-    var streamedQuizQuestions: [QuizQuestionModel] = []
 
     // Generation results
     var generatedFlashcardCount: Int = 0
-    var generatedMCCount: Int = 0
-    var generatedTFCount: Int = 0
-    var generationNote: String?
 
     var skippedBatches: Int {
-        flashcardSkippedBatches + quizSkippedBatches
+        flashcardSkippedBatches
     }
 
     var hasProgress: Bool {
-        flashcardTotal > 0 || quizTotal > 0
+        flashcardTotal > 0
     }
 
     var sourceInputMode: SourceInputMode = .text
@@ -125,12 +87,9 @@ class CreateDeckPresenter {
         !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    init(interactor: CreateDeckInteractor, router: CreateDeckRouter, defaultContentType: CreateDeckPresenter.ContentType? = nil) {
+    init(interactor: CreateDeckInteractor, router: CreateDeckRouter) {
         self.interactor = interactor
         self.router = router
-        if let defaultContentType {
-            self.contentType = defaultContentType
-        }
     }
 
     // MARK: - Lifecycle
@@ -158,21 +117,6 @@ class CreateDeckPresenter {
     func onCreationModeChanged(_ mode: CreationMode) {
         interactor.trackEvent(event: Event.onCreationModeChanged(mode: mode.rawValue))
         creationMode = mode
-    }
-
-    func onContentTypeChanged(_ type: ContentType) {
-        interactor.trackEvent(event: Event.onContentTypeChanged(contentType: type.rawValue))
-        contentType = type
-    }
-
-    func onQuestionCountChanged(_ count: Int) {
-        interactor.trackEvent(event: Event.onQuestionCountChanged(count: count))
-        questionCount = count
-    }
-
-    func onQuizQuestionTypeChanged(_ type: QuizQuestionType) {
-        interactor.trackEvent(event: Event.onQuizQuestionTypeChanged(questionType: type.rawValue))
-        quizQuestionType = type
     }
 
     // MARK: - Image Actions
@@ -280,17 +224,8 @@ class CreateDeckPresenter {
         flashcardStatusText = nil
         flashcardSkippedBatches = 0
         flashcardItemsGenerated = 0
-        quizProgress = 0
-        quizTotal = 0
-        quizStatusText = nil
-        quizSkippedBatches = 0
-        quizItemsGenerated = 0
         streamedFlashcards = []
-        streamedQuizQuestions = []
         generatedFlashcardCount = 0
-        generatedMCCount = 0
-        generatedTFCount = 0
-        generationNote = nil
     }
 
     private func handleGenerationSuccess() {
@@ -303,85 +238,18 @@ class CreateDeckPresenter {
         let trimmedName = deckName.trimmingCharacters(in: .whitespacesAndNewlines)
         let savedImageUrl = try saveImageIfNeeded()
 
-        // Run sequentially — the on-device model can only handle
-        // one session at a time, so parallel requests cause failures.
-        let flashcardResult = await generateFlashcardsIfNeeded(name: trimmedName, imageUrl: savedImageUrl)
-        let quizResult = await generateQuizIfNeeded(name: trimmedName)
+        try await generateFlashcards()
+        let flashcards = streamedFlashcards
+        generatedFlashcardCount = flashcards.count
+        interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
 
-        try evaluateGenerationOutcome(flashcardResult: flashcardResult, quizResult: quizResult)
-    }
-
-    private func generateFlashcardsIfNeeded(name: String, imageUrl: String?) async -> Result<Void, Error>? {
-        guard contentType == .flashcards || contentType == .both else { return nil }
-
-        do {
-            try await generateFlashcards()
-            let flashcards = streamedFlashcards
-            generatedFlashcardCount = flashcards.count
-            interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
-
-            try interactor.createDeck(
-                name: name,
-                color: selectedColor,
-                imageUrl: imageUrl,
-                sourceText: sourceText,
-                flashcards: flashcards
-            )
-            return .success(())
-        } catch {
-            interactor.trackEvent(event: Event.onGenerateFail(error: error))
-            return .failure(error)
-        }
-    }
-
-    private func generateQuizIfNeeded(name: String) async -> Result<Void, Error>? {
-        guard contentType == .quiz || contentType == .both else { return nil }
-
-        do {
-            try await generateQuizQuestions()
-            let questions = streamedQuizQuestions
-            generatedMCCount = questions.filter { $0.questionType == .multipleChoice }.count
-            generatedTFCount = questions.filter { $0.questionType == .trueFalse }.count
-            interactor.trackEvent(event: Event.onQuizGenerateSuccess(questionCount: questions.count))
-
-            try interactor.createQuiz(
-                name: name,
-                color: selectedColor,
-                sourceText: sourceText,
-                questions: questions
-            )
-            return .success(())
-        } catch {
-            interactor.trackEvent(event: Event.onGenerateFail(error: error))
-            return .failure(error)
-        }
-    }
-
-    private func evaluateGenerationOutcome(
-        flashcardResult: Result<Void, Error>?,
-        quizResult: Result<Void, Error>?
-    ) throws {
-        let flashcardsOk: Bool = if case .success = flashcardResult { true } else { flashcardResult == nil }
-        let quizOk: Bool = if case .success = quizResult { true } else { quizResult == nil }
-
-        // Both succeeded (or only one type was requested and it succeeded)
-        if flashcardsOk && quizOk { return }
-
-        // "Both" mode — one succeeded, one failed: show success screen with note
-        if flashcardResult != nil && quizResult != nil {
-            if flashcardsOk {
-                generationNote = String(localized: "Quiz generation failed. You can try generating the quiz separately.")
-                return
-            } else if quizOk {
-                generationNote = String(localized: "Flashcard generation failed. You can try generating flashcards separately.")
-                return
-            }
-        }
-
-        // Single type failed or both failed — stay on screen with error
-        if case .failure(let error) = flashcardResult { throw error }
-        if case .failure(let error) = quizResult { throw error }
-        throw AppError("Generation failed.")
+        try interactor.createDeck(
+            name: trimmedName,
+            color: selectedColor,
+            imageUrl: savedImageUrl,
+            sourceText: sourceText,
+            flashcards: flashcards
+        )
     }
 
     func onCreateEmptyPressed() {

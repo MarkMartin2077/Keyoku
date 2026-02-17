@@ -17,28 +17,16 @@ struct WidgetDeckItem: Codable, Identifiable {
     let createdAt: Date
 }
 
-struct WidgetQuizItem: Codable, Identifiable {
-    let id: String
-    let name: String
-    let colorRawValue: String
-    let questionCount: Int
-    let createdAt: Date
-}
-
 struct WidgetData: Codable {
     let deckCount: Int
     let totalCardCount: Int
-    let quizCount: Int
     let recentDecks: [WidgetDeckItem]
-    let recentQuizzes: [WidgetQuizItem]
     let updatedAt: Date
 
     static let empty = WidgetData(
         deckCount: 0,
         totalCardCount: 0,
-        quizCount: 0,
         recentDecks: [],
-        recentQuizzes: [],
         updatedAt: .now
     )
 }

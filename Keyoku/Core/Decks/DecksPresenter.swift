@@ -45,7 +45,7 @@ class DecksPresenter {
     
     func onAddDeckPressed() {
         interactor.trackEvent(event: Event.onAddDeckPressed)
-        router.showCreateContentView(defaultContentType: .flashcards)
+        router.showCreateContentView()
     }
     
     func onDeckPressed(deck: DeckModel) {

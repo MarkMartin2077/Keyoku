@@ -17,35 +17,22 @@ struct WidgetDeckItem: Codable, Identifiable {
     let createdAt: Date
 }
 
-struct WidgetQuizItem: Codable, Identifiable {
-    let id: String
-    let name: String
-    let colorRawValue: String
-    let questionCount: Int
-    let createdAt: Date
-}
-
 struct WidgetData: Codable {
     let deckCount: Int
     let totalCardCount: Int
-    let quizCount: Int
     let recentDecks: [WidgetDeckItem]
-    let recentQuizzes: [WidgetQuizItem]
     let updatedAt: Date
 
     static let empty = WidgetData(
         deckCount: 0,
         totalCardCount: 0,
-        quizCount: 0,
         recentDecks: [],
-        recentQuizzes: [],
         updatedAt: .now
     )
 
     static let placeholder = WidgetData(
         deckCount: 3,
         totalCardCount: 42,
-        quizCount: 2,
         recentDecks: [
             WidgetDeckItem(
                 id: "p1",
@@ -66,29 +53,6 @@ struct WidgetData: Codable {
                 name: "History 101",
                 colorRawValue: "green",
                 cardCount: 12,
-                createdAt: .now.addingTimeInterval(-172800)
-            )
-        ],
-        recentQuizzes: [
-            WidgetQuizItem(
-                id: "q1",
-                name: "World Geography",
-                colorRawValue: "purple",
-                questionCount: 15,
-                createdAt: .now
-            ),
-            WidgetQuizItem(
-                id: "q2",
-                name: "Science Basics",
-                colorRawValue: "orange",
-                questionCount: 10,
-                createdAt: .now.addingTimeInterval(-86400)
-            ),
-            WidgetQuizItem(
-                id: "q3",
-                name: "Vocabulary",
-                colorRawValue: "teal",
-                questionCount: 20,
                 createdAt: .now.addingTimeInterval(-172800)
             )
         ],

@@ -4,10 +4,9 @@ import SwiftUI
 protocol HomeRouter: GlobalRouter {
     func showDevSettingsView()
     func showDeckDetailView(deck: DeckModel)
-    func showCreateContentView(defaultContentType: CreateDeckPresenter.ContentType?)
+    func showCreateContentView()
     func showDecksView(delegate: DecksDelegate)
     func showSettingsView()
-    func showQuizView(quiz: QuizModel)
 }
 
 extension CoreRouter: HomeRouter { }

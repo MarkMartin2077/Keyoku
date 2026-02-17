@@ -23,7 +23,6 @@ struct Dependencies {
         let hapticManager: HapticManager
         let soundEffectManager: SoundEffectManager
         let flashcardManager: FlashcardManager
-        let quizManager: QuizManager
         let spotlightManager: SpotlightManager
 
         switch config {
@@ -46,7 +45,6 @@ struct Dependencies {
             appState = AppState(startingModuleId: isSignedIn ? Constants.tabbarModuleId : Constants.onboardingModuleId)
             hapticManager = HapticManager(logger: logManager)
             flashcardManager = FlashcardManager(services: MockFlashcardServices(), logManager: logManager)
-            quizManager = QuizManager(services: MockQuizServices(), logManager: logManager)
         case .dev:
             logManager = LogManager(services: [
                 ConsoleService(printParameters: true),
@@ -64,7 +62,6 @@ struct Dependencies {
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
             flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
-            quizManager = QuizManager(services: ProductionQuizServices(), logManager: logManager)
         case .prod:
             logManager = LogManager(services: [
                 FirebaseAnalyticsService(),
@@ -82,7 +79,6 @@ struct Dependencies {
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
             flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
-            quizManager = QuizManager(services: ProductionQuizServices(), logManager: logManager)
         }
         pushManager = PushManager(logManager: logManager)
         soundEffectManager = SoundEffectManager(logger: logManager)
@@ -99,7 +95,7 @@ struct Dependencies {
         container.register(HapticManager.self, service: hapticManager)
         container.register(SoundEffectManager.self, service: soundEffectManager)
         container.register(FlashcardManager.self, service: flashcardManager)
-        container.register(QuizManager.self, service: quizManager)
+
         container.register(SpotlightManager.self, service: spotlightManager)
 
         self.container = container
@@ -124,7 +120,7 @@ class DevPreview {
         container.register(SoundEffectManager.self, service: soundEffectManager)
         container.register(HapticManager.self, service: hapticManager)
         container.register(FlashcardManager.self, service: flashcardManager)
-        container.register(QuizManager.self, service: quizManager)
+
         container.register(SpotlightManager.self, service: spotlightManager)
         return container
     }
@@ -139,7 +135,6 @@ class DevPreview {
     let hapticManager: HapticManager
     let soundEffectManager: SoundEffectManager
     let flashcardManager: FlashcardManager
-    let quizManager: QuizManager
     let spotlightManager: SpotlightManager
 
     init(isSignedIn: Bool = true) {
@@ -153,7 +148,6 @@ class DevPreview {
         self.hapticManager = HapticManager()
         self.soundEffectManager = SoundEffectManager()
         self.flashcardManager = FlashcardManager(services: MockFlashcardServices())
-        self.quizManager = QuizManager(services: MockQuizServices())
         self.spotlightManager = SpotlightManager()
     }
 

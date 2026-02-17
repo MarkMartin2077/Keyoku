@@ -44,14 +44,6 @@ struct MediumWidgetView: View {
                     .fontWeight(.medium)
             }
 
-            HStack(spacing: 4) {
-                Image(systemName: "questionmark.circle.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.blue)
-                Text("\(data.quizCount) \(data.quizCount == 1 ? "quiz" : "quizzes")")
-                    .font(.caption)
-                    .fontWeight(.medium)
-            }
         }
     }
 

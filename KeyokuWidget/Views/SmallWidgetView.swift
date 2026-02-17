@@ -36,11 +36,6 @@ struct SmallWidgetView: View {
                     label: data.totalCardCount == 1 ? "card" : "cards"
                 )
 
-                statRow(
-                    icon: "questionmark.circle.fill",
-                    value: "\(data.quizCount)",
-                    label: data.quizCount == 1 ? "quiz" : "quizzes"
-                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

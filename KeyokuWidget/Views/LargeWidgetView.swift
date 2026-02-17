@@ -17,8 +17,6 @@ struct LargeWidgetView: View {
 
             decksSection
 
-            quizzesSection
-
             Link(destination: URL(string: "keyoku://create")!) {
                 createButton
             }
@@ -48,14 +46,6 @@ struct LargeWidgetView: View {
                     .fontWeight(.medium)
             }
 
-            HStack(spacing: 4) {
-                Image(systemName: "questionmark.circle.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.blue)
-                Text("\(data.quizCount) \(data.quizCount == 1 ? "quiz" : "quizzes")")
-                    .font(.caption)
-                    .fontWeight(.medium)
-            }
         }
     }
 
@@ -75,29 +65,6 @@ struct LargeWidgetView: View {
                     ForEach(data.recentDecks) { deck in
                         Link(destination: URL(string: "keyoku://deck?id=\(deck.id)")!) {
                             WidgetDeckCardView(deck: deck)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Quizzes
-
-    private var quizzesSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Recent Quizzes")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-
-            if data.recentQuizzes.isEmpty {
-                emptyRow(text: "No quizzes yet")
-            } else {
-                HStack(spacing: 8) {
-                    ForEach(data.recentQuizzes) { quiz in
-                        Link(destination: URL(string: "keyoku://quiz?id=\(quiz.id)")!) {
-                            WidgetQuizCardView(quiz: quiz)
                         }
                     }
                 }

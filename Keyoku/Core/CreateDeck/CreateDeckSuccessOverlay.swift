@@ -58,30 +58,11 @@ struct CreateDeckSuccessOverlay: View {
 
     private var statsCard: some View {
         VStack(spacing: 12) {
-            if presenter.generatedFlashcardCount > 0 {
-                statRow(
-                    icon: "rectangle.on.rectangle",
-                    label: "Flashcards",
-                    value: "\(presenter.generatedFlashcardCount)"
-                )
-            }
-
-            if presenter.generatedMCCount + presenter.generatedTFCount > 0 {
-                let totalQuestions = presenter.generatedMCCount + presenter.generatedTFCount
-                statRow(
-                    icon: "questionmark.circle",
-                    label: "Quiz Questions",
-                    value: "\(totalQuestions)"
-                )
-
-                if presenter.generatedMCCount > 0 {
-                    statSubRow(label: "Multiple Choice", value: "\(presenter.generatedMCCount)")
-                }
-
-                if presenter.generatedTFCount > 0 {
-                    statSubRow(label: "True & False", value: "\(presenter.generatedTFCount)")
-                }
-            }
+            statRow(
+                icon: "rectangle.on.rectangle",
+                label: "Flashcards",
+                value: "\(presenter.generatedFlashcardCount)"
+            )
         }
         .padding(16)
         .background(
@@ -105,36 +86,15 @@ struct CreateDeckSuccessOverlay: View {
         }
     }
 
-    private func statSubRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.leading, 32)
-            Spacer()
-            Text(value)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        }
-    }
-
     // MARK: - Notes
 
     @ViewBuilder
     private var notesSection: some View {
-        VStack(spacing: 8) {
-            if presenter.skippedBatches > 0 {
-                noteLabel(
-                    text: "\(presenter.skippedBatches) section(s) skipped due to content restrictions.",
-                    color: .orange
-                )
-            }
-
-            if let note = presenter.generationNote {
-                noteLabel(text: note, color: .secondary)
-            }
+        if presenter.skippedBatches > 0 {
+            noteLabel(
+                text: "\(presenter.skippedBatches) section(s) skipped due to content restrictions.",
+                color: .orange
+            )
         }
     }
 

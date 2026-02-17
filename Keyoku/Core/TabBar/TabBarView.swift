@@ -55,12 +55,6 @@ extension CoreBuilder {
                         decksView(router: router, delegate: DecksDelegate())
                     }
                     .any()
-                }),
-                TabBarScreen(title: String(localized: "Quizzes"), systemImage: "questionmark.circle.fill", screen: {
-                    RouterView { router in
-                        quizzesView(router: router, delegate: QuizzesDelegate())
-                    }
-                    .any()
                 })
             ],
             searchView: {

@@ -12,38 +12,21 @@ struct CreateDeckGeneratingOverlay: View {
     let presenter: CreateDeckPresenter
 
     private var streamedItems: [StreamedCardItem] {
-        var items: [StreamedCardItem] = []
-
-        for card in presenter.streamedFlashcards {
-            items.append(StreamedCardItem(
+        presenter.streamedFlashcards.map { card in
+            StreamedCardItem(
                 id: card.flashcardId,
                 label: "Flashcard",
                 content: card.question
-            ))
+            )
         }
-
-        for question in presenter.streamedQuizQuestions {
-            let label = question.questionType == .multipleChoice ? "Multiple Choice" : "True & False"
-            items.append(StreamedCardItem(
-                id: question.questionId,
-                label: label,
-                content: question.questionText
-            ))
-        }
-
-        return items
     }
 
     private var totalGenerated: Int {
-        presenter.flashcardItemsGenerated + presenter.quizItemsGenerated
+        presenter.flashcardItemsGenerated
     }
 
     private var totalTarget: Int {
-        switch presenter.contentType {
-        case .flashcards: return presenter.cardCount
-        case .quiz: return presenter.questionCount
-        case .both: return presenter.cardCount + presenter.questionCount
-        }
+        presenter.cardCount
     }
 
     var body: some View {
@@ -80,7 +63,7 @@ struct CreateDeckGeneratingOverlay: View {
                 .foregroundStyle(.accent)
                 .symbolEffect(.pulse, isActive: true)
 
-            Text(generatingTitle)
+            Text("Generating Flashcards")
                 .font(.title3)
                 .fontWeight(.bold)
 
@@ -224,22 +207,14 @@ struct CreateDeckGeneratingOverlay: View {
     // MARK: - Text Helpers
 
     private var currentStatusText: String? {
-        if let flashcardStatus = presenter.flashcardStatusText, presenter.flashcardTotal > 0 {
-            if presenter.quizTotal > 0, let quizStatus = presenter.quizStatusText {
-                return "Flashcards: \(flashcardStatus) | Quiz: \(quizStatus)"
-            }
-            return "Batch \(presenter.flashcardProgress)/\(presenter.flashcardTotal) — \(flashcardStatus)"
+        guard let flashcardStatus = presenter.flashcardStatusText, presenter.flashcardTotal > 0 else {
+            return nil
         }
-
-        if let quizStatus = presenter.quizStatusText, presenter.quizTotal > 0 {
-            return "Batch \(presenter.quizProgress)/\(presenter.quizTotal) — \(quizStatus)"
-        }
-
-        return nil
+        return "Batch \(presenter.flashcardProgress)/\(presenter.flashcardTotal) — \(flashcardStatus)"
     }
 
     private var accessibilityLabel: String {
-        var label = "\(generatingTitle). \(totalGenerated) of \(totalTarget) generated."
+        var label = "Generating Flashcards. \(totalGenerated) of \(totalTarget) generated."
         if presenter.skippedBatches > 0 {
             label += " \(presenter.skippedBatches) sections skipped."
         }
@@ -256,14 +231,6 @@ struct CreateDeckGeneratingOverlay: View {
         } else {
             let minutes = Int(ceil(Double(seconds) / 60.0))
             return "About \(minutes) minute\(minutes == 1 ? "" : "s") remaining"
-        }
-    }
-
-    private var generatingTitle: String {
-        switch presenter.contentType {
-        case .flashcards: return "Generating Flashcards"
-        case .quiz: return "Generating Quiz"
-        case .both: return "Generating Content"
         }
     }
 }

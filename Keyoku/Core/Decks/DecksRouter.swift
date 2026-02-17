@@ -10,7 +10,7 @@ import SwiftUI
 @MainActor
 protocol DecksRouter: GlobalRouter {
     func showDeckDetailView(deck: DeckModel)
-    func showCreateContentView(defaultContentType: CreateDeckPresenter.ContentType?)
+    func showCreateContentView()
 }
 
 extension CoreRouter: DecksRouter {

@@ -26,12 +26,6 @@ class SearchPresenter {
         return interactor.decks.filter { $0.name.lowercased().localizedStandardContains(query) }
     }
 
-    var filteredQuizzes: [QuizModel] {
-        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !query.isEmpty else { return [] }
-        return interactor.quizzes.filter { $0.name.lowercased().contains(query) }
-    }
-
     init(interactor: SearchInteractor, router: SearchRouter) {
         self.interactor = interactor
         self.router = router
@@ -40,7 +34,6 @@ class SearchPresenter {
     func onViewAppear(delegate: SearchDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
         interactor.loadDecks()
-        interactor.loadQuizzes()
     }
 
     func onViewDisappear(delegate: SearchDelegate) {
@@ -52,10 +45,6 @@ class SearchPresenter {
         router.showDeckDetailView(deck: deck)
     }
 
-    func onQuizPressed(quiz: QuizModel) {
-        interactor.trackEvent(event: Event.onQuizPressed(quiz: quiz))
-        router.showQuizView(quiz: quiz)
-    }
 }
 
 extension SearchPresenter {
@@ -64,14 +53,12 @@ extension SearchPresenter {
         case onAppear(delegate: SearchDelegate)
         case onDisappear(delegate: SearchDelegate)
         case onDeckPressed(deck: DeckModel)
-        case onQuizPressed(quiz: QuizModel)
 
         var eventName: String {
             switch self {
             case .onAppear:         return "SearchView_Appear"
             case .onDisappear:      return "SearchView_Disappear"
             case .onDeckPressed:    return "SearchView_Deck_Pressed"
-            case .onQuizPressed:    return "SearchView_Quiz_Pressed"
             }
         }
 
@@ -81,8 +68,6 @@ extension SearchPresenter {
                 return delegate.eventParameters
             case .onDeckPressed(deck: let deck):
                 return deck.eventParameters
-            case .onQuizPressed(quiz: let quiz):
-                return quiz.eventParameters
             }
         }
 

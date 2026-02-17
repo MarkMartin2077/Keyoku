@@ -27,21 +27,6 @@ class HomePresenter {
         decks.reduce(0) { $0 + $1.flashcards.count }
     }
 
-    var quizzes: [QuizModel] {
-        interactor.quizzes
-    }
-
-    var recentQuizzes: [QuizModel] {
-        Array(
-            quizzes.sorted { $0.createdAt > $1.createdAt }
-                .prefix(3)
-        )
-    }
-
-    var totalQuestionCount: Int {
-        quizzes.reduce(0) { $0 + $1.questions.count }
-    }
-
     init(interactor: HomeInteractor, router: HomeRouter) {
         self.interactor = interactor
         self.router = router
@@ -51,7 +36,6 @@ class HomePresenter {
 
     func onFirstAppear(delegate: HomeDelegate) {
         interactor.loadDecks()
-        interactor.loadQuizzes()
 
         Task {
             await checkShowPushNotificationButton()
@@ -73,7 +57,7 @@ class HomePresenter {
 
         switch actionType {
         case "com.keyoku.create":
-            router.showCreateContentView(defaultContentType: nil)
+            router.showCreateContentView()
         default:
             break
         }
@@ -92,12 +76,7 @@ class HomePresenter {
 
     func onCreatePressed() {
         interactor.trackEvent(event: Event.onCreatePressed)
-        router.showCreateContentView(defaultContentType: nil)
-    }
-
-    func onQuizPressed(quiz: QuizModel) {
-        interactor.trackEvent(event: Event.onQuizPressed(quiz: quiz))
-        router.showQuizView(quiz: quiz)
+        router.showCreateContentView()
     }
 
     func onViewAllDecksPressed() {
@@ -128,24 +107,10 @@ class HomePresenter {
             if let id = params["id"], let deck = interactor.getDeck(id: id) {
                 router.showDeckDetailView(deck: deck)
             }
-        case "quiz":
-            if let id = params["id"], let quiz = interactor.getQuiz(id: id) {
-                router.showQuizView(quiz: quiz)
-            }
         case "create":
-            let contentType = deepLinkContentType(from: params["type"])
-            router.showCreateContentView(defaultContentType: contentType)
+            router.showCreateContentView()
         default:
             break
-        }
-    }
-
-    private func deepLinkContentType(from value: String?) -> CreateDeckPresenter.ContentType? {
-        switch value {
-        case "flashcards": return .flashcards
-        case "quiz": return .quiz
-        case "both": return .both
-        default: return nil
         }
     }
 
@@ -173,12 +138,8 @@ class HomePresenter {
             if let deck = recentDecks.first {
                 router.showDeckDetailView(deck: deck)
             }
-        } else if id.hasPrefix("quiz") {
-            if let quiz = recentQuizzes.first {
-                router.showQuizView(quiz: quiz)
-            }
         } else if id.hasPrefix("create") {
-            router.showCreateContentView(defaultContentType: nil)
+            router.showCreateContentView()
         }
     }
     
@@ -264,7 +225,7 @@ class HomePresenter {
 
         switch actionType {
         case "com.keyoku.create":
-            router.showCreateContentView(defaultContentType: nil)
+            router.showCreateContentView()
         default:
             break
         }
@@ -277,7 +238,6 @@ extension HomePresenter {
         case onAppear(delegate: HomeDelegate)
         case onDisappear(delegate: HomeDelegate)
         case onDeckPressed(deck: DeckModel)
-        case onQuizPressed(quiz: QuizModel)
         case onCreatePressed
         case onViewAllDecksPressed
         case deepLinkStart
@@ -302,7 +262,6 @@ extension HomePresenter {
             case .onAppear:                 return "HomeView_Appear"
             case .onDisappear:              return "HomeView_Disappear"
             case .onDeckPressed:            return "HomeView_Deck_Pressed"
-            case .onQuizPressed:            return "HomeView_Quiz_Pressed"
             case .onCreatePressed:          return "HomeView_Create_Pressed"
             case .onViewAllDecksPressed:    return "HomeView_ViewAllDecks_Pressed"
             case .deepLinkStart:            return "HomeView_DeepLink_Start"
@@ -330,8 +289,6 @@ extension HomePresenter {
                 return delegate.eventParameters
             case .onDeckPressed(deck: let deck):
                 return deck.eventParameters
-            case .onQuizPressed(quiz: let quiz):
-                return quiz.eventParameters
             case .pushNotifsEnable(isAuthorized: let isAuthorized):
                 return ["is_authorized": isAuthorized]
             case .pushNotifAction(notificationId: let notificationId):

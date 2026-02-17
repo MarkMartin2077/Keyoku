@@ -277,7 +277,7 @@ struct OnboardingCompletedView: View {
         OnboardingPageView(
             illustration: AnyView(page3Illustration),
             title: String(localized: "Study Your Way"),
-            subtitle: String(localized: "Flip through flashcards to practice or challenge yourself with quizzes. Multiple choice, true or false — you decide.")
+            subtitle: String(localized: "Flip through flashcards to practice and reinforce what you've learned. Study at your own pace.")
         )
     }
 
@@ -322,7 +322,7 @@ struct OnboardingCompletedView: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Quiz side
+            // Back of card
             VStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
@@ -334,36 +334,28 @@ struct OnboardingCompletedView: View {
                     )
                     .frame(width: 130, height: 160)
                     .overlay {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Image(systemName: "questionmark.circle.fill")
+                        VStack(spacing: 10) {
+                            Image(systemName: "lightbulb.fill")
                                 .font(.title2)
                                 .foregroundStyle(.white.opacity(0.7))
-                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                            ForEach(0..<3, id: \.self) { index in
-                                HStack(spacing: 6) {
-                                    Circle()
-                                        .fill(index == 0 ? .white : .white.opacity(0.25))
-                                        .frame(width: 10, height: 10)
-                                        .overlay {
-                                            if index == 0 {
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 6, weight: .bold))
-                                                    .foregroundStyle(.purple)
-                                            }
-                                        }
-
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(.white.opacity(index == 0 ? 0.5 : 0.25))
-                                        .frame(height: 4)
-                                }
+                            VStack(spacing: 5) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(.white.opacity(0.4))
+                                    .frame(width: 80, height: 5)
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(.white.opacity(0.3))
+                                    .frame(width: 60, height: 5)
                             }
+
+                            Text("Answer")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.5))
                         }
-                        .padding(14)
                     }
                     .shadow(color: Color.purple.opacity(0.25), radius: 12, y: 6)
 
-                Text("Quizzes")
+                Text("Review")
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)

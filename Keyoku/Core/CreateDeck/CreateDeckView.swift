@@ -11,7 +11,6 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 struct CreateDeckDelegate {
-    var defaultContentType: CreateDeckPresenter.ContentType?
 
     var eventParameters: [String: Any]? {
         nil
@@ -31,16 +30,7 @@ struct CreateDeckView: View {
             creationModePicker
 
             if presenter.creationMode == .generate {
-                contentTypePicker
-
-                if presenter.contentType == .flashcards || presenter.contentType == .both {
-                    cardAmountSection
-                }
-
-                if presenter.contentType == .quiz || presenter.contentType == .both {
-                    questionSettingsSection
-                }
-
+                cardAmountSection
                 sourceTextSection
             }
         }
@@ -123,43 +113,6 @@ struct CreateDeckView: View {
         }
     }
     
-    // MARK: - Content Type Picker
-
-    private var contentTypePicker: some View {
-        Section {
-            Picker("Content Type", selection: Binding(
-                get: { presenter.contentType },
-                set: { presenter.onContentTypeChanged($0) }
-            )) {
-                ForEach(CreateDeckPresenter.ContentType.allCases, id: \.self) { type in
-                    Text(type.displayName).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-        }
-    }
-
-    // MARK: - Question Settings Section
-
-    private var questionSettingsSection: some View {
-        Section {
-            Stepper("\(presenter.questionCount) questions", value: $presenter.questionCount, in: 5...30, step: 5)
-
-            Picker("Question Type", selection: Binding(
-                get: { presenter.quizQuestionType },
-                set: { presenter.onQuizQuestionTypeChanged($0) }
-            )) {
-                ForEach(CreateDeckPresenter.QuizQuestionType.allCases, id: \.self) { type in
-                    Text(type.displayName).tag(type)
-                }
-            }
-        } header: {
-            Text("Quiz Settings")
-        } footer: {
-            Text("More questions require more source text for best results.")
-        }
-    }
-
     // MARK: - Card Amount Section
 
     private var cardAmountSection: some View {
@@ -398,11 +351,7 @@ struct CreateDeckView: View {
     }
 
     private var generateButtonLabel: String {
-        switch presenter.contentType {
-        case .flashcards: return "Generate"
-        case .quiz: return "Generate Quiz"
-        case .both: return "Generate All"
-        }
+        "Generate"
     }
     
     @ViewBuilder
@@ -445,17 +394,27 @@ struct CreateDeckView: View {
     }
 }
 
+extension CoreRouter {
+
+    func showCreateContentView() {
+        let delegate = CreateDeckDelegate()
+        router.showScreen(.sheet) { router in
+            builder.createDeckView(router: router, delegate: delegate)
+        }
+    }
+
+}
+
 extension CoreBuilder {
-    
+
     func createDeckView(router: AnyRouter, delegate: CreateDeckDelegate) -> some View {
         CreateDeckView(
             presenter: CreateDeckPresenter(
                 interactor: interactor,
-                router: CoreRouter(router: router, builder: self),
-                defaultContentType: delegate.defaultContentType
+                router: CoreRouter(router: router, builder: self)
             ),
             delegate: delegate
         )
     }
-    
+
 }

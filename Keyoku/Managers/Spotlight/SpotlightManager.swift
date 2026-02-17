@@ -18,12 +18,11 @@ class SpotlightManager {
 
     // MARK: - Batch Indexing
 
-    func indexAllContent(decks: [DeckModel], quizzes: [QuizModel]) {
-        logManager?.trackEvent(event: Event.indexAllStart(deckCount: decks.count, quizCount: quizzes.count))
+    func indexAllContent(decks: [DeckModel]) {
+        logManager?.trackEvent(event: Event.indexAllStart(deckCount: decks.count))
 
         Task.detached {
             let items = decks.map { Self.searchableItem(for: $0) }
-                      + quizzes.map { Self.searchableItem(for: $0) }
 
             do {
                 try await CSSearchableIndex.default().deleteAllSearchableItems()
@@ -49,15 +48,6 @@ class SpotlightManager {
         }
     }
 
-    func indexQuiz(_ quiz: QuizModel) {
-        logManager?.trackEvent(event: Event.indexQuiz(quizId: quiz.quizId))
-
-        let item = Self.searchableItem(for: quiz)
-        Task.detached {
-            try? await CSSearchableIndex.default().indexSearchableItems([item])
-        }
-    }
-
     // MARK: - Removal
 
     func removeDeck(id: String) {
@@ -65,14 +55,6 @@ class SpotlightManager {
 
         Task.detached {
             try? await CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ["deck-\(id)"])
-        }
-    }
-
-    func removeQuiz(id: String) {
-        logManager?.trackEvent(event: Event.removeQuiz(quizId: id))
-
-        Task.detached {
-            try? await CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ["quiz-\(id)"])
         }
     }
 
@@ -107,28 +89,13 @@ class SpotlightManager {
         )
     }
 
-    private nonisolated static func searchableItem(for quiz: QuizModel) -> CSSearchableItem {
-        let attributes = CSSearchableItemAttributeSet(contentType: .content)
-        attributes.title = quiz.name
-        attributes.contentDescription = "\(quiz.questions.count) question\(quiz.questions.count == 1 ? "" : "s")"
-        attributes.keywords = ["quiz", "test", "study"]
-
-        return CSSearchableItem(
-            uniqueIdentifier: "quiz-\(quiz.quizId)",
-            domainIdentifier: "com.keyoku.quiz",
-            attributeSet: attributes
-        )
-    }
-
     // MARK: - Events
 
     enum Event: LoggableEvent {
-        case indexAllStart(deckCount: Int, quizCount: Int)
+        case indexAllStart(deckCount: Int)
         case indexAllFail(error: Error)
         case indexDeck(deckId: String)
-        case indexQuiz(quizId: String)
         case removeDeck(deckId: String)
-        case removeQuiz(quizId: String)
         case removeAll
 
         var eventName: String {
@@ -136,27 +103,21 @@ class SpotlightManager {
             case .indexAllStart:     return "SpotlightMan_IndexAll_Start"
             case .indexAllFail:      return "SpotlightMan_IndexAll_Fail"
             case .indexDeck:         return "SpotlightMan_IndexDeck"
-            case .indexQuiz:         return "SpotlightMan_IndexQuiz"
             case .removeDeck:       return "SpotlightMan_RemoveDeck"
-            case .removeQuiz:       return "SpotlightMan_RemoveQuiz"
             case .removeAll:        return "SpotlightMan_RemoveAll"
             }
         }
 
         var parameters: [String: Any]? {
             switch self {
-            case .indexAllStart(deckCount: let deckCount, quizCount: let quizCount):
-                return ["deck_count": deckCount, "quiz_count": quizCount]
+            case .indexAllStart(deckCount: let deckCount):
+                return ["deck_count": deckCount]
             case .indexAllFail(error: let error):
                 return error.eventParameters
             case .indexDeck(deckId: let id):
                 return ["deck_id": id]
-            case .indexQuiz(quizId: let id):
-                return ["quiz_id": id]
             case .removeDeck(deckId: let id):
                 return ["deck_id": id]
-            case .removeQuiz(quizId: let id):
-                return ["quiz_id": id]
             case .removeAll:
                 return nil
             }

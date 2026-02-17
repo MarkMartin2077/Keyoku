@@ -10,7 +10,6 @@ import SwiftUI
 @MainActor
 protocol SearchRouter: GlobalRouter {
     func showDeckDetailView(deck: DeckModel)
-    func showQuizView(quiz: QuizModel)
 }
 
 extension CoreRouter: SearchRouter { }

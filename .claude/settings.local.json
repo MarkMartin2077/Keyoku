@@ -20,7 +20,8 @@
       "WebSearch",
       "WebFetch(domain:www.createwithswift.com)",
       "WebFetch(domain:azamsharp.com)",
-      "WebFetch(domain:levelup.gitconnected.com)"
+      "WebFetch(domain:levelup.gitconnected.com)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

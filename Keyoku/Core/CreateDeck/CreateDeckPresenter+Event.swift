@@ -28,10 +28,6 @@ extension CreateDeckPresenter {
         case onBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
         case onGenerateSuccess(cardCount: Int)
         case onGenerateFail(error: Error)
-        case onContentTypeChanged(contentType: String)
-        case onQuestionCountChanged(count: Int)
-        case onQuizQuestionTypeChanged(questionType: String)
-        case onQuizGenerateSuccess(questionCount: Int)
         case onSuccessDismissPressed
         case onCreateEmptyPressed
         case onCreateEmptySuccess
@@ -57,10 +53,6 @@ extension CreateDeckPresenter {
             case .onBatchStart:             return "CreateDeckView_Batch_Start"
             case .onGenerateSuccess:        return "CreateDeckView_Generate_Success"
             case .onGenerateFail:           return "CreateDeckView_Generate_Fail"
-            case .onContentTypeChanged:     return "CreateDeckView_ContentType_Changed"
-            case .onQuestionCountChanged:   return "CreateDeckView_QuestionCount_Changed"
-            case .onQuizQuestionTypeChanged: return "CreateDeckView_QuizQuestionType_Changed"
-            case .onQuizGenerateSuccess:    return "CreateDeckView_QuizGenerate_Success"
             case .onSuccessDismissPressed:   return "CreateDeckView_SuccessDismiss_Pressed"
             case .onCreateEmptyPressed:     return "CreateDeckView_CreateEmpty_Pressed"
             case .onCreateEmptySuccess:     return "CreateDeckView_CreateEmpty_Success"
@@ -92,14 +84,6 @@ extension CreateDeckPresenter {
                 return ["source_text_length": length, "card_count": count, "source_input_mode": mode]
             case .onBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
                 return ["batch_number": batch, "total_batches": total, "batch_card_count": cards]
-            case .onContentTypeChanged(contentType: let type):
-                return ["content_type": type]
-            case .onQuestionCountChanged(count: let count):
-                return ["question_count": count]
-            case .onQuizQuestionTypeChanged(questionType: let type):
-                return ["quiz_question_type": type]
-            case .onQuizGenerateSuccess(questionCount: let count):
-                return ["question_count": count]
             case .onGenerateSuccess(cardCount: let count):
                 return ["card_count": count]
             case .onGenerateFail(error: let error):

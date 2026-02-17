@@ -12,7 +12,6 @@ struct CoreInteractor: GlobalInteractor {
     private let hapticManager: HapticManager
     private let soundEffectManager: SoundEffectManager
     private let flashcardManager: FlashcardManager
-    private let quizManager: QuizManager
     private let spotlightManager: SpotlightManager
 
     init(container: DependencyContainer) {
@@ -26,7 +25,6 @@ struct CoreInteractor: GlobalInteractor {
         self.hapticManager = container.resolve(HapticManager.self)!
         self.soundEffectManager = container.resolve(SoundEffectManager.self)!
         self.flashcardManager = container.resolve(FlashcardManager.self)!
-        self.quizManager = container.resolve(QuizManager.self)!
         self.spotlightManager = container.resolve(SpotlightManager.self)!
     }
     
@@ -271,43 +269,6 @@ struct CoreInteractor: GlobalInteractor {
         try flashcardManager.saveDeckImage(data: data)
     }
 
-    // MARK: QuizManager
-
-    var quizzes: [QuizModel] {
-        quizManager.quizzes
-    }
-
-    func loadQuizzes() {
-        quizManager.loadQuizzes()
-    }
-
-    func getQuiz(id: String) -> QuizModel? {
-        quizManager.getQuiz(id: id)
-    }
-
-    func createQuiz(name: String, color: DeckColor = .blue, sourceText: String) throws {
-        try quizManager.createQuiz(name: name, color: color, sourceText: sourceText)
-        if let quiz = quizManager.quizzes.first(where: { $0.name == name }) {
-            spotlightManager.indexQuiz(quiz)
-        }
-    }
-
-    func createQuiz(name: String, color: DeckColor = .blue, sourceText: String, questions: [QuizQuestionModel]) throws {
-        try quizManager.createQuiz(name: name, color: color, sourceText: sourceText, questions: questions)
-        if let quiz = quizManager.quizzes.first(where: { $0.name == name }) {
-            spotlightManager.indexQuiz(quiz)
-        }
-    }
-
-    func deleteQuiz(id: String) throws {
-        try quizManager.deleteQuiz(id: id)
-        spotlightManager.removeQuiz(id: id)
-    }
-
-    func deleteQuizQuestion(questionId: String, fromQuizId: String) throws {
-        try quizManager.deleteQuizQuestion(questionId: questionId, fromQuizId: fromQuizId)
-    }
-
     // MARK: SpotlightManager
 
     func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)? {
@@ -328,15 +289,14 @@ struct CoreInteractor: GlobalInteractor {
             )
         )
         async let flashcardLogin: Void = flashcardManager.logIn(userId: user.uid)
-        async let quizLogin: Void = quizManager.logIn(userId: user.uid)
 
-        let (_, _, _, _) = await (try userLogin, try purchaseLogin, try flashcardLogin, try quizLogin)
+        let (_, _, _) = await (try userLogin, try purchaseLogin, try flashcardLogin)
 
         // Add user properties
         logManager.addUserProperties(dict: Utilities.eventParameters, isHighPriority: false)
 
         // Index all content for Spotlight search
-        spotlightManager.indexAllContent(decks: flashcardManager.decks, quizzes: quizManager.quizzes)
+        spotlightManager.indexAllContent(decks: flashcardManager.decks)
     }
 
     func signOut() async throws {
@@ -344,7 +304,6 @@ struct CoreInteractor: GlobalInteractor {
         try await purchaseManager.logOut()
         userManager.signOut()
         flashcardManager.signOut()
-        quizManager.signOut()
         spotlightManager.removeAllItems()
     }
     

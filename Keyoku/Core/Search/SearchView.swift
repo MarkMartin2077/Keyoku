@@ -23,19 +23,14 @@ struct SearchView: View {
         List {
             if !presenter.isSearching {
                 suggestionsSection
-            } else if presenter.filteredDecks.isEmpty && presenter.filteredQuizzes.isEmpty {
+            } else if presenter.filteredDecks.isEmpty {
                 noResultsView
             } else {
-                if !presenter.filteredDecks.isEmpty {
-                    decksResultsSection
-                }
-                if !presenter.filteredQuizzes.isEmpty {
-                    quizzesResultsSection
-                }
+                decksResultsSection
             }
         }
         .navigationTitle("Search")
-        .searchable(text: $presenter.searchText, prompt: "Search decks & quizzes")
+        .searchable(text: $presenter.searchText, prompt: "Search decks")
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }
@@ -54,7 +49,7 @@ struct SearchView: View {
             Text("Search your library")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            Text("Find decks and quizzes by name")
+            Text("Find decks by name")
                 .font(.subheadline)
                 .foregroundStyle(.tertiary)
         }
@@ -113,36 +108,6 @@ struct SearchView: View {
         }
     }
 
-    // MARK: - Quiz Results
-
-    private var quizzesResultsSection: some View {
-        Section {
-            ForEach(presenter.filteredQuizzes) { quiz in
-                HStack {
-                    Circle()
-                        .fill(quiz.color.color.gradient)
-                        .frame(width: 10, height: 10)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(quiz.name)
-                            .font(.headline)
-                        Text("\(quiz.questions.count) question\(quiz.questions.count == 1 ? "" : "s")")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
-                .anyButton(.highlight) {
-                    presenter.onQuizPressed(quiz: quiz)
-                }
-            }
-        } header: {
-            Text("Quizzes")
-        }
-    }
 }
 
 #Preview {
