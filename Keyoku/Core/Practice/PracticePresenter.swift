@@ -20,6 +20,9 @@ class PracticePresenter {
     private(set) var currentIndex: Int = 0
     private var hasRecordedCompletion: Bool = false
 
+    var showStreakCelebration: Bool = false
+    var newStreakCount: Int = 0
+
     var currentCard: FlashcardModel? {
         guard !flashcards.isEmpty, currentIndex < flashcards.count else { return nil }
         return flashcards[currentIndex]
@@ -78,6 +81,35 @@ class PracticePresenter {
             hasRecordedCompletion = true
             interactor.trackEvent(event: Event.onPracticeSessionComplete(deckName: deckName, cardsCount: flashcards.count))
             interactor.playHaptic(option: .lessonComplete())
+            recordStreakEvent()
+        }
+    }
+
+    func onStreakCelebrationDismissed() {
+        interactor.trackEvent(event: Event.onStreakCelebrationDismissed)
+        showStreakCelebration = false
+    }
+
+    private func recordStreakEvent() {
+        let previousStreak = interactor.currentStreakData.currentStreak ?? 0
+
+        Task {
+            do {
+                let metadata: [String: GamificationDictionaryValue] = [
+                    "deck_name": .string(deckName),
+                    "cards_count": .int(flashcards.count)
+                ]
+                let _ = try await interactor.addStreakEvent(metadata: metadata)
+                interactor.trackEvent(event: Event.onStreakEventRecorded(deckName: deckName))
+
+                let updatedStreak = interactor.currentStreakData.currentStreak ?? 0
+                if updatedStreak > previousStreak {
+                    newStreakCount = updatedStreak
+                    showStreakCelebration = true
+                }
+            } catch {
+                interactor.trackEvent(event: Event.onStreakEventFailed(error: error))
+            }
         }
     }
 
@@ -101,6 +133,9 @@ extension PracticePresenter {
         case onNextPressed(fromIndex: Int)
         case onShufflePressed
         case onPracticeSessionComplete(deckName: String, cardsCount: Int)
+        case onStreakEventRecorded(deckName: String)
+        case onStreakEventFailed(error: Error)
+        case onStreakCelebrationDismissed
 
         var eventName: String {
             switch self {
@@ -110,6 +145,9 @@ extension PracticePresenter {
             case .onNextPressed:                return "PracticeView_Next_Pressed"
             case .onShufflePressed:             return "PracticeView_Shuffle_Pressed"
             case .onPracticeSessionComplete:    return "PracticeView_Session_Complete"
+            case .onStreakEventRecorded:         return "PracticeView_Streak_Recorded"
+            case .onStreakEventFailed:           return "PracticeView_Streak_Failed"
+            case .onStreakCelebrationDismissed:  return "PracticeView_Streak_Celebration_Dismissed"
             }
         }
 
@@ -125,13 +163,22 @@ extension PracticePresenter {
                 return ["from_index": index]
             case .onPracticeSessionComplete(deckName: let deckName, cardsCount: let cardsCount):
                 return ["deck_name": deckName, "cards_count": cardsCount]
+            case .onStreakEventRecorded(deckName: let deckName):
+                return ["deck_name": deckName]
+            case .onStreakEventFailed(error: let error):
+                return error.eventParameters
             default:
                 return nil
             }
         }
 
         var type: LogType {
-            .analytic
+            switch self {
+            case .onStreakEventFailed:
+                return .severe
+            default:
+                return .analytic
+            }
         }
     }
 }

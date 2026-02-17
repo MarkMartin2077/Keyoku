@@ -28,6 +28,8 @@
 		02B62BB22E662E85008FB7FF /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 02B62BB12E662E85008FB7FF /* FirebaseStorage */; };
 		9FA4C8992F3A966F00709A1E /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 9FA4C8982F3A966F00709A1E /* CLAUDE.md */; };
 		9FA62FC32F42A9EA00E48C0C /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9FA62FC22F42A9EA00E48C0C /* StoreKit.framework */; };
+		9FA62FCC2F44283F00E48C0C /* SwiftfulGamification in Frameworks */ = {isa = PBXBuildFile; productRef = 9FA62FCB2F44283F00E48C0C /* SwiftfulGamification */; };
+		9FA62FCF2F442A7A00E48C0C /* SwiftfulGamificationFirebase in Frameworks */ = {isa = PBXBuildFile; productRef = 9FA62FCE2F442A7A00E48C0C /* SwiftfulGamificationFirebase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -111,9 +113,11 @@
 				02B62BAB2E662DF3008FB7FF /* SwiftfulLoggingFirebaseCrashlytics in Frameworks */,
 				02B62BA52E662DD7008FB7FF /* SwiftfulAuthenticatingFirebase in Frameworks */,
 				028744482D33A58F00C2C3E1 /* SwiftfulSoundEffects in Frameworks */,
+				9FA62FCF2F442A7A00E48C0C /* SwiftfulGamificationFirebase in Frameworks */,
 				0229588C2CEE932F00765488 /* SDWebImageSwiftUI in Frameworks */,
 				9FA62FC32F42A9EA00E48C0C /* StoreKit.framework in Frameworks */,
 				028F9B862CECF666009B9F48 /* SwiftfulUtilities in Frameworks */,
+				9FA62FCC2F44283F00E48C0C /* SwiftfulGamification in Frameworks */,
 				028F9BD72CED155A009B9F48 /* SwiftfulAuthUI in Frameworks */,
 				02B62BB22E662E85008FB7FF /* FirebaseStorage in Frameworks */,
 				02B62BB02E662E60008FB7FF /* FirebaseRemoteConfig in Frameworks */,
@@ -248,6 +252,8 @@
 				02B62BAD2E662E14008FB7FF /* SwiftfulFirestore */,
 				02B62BAF2E662E60008FB7FF /* FirebaseRemoteConfig */,
 				02B62BB12E662E85008FB7FF /* FirebaseStorage */,
+				9FA62FCB2F44283F00E48C0C /* SwiftfulGamification */,
+				9FA62FCE2F442A7A00E48C0C /* SwiftfulGamificationFirebase */,
 			);
 			productName = Keyoku;
 			productReference = 028F9B532CECF2C2009B9F48 /* Keyoku.app */;
@@ -303,6 +309,8 @@
 				02B62BA62E662DE7008FB7FF /* XCRemoteSwiftPackageReference "SwiftfulLoggingFirebaseAnalytics" */,
 				02B62BA92E662DF3008FB7FF /* XCRemoteSwiftPackageReference "SwiftfulLoggingFirebaseCrashlytics" */,
 				02B62BAC2E662E14008FB7FF /* XCRemoteSwiftPackageReference "SwiftfulFirestore" */,
+				9FA62FCA2F44283F00E48C0C /* XCRemoteSwiftPackageReference "SwiftfulGamification" */,
+				9FA62FCD2F442A7A00E48C0C /* XCRemoteSwiftPackageReference "SwiftfulGamificationFirebase" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 028F9B542CECF2C2009B9F48 /* Products */;
@@ -1064,6 +1072,22 @@
 				minimumVersion = 11.0.0;
 			};
 		};
+		9FA62FCA2F44283F00E48C0C /* XCRemoteSwiftPackageReference "SwiftfulGamification" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftfulThinking/SwiftfulGamification.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.1;
+			};
+		};
+		9FA62FCD2F442A7A00E48C0C /* XCRemoteSwiftPackageReference "SwiftfulGamificationFirebase" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftfulThinking/SwiftfulGamificationFirebase.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1161,6 +1185,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 02B62BA02E662DC3008FB7FF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		9FA62FCB2F44283F00E48C0C /* SwiftfulGamification */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9FA62FCA2F44283F00E48C0C /* XCRemoteSwiftPackageReference "SwiftfulGamification" */;
+			productName = SwiftfulGamification;
+		};
+		9FA62FCE2F442A7A00E48C0C /* SwiftfulGamificationFirebase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9FA62FCD2F442A7A00E48C0C /* XCRemoteSwiftPackageReference "SwiftfulGamificationFirebase" */;
+			productName = SwiftfulGamificationFirebase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

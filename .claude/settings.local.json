@@ -21,7 +21,8 @@
       "WebFetch(domain:www.createwithswift.com)",
       "WebFetch(domain:azamsharp.com)",
       "WebFetch(domain:levelup.gitconnected.com)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

@@ -56,6 +56,10 @@ struct HomeView: View {
             }
             
             ToolbarItem(placement: .topBarTrailing) {
+                streakIndicator
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
                 if presenter.showNotificationButton {
                     pushNotificationButton
                 }
@@ -286,6 +290,20 @@ struct HomeView: View {
             }
     }
     
+    // MARK: - Streak Indicator
+
+    private var streakIndicator: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "flame.fill")
+                .foregroundStyle(presenter.currentStreak > 0 ? .orange : .gray)
+            Text("\(presenter.currentStreak)")
+                .fontWeight(.semibold)
+                .contentTransition(.numericText())
+        }
+        .font(.subheadline)
+        .accessibilityLabel("\(presenter.currentStreak) day streak")
+    }
+
     // MARK: - Push Notifications
     private var pushNotificationButton: some View {
         Image(systemName: "bell.fill")

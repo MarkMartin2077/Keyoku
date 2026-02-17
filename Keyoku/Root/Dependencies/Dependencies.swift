@@ -11,6 +11,14 @@ import SwiftfulRouting
 struct Dependencies {
     let container: DependencyContainer
 
+    static let streakConfiguration = StreakConfiguration(
+        streakKey: Constants.streakKey,
+        eventsRequiredPerDay: 1,
+        useServerCalculation: false,
+        leewayHours: 0,
+        freezeBehavior: .autoConsumeFreezes
+    )
+
     // swiftlint:disable:next function_body_length
     init(config: BuildConfiguration) {
         let authManager: AuthManager
@@ -24,6 +32,7 @@ struct Dependencies {
         let soundEffectManager: SoundEffectManager
         let flashcardManager: FlashcardManager
         let spotlightManager: SpotlightManager
+        let streakManager: StreakManager
 
         switch config {
         case .mock(isSignedIn: let isSignedIn):
@@ -45,6 +54,7 @@ struct Dependencies {
             appState = AppState(startingModuleId: isSignedIn ? Constants.tabbarModuleId : Constants.onboardingModuleId)
             hapticManager = HapticManager(logger: logManager)
             flashcardManager = FlashcardManager(services: MockFlashcardServices(), logManager: logManager)
+            streakManager = StreakManager(services: MockStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
         case .dev:
             logManager = LogManager(services: [
                 ConsoleService(printParameters: true),
@@ -62,6 +72,7 @@ struct Dependencies {
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
             flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
+            streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
         case .prod:
             logManager = LogManager(services: [
                 FirebaseAnalyticsService(),
@@ -79,6 +90,7 @@ struct Dependencies {
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
             flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), logManager: logManager)
+            streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
         }
         pushManager = PushManager(logManager: logManager)
         soundEffectManager = SoundEffectManager(logger: logManager)
@@ -97,6 +109,7 @@ struct Dependencies {
         container.register(FlashcardManager.self, service: flashcardManager)
 
         container.register(SpotlightManager.self, service: spotlightManager)
+        container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
 
         self.container = container
         
@@ -122,6 +135,7 @@ class DevPreview {
         container.register(FlashcardManager.self, service: flashcardManager)
 
         container.register(SpotlightManager.self, service: spotlightManager)
+        container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
         return container
     }
     
@@ -136,6 +150,7 @@ class DevPreview {
     let soundEffectManager: SoundEffectManager
     let flashcardManager: FlashcardManager
     let spotlightManager: SpotlightManager
+    let streakManager: StreakManager
 
     init(isSignedIn: Bool = true) {
         self.authManager = AuthManager(service: MockAuthService(user: isSignedIn ? .mock() : nil))
@@ -149,6 +164,7 @@ class DevPreview {
         self.soundEffectManager = SoundEffectManager()
         self.flashcardManager = FlashcardManager(services: MockFlashcardServices())
         self.spotlightManager = SpotlightManager()
+        self.streakManager = StreakManager(services: MockStreakServices(), configuration: Dependencies.streakConfiguration, logger: nil)
     }
 
 }

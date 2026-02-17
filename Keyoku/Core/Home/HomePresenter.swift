@@ -10,6 +10,12 @@ class HomePresenter {
 
     private(set) var showNotificationButton: Bool = false
     
+    // MARK: - Streak Data
+
+    var currentStreak: Int {
+        interactor.currentStreakData.currentStreak ?? 0
+    }
+
     // MARK: - Dashboard Data
 
     var decks: [DeckModel] {

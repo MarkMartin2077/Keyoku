@@ -14,6 +14,9 @@ protocol HomeInteractor: GlobalInteractor {
 
     // Spotlight
     func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)?
+
+    // Streaks
+    var currentStreakData: CurrentStreakData { get }
 }
 
 extension CoreInteractor: HomeInteractor { }

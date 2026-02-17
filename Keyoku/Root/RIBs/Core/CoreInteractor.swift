@@ -13,6 +13,7 @@ struct CoreInteractor: GlobalInteractor {
     private let soundEffectManager: SoundEffectManager
     private let flashcardManager: FlashcardManager
     private let spotlightManager: SpotlightManager
+    private let streakManager: StreakManager
 
     init(container: DependencyContainer) {
         self.appState = container.resolve(AppState.self)!
@@ -26,6 +27,7 @@ struct CoreInteractor: GlobalInteractor {
         self.soundEffectManager = container.resolve(SoundEffectManager.self)!
         self.flashcardManager = container.resolve(FlashcardManager.self)!
         self.spotlightManager = container.resolve(SpotlightManager.self)!
+        self.streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey)!
     }
     
     // MARK: APP STATE
@@ -269,6 +271,20 @@ struct CoreInteractor: GlobalInteractor {
         try flashcardManager.saveDeckImage(data: data)
     }
 
+    // MARK: StreakManager
+
+    var currentStreakData: CurrentStreakData {
+        streakManager.currentStreakData
+    }
+
+    func addStreakEvent(metadata: [String: GamificationDictionaryValue] = [:]) async throws -> StreakEvent {
+        try await streakManager.addStreakEvent(metadata: metadata)
+    }
+
+    func recalculateStreak() {
+        streakManager.recalculateStreak()
+    }
+
     // MARK: SpotlightManager
 
     func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)? {
@@ -289,8 +305,9 @@ struct CoreInteractor: GlobalInteractor {
             )
         )
         async let flashcardLogin: Void = flashcardManager.logIn(userId: user.uid)
+        async let streakLogin: Void = streakManager.logIn(userId: user.uid)
 
-        let (_, _, _) = await (try userLogin, try purchaseLogin, try flashcardLogin)
+        let (_, _, _, _) = await (try userLogin, try purchaseLogin, try flashcardLogin, try streakLogin)
 
         // Add user properties
         logManager.addUserProperties(dict: Utilities.eventParameters, isHighPriority: false)
@@ -304,6 +321,7 @@ struct CoreInteractor: GlobalInteractor {
         try await purchaseManager.logOut()
         userManager.signOut()
         flashcardManager.signOut()
+        streakManager.logOut()
         spotlightManager.removeAllItems()
     }
     

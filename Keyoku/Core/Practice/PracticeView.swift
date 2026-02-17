@@ -36,6 +36,18 @@ struct PracticeView: View {
                 shuffleButton
             }
         }
+        .overlay {
+            if presenter.showStreakCelebration {
+                StreakCelebrationView(
+                    streakCount: presenter.newStreakCount,
+                    onDismiss: {
+                        presenter.onStreakCelebrationDismissed()
+                    }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut, value: presenter.showStreakCelebration)
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }
