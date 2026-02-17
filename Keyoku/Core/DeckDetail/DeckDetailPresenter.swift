@@ -155,7 +155,7 @@ class DeckDetailPresenter {
     func onGenerateSheetOpened() {
         interactor.trackEvent(event: Event.onGenerateSheetOpened)
         resetGenerationState()
-        sourceText = deck?.sourceText ?? ""
+        sourceText = ""
         sourceInputMode = .text
         pdfFileName = nil
         pdfPageCount = nil
@@ -171,7 +171,7 @@ class DeckDetailPresenter {
         if mode == .text {
             pdfFileName = nil
             pdfPageCount = nil
-            sourceText = deck?.sourceText ?? ""
+            sourceText = ""
         }
     }
 

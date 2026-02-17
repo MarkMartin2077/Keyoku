@@ -132,7 +132,7 @@ extension DeckDetailPresenter {
 extension DeckDetailPresenter {
 
     func generateFlashcards() async throws {
-        let maxCardsPerBatch = 5
+        let maxCardsPerBatch = 3
         let chunks = makeChunks(maxTextPerBatch: 5000, itemCount: cardCount, maxItemsPerBatch: maxCardsPerBatch)
 
         flashcardTotal = chunks.count
@@ -166,6 +166,8 @@ extension DeckDetailPresenter {
         }
     }
 
+    private static let minAnswerLength = 10
+
     private func streamFlashcardBatch(text: String, count: Int) async throws {
         let session = makeSession()
         let prompt = """
@@ -181,12 +183,13 @@ extension DeckDetailPresenter {
         - Formulas, rules, or principles stated in the text
         - Key facts and their significance as presented in the text
 
-        Each card should have a clear, specific question and a concise but \
-        complete answer. Make sure there is no weird mid sentence cut off and \
-        the answers also do not have a weird cutoff.
-
-        Also make sure answers are as accurate as possible, double-check if \
-        necessary.
+        CRITICAL RULES:
+        - Every answer MUST be a complete, substantive response (at least 1-2 sentences). \
+        - NEVER leave an answer incomplete, truncated, or cut off mid-sentence. \
+        - If you cannot provide a full answer for a card, omit that card entirely. \
+        - Finish writing each card's answer completely before starting the next card. \
+        - Quality over quantity: it is better to produce fewer complete cards \
+        than many incomplete ones.
 
         Source text:
         \(text)
@@ -199,7 +202,10 @@ extension DeckDetailPresenter {
         for try await snapshot in stream {
             let completedCards = snapshot.content.cards?.compactMap { partialCard -> FlashcardModel? in
                 guard let question = partialCard.question,
-                      let answer = partialCard.answer else { return nil }
+                      let answer = partialCard.answer,
+                      question.trimmingCharacters(in: .whitespacesAndNewlines).count >= 5,
+                      answer.trimmingCharacters(in: .whitespacesAndNewlines).count >= Self.minAnswerLength
+                else { return nil }
                 return FlashcardModel(question: question, answer: answer)
             } ?? []
 
@@ -215,5 +221,14 @@ extension DeckDetailPresenter {
             streamedFlashcards = Array(streamedFlashcards.prefix(countBeforeBatch)) + stableCards
             flashcardItemsGenerated = streamedFlashcards.count
         }
+
+        // Final quality pass: remove any cards with incomplete answers
+        let qualityCards = streamedFlashcards.suffix(from: countBeforeBatch).filter { card in
+            let answer = card.answer.trimmingCharacters(in: .whitespacesAndNewlines)
+            let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
+            return answer.count >= Self.minAnswerLength && endsCleanly
+        }
+        streamedFlashcards = Array(streamedFlashcards.prefix(countBeforeBatch)) + Array(qualityCards)
+        flashcardItemsGenerated = streamedFlashcards.count
     }
 }
