@@ -39,7 +39,9 @@ class HomePresenter {
 
     var studiedDecks: [DeckModel] {
         decks
-            .filter { deck in deck.flashcards.contains(where: { $0.isLearned }) }
+            .filter { deck in
+                deck.clickCount > 0 && deck.flashcards.contains(where: { !$0.isLearned })
+            }
             .sorted { lhs, rhs in
                 let lhsUnlearned = lhs.flashcards.filter { !$0.isLearned }.count
                 let rhsUnlearned = rhs.flashcards.filter { !$0.isLearned }.count
