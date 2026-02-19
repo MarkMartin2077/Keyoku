@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+/// Deck list presenter that provides searchable, full-list access to all user decks.
+///
+/// Supports text-based filtering, deck creation with free-tier limit enforcement,
+/// swipe-to-delete, and a first-deck premium prompt after initial deck creation.
 @Observable
 @MainActor
 class DecksPresenter {

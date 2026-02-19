@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+/// Global search presenter that filters across deck names and flashcard content.
+///
+/// Matches against deck names, flashcard questions, and flashcard answers. Results are
+/// ranked by the number of matching cards within each deck.
 @Observable
 @MainActor
 class SearchPresenter {

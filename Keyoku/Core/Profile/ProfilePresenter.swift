@@ -1,5 +1,10 @@
 import SwiftUI
 
+/// Profile presenter that displays user info, study stats, and account management actions.
+///
+/// Shows profile name/email/image, streak count, deck/card statistics, and premium status.
+/// Provides sign out, delete account (with reauthentication), upgrade to premium,
+/// manage subscription, and account creation for anonymous users.
 @Observable
 @MainActor
 class ProfilePresenter {

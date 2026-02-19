@@ -10,6 +10,11 @@ import UIKit
 import PDFKit
 import FoundationModels
 
+/// New deck creation presenter that supports AI-generated and empty deck workflows.
+///
+/// Users can generate flashcards from pasted text or uploaded PDFs using on-device AI,
+/// or create an empty deck to add cards manually later. Handles deck naming, color selection,
+/// cover image, and a first-deck celebration flow for new users.
 @Observable
 @MainActor
 class CreateDeckPresenter {

@@ -7,6 +7,11 @@
 import SwiftUI
 import SignInAppleAsync
 
+/// Account creation presenter that handles Apple and Google sign-in.
+///
+/// Before authenticating, snapshots any anonymous decks so they can be migrated to the
+/// new account after sign-in. Handles credential conflicts (error 17025) with a dedicated alert
+/// and restores the anonymous session if sign-in fails.
 @Observable
 @MainActor
 class CreateAccountPresenter {

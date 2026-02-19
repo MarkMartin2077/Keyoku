@@ -109,7 +109,7 @@ extension GlobalRouter {
         }
     }
 
-    func showDeckMasteredPremiumPromptModal(onSeeOfferPressed: @escaping () -> Void, onDismissPressed: @escaping () -> Void) {
+    func showDeckCompletedPremiumPromptModal(onSeeOfferPressed: @escaping () -> Void, onDismissPressed: @escaping () -> Void) {
         router.showModal(transition: .move(edge: .bottom), backgroundColor: Color.black.opacity(0.6)) {
             CustomModalView(
                 title: "You're on a roll!",

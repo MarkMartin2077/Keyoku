@@ -7,6 +7,11 @@
 import SwiftUI
 import StoreKit
 
+/// Paywall presenter that manages the premium subscription purchase flow.
+///
+/// Loads available products from StoreKit, handles purchase completion (success, pending,
+/// cancelled), and supports restoring previous purchases. Automatically dismisses on
+/// successful purchase or restore.
 @Observable
 @MainActor
 class PaywallPresenter {

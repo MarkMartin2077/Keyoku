@@ -7,6 +7,10 @@
 import SwiftUI
 import SwiftfulUtilities
 
+/// Settings presenter that provides links to system settings and legal documents.
+///
+/// Opens notification settings, privacy policy, and terms of service URLs.
+/// Also manages the app ratings flow with a yes/no enjoyment prompt before requesting a review.
 @Observable
 @MainActor
 class SettingsPresenter {

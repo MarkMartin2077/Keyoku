@@ -6,6 +6,10 @@
 //
 import SwiftUI
 
+/// Welcome screen presenter that routes users to onboarding or sign-in.
+///
+/// New users tap "Get Started" to begin onboarding. Returning users tap "Sign In"
+/// to authenticate via Apple/Google — existing accounts skip onboarding and go straight to the tab bar.
 @Observable
 @MainActor
 class WelcomePresenter {

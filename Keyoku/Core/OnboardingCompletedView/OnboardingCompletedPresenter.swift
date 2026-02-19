@@ -6,6 +6,10 @@
 //
 import SwiftUI
 
+/// Onboarding tutorial presenter that walks new users through introductory pages.
+///
+/// Manages a paginated flow (4 pages) with continue/finish actions. On the last page,
+/// persists the onboarding-complete flag and switches to the main tab bar module.
 @Observable
 @MainActor
 class OnboardingCompletedPresenter {

@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+/// Practice session presenter that drives the flashcard study experience.
+///
+/// Manages card swiping (learned vs. still learning), undo, shuffle, and practice-again flows.
+/// Tracks session completion, persists learned status per card, records streak events,
+/// and shows a premium prompt when a free user learns all cards in a deck.
 @Observable
 @MainActor
 class PracticePresenter {
@@ -111,7 +116,7 @@ class PracticePresenter {
             recordStreakEvent()
 
             if learnedCount == flashcards.count, !interactor.isPremium {
-                showDeckMasteredPremiumPrompt()
+                showDeckCompletedPremiumPrompt()
             }
         }
     }
@@ -177,16 +182,16 @@ class PracticePresenter {
 
     // MARK: - Premium Prompt
 
-    private func showDeckMasteredPremiumPrompt() {
-        router.showDeckMasteredPremiumPromptModal(
+    private func showDeckCompletedPremiumPrompt() {
+        router.showDeckCompletedPremiumPromptModal(
             onSeeOfferPressed: { [weak self] in
                 self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.deckMasteredPaywallAccepted)
-                self?.router.showPaywallView(delegate: PaywallDelegate(source: "deck_mastered"))
+                self?.interactor.trackEvent(event: Event.deckCompletedPaywallAccepted)
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "deck_completed"))
             },
             onDismissPressed: { [weak self] in
                 self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.deckMasteredPaywallDismissed)
+                self?.interactor.trackEvent(event: Event.deckCompletedPaywallDismissed)
             }
         )
     }
@@ -266,8 +271,8 @@ extension PracticePresenter {
         case onStreakEventFailed(error: Error)
         case onStreakCelebrationDismissed
         case onPersistLearnedFail(error: Error)
-        case deckMasteredPaywallAccepted
-        case deckMasteredPaywallDismissed
+        case deckCompletedPaywallAccepted
+        case deckCompletedPaywallDismissed
 
         var eventName: String {
             switch self {
@@ -283,8 +288,8 @@ extension PracticePresenter {
             case .onStreakEventFailed:          return "PracticeView_Streak_Failed"
             case .onStreakCelebrationDismissed: return "PracticeView_Streak_Celebration_Dismissed"
             case .onPersistLearnedFail:         return "PracticeView_Persist_Learned_Fail"
-            case .deckMasteredPaywallAccepted:  return "PracticeView_DeckMastered_Paywall_Accepted"
-            case .deckMasteredPaywallDismissed: return "PracticeView_DeckMastered_Paywall_Dismissed"
+            case .deckCompletedPaywallAccepted:  return "PracticeView_DeckCompleted_Paywall_Accepted"
+            case .deckCompletedPaywallDismissed: return "PracticeView_DeckCompleted_Paywall_Dismissed"
             }
         }
 

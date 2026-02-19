@@ -1,6 +1,11 @@
 import SwiftUI
 import CoreSpotlight
 
+/// Main dashboard presenter that serves as the primary entry point after authentication.
+///
+/// Manages deck display (recent, studied, sorted), deck creation with free-tier limit enforcement,
+/// and a first-deck premium prompt. Also handles deep links, push notifications, Spotlight indexing,
+/// and quick actions — all of which route to the appropriate screen.
 @Observable
 @MainActor
 class HomePresenter {

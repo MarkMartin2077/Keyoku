@@ -8,6 +8,11 @@
 import SwiftUI
 import PDFKit
 
+/// Deck detail presenter that manages a single deck's flashcards, metadata, and AI generation.
+///
+/// Provides full CRUD for flashcards (add, edit, delete), deck editing (name, color, image),
+/// practice session launching, learned-status reset, and on-device AI card generation from
+/// pasted text or uploaded PDFs. Generation streams cards in batches with quality filtering.
 @Observable
 @MainActor
 class DeckDetailPresenter {

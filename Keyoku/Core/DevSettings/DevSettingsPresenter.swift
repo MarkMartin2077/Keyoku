@@ -7,6 +7,10 @@
 import SwiftUI
 import SwiftfulUtilities
 
+/// Dev-only settings presenter for overriding A/B tests and inspecting debug data.
+///
+/// Displays auth, user, and device utility data in key-value format. Allows toggling
+/// A/B test values at runtime (bool and enum tests). Only available in Mock and Dev builds.
 @Observable
 @MainActor
 class DevSettingsPresenter {

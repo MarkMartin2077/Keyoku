@@ -10,6 +10,10 @@ import SwiftfulUtilities
 import FirebaseMessaging
 #endif
 
+/// Root app presenter that handles initial authentication and FCM token registration.
+///
+/// On launch, checks if the user has an existing auth session or signs in anonymously.
+/// Retries on failure with a 5-second backoff. Also manages ATT prompt and FCM token persistence.
 @Observable
 @MainActor
 class AppPresenter {
