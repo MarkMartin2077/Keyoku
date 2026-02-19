@@ -47,12 +47,20 @@
 			remoteGlobalIDString = 028F9B522CECF2C2009B9F48;
 			remoteInfo = Keyoku;
 		};
+		9F6257382F47AA19007A60B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 028F9B4B2CECF2C2009B9F48 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 028F9B522CECF2C2009B9F48;
+			remoteInfo = Keyoku;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0229582F2CEE7FEF00765488 /* KeyokuUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeyokuUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0229583F2CEE7FF900765488 /* KeyokuUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeyokuUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		028F9B532CECF2C2009B9F48 /* Keyoku.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Keyoku.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F6257322F47AA19007A60B9 /* KeyokuSnapshotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeyokuSnapshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9FA4C8982F3A966F00709A1E /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 		9FA62FC22F42A9EA00E48C0C /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -84,6 +92,11 @@
 				028743182D336F3800C2C3E1 /* Exceptions for "Keyoku" folder in "Keyoku" target */,
 			);
 			path = Keyoku;
+			sourceTree = "<group>";
+		};
+		9F6257332F47AA19007A60B9 /* KeyokuSnapshotTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KeyokuSnapshotTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -132,6 +145,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9F62572F2F47AA19007A60B9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -142,6 +162,7 @@
 				028F9B552CECF2C2009B9F48 /* Keyoku */,
 				022958302CEE7FEF00765488 /* KeyokuUITests */,
 				022958402CEE7FF900765488 /* KeyokuUnitTests */,
+				9F6257332F47AA19007A60B9 /* KeyokuSnapshotTests */,
 				028F9C2B2CED2D0D009B9F48 /* Frameworks */,
 				028F9B542CECF2C2009B9F48 /* Products */,
 			);
@@ -153,6 +174,7 @@
 				028F9B532CECF2C2009B9F48 /* Keyoku.app */,
 				0229582F2CEE7FEF00765488 /* KeyokuUITests.xctest */,
 				0229583F2CEE7FF900765488 /* KeyokuUnitTests.xctest */,
+				9F6257322F47AA19007A60B9 /* KeyokuSnapshotTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -259,6 +281,29 @@
 			productReference = 028F9B532CECF2C2009B9F48 /* Keyoku.app */;
 			productType = "com.apple.product-type.application";
 		};
+		9F6257312F47AA19007A60B9 /* KeyokuSnapshotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9F62573A2F47AA19007A60B9 /* Build configuration list for PBXNativeTarget "KeyokuSnapshotTests" */;
+			buildPhases = (
+				9F62572E2F47AA19007A60B9 /* Sources */,
+				9F62572F2F47AA19007A60B9 /* Frameworks */,
+				9F6257302F47AA19007A60B9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9F6257392F47AA19007A60B9 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9F6257332F47AA19007A60B9 /* KeyokuSnapshotTests */,
+			);
+			name = KeyokuSnapshotTests;
+			packageProductDependencies = (
+			);
+			productName = KeyokuSnapshotTests;
+			productReference = 9F6257322F47AA19007A60B9 /* KeyokuSnapshotTests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -266,7 +311,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1600;
+				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					0229582E2CEE7FEF00765488 = {
@@ -279,6 +324,10 @@
 					};
 					028F9B522CECF2C2009B9F48 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					9F6257312F47AA19007A60B9 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 028F9B522CECF2C2009B9F48;
 					};
 				};
 			};
@@ -320,6 +369,7 @@
 				028F9B522CECF2C2009B9F48 /* Keyoku */,
 				0229582E2CEE7FEF00765488 /* KeyokuUITests */,
 				0229583E2CEE7FF900765488 /* KeyokuUnitTests */,
+				9F6257312F47AA19007A60B9 /* KeyokuSnapshotTests */,
 			);
 		};
 /* End PBXProject section */
@@ -344,6 +394,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				9FA4C8992F3A966F00709A1E /* CLAUDE.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F6257302F47AA19007A60B9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -416,6 +473,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9F62572E2F47AA19007A60B9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -428,6 +492,11 @@
 			isa = PBXTargetDependency;
 			target = 028F9B522CECF2C2009B9F48 /* Keyoku */;
 			targetProxy = 022958432CEE7FF900765488 /* PBXContainerItemProxy */;
+		};
+		9F6257392F47AA19007A60B9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 028F9B522CECF2C2009B9F48 /* Keyoku */;
+			targetProxy = 9F6257382F47AA19007A60B9 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -889,6 +958,77 @@
 			};
 			name = Release;
 		};
+		9F62573B2F47AA19007A60B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4BPQ98Z5QY;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.markmartin89.KeyokuSnapshotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Keyoku;
+			};
+			name = Debug;
+		};
+		9F62573C2F47AA19007A60B9 /* Mock */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4BPQ98Z5QY;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.markmartin89.KeyokuSnapshotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Keyoku;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Mock;
+		};
+		9F62573D2F47AA19007A60B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4BPQ98Z5QY;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.markmartin89.KeyokuSnapshotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Keyoku;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -928,6 +1068,16 @@
 				028F9B792CECF2C4009B9F48 /* Debug */,
 				022958182CEE4BB000765488 /* Mock */,
 				028F9B7A2CECF2C4009B9F48 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9F62573A2F47AA19007A60B9 /* Build configuration list for PBXNativeTarget "KeyokuSnapshotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F62573B2F47AA19007A60B9 /* Debug */,
+				9F62573C2F47AA19007A60B9 /* Mock */,
+				9F62573D2F47AA19007A60B9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
