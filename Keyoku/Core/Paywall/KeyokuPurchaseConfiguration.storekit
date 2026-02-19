@@ -73,6 +73,39 @@
           "winbackOffers" : [
 
           ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : true,
+          "groupNumber" : 2,
+          "internalID" : "6759212117",
+          "introductoryOffer" : {
+            "internalID" : "52E726DE",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "Unlimited Access to Keyoku",
+              "displayName" : "Monthly Subscription to Keyoku",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "markmartin89.Keyoku.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Common Monthly Product",
+          "subscriptionGroupID" : "21934694",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
         }
       ]
     }
