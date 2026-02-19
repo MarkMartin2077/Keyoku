@@ -14,6 +14,7 @@ protocol DecksInteractor: GlobalInteractor {
     func createDeck(name: String, color: DeckColor, imageUrl: String?, sourceText: String) throws
     func deleteDeck(id: String) throws
     var isPremium: Bool { get }
+    var currentUser: UserModel? { get }
 }
 
 extension CoreInteractor: DecksInteractor { }

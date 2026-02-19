@@ -507,9 +507,9 @@ struct CreateDeckView: View {
 
 extension CoreRouter {
 
-    func showCreateContentView() {
+    func showCreateContentView(onDismiss: (() -> Void)? = nil) {
         let delegate = CreateDeckDelegate()
-        router.showScreen(.sheet) { router in
+        router.showScreen(.sheet, onDismiss: onDismiss) { router in
             builder.createDeckView(router: router, delegate: delegate)
         }
     }

@@ -10,7 +10,7 @@ import SwiftUI
 @MainActor
 protocol DecksRouter: GlobalRouter {
     func showDeckDetailView(deck: DeckModel)
-    func showCreateContentView()
+    func showCreateContentView(onDismiss: (() -> Void)?)
     func showPaywallView(delegate: PaywallDelegate)
 }
 

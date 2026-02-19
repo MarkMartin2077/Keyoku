@@ -100,7 +100,7 @@ class HomePresenter {
                 router.showPaywallView(delegate: PaywallDelegate(source: "home_deck_limit"))
                 return
             }
-            router.showCreateContentView()
+            showCreateDeckWithPaywallCheck()
         default:
             break
         }
@@ -141,7 +141,26 @@ class HomePresenter {
             return
         }
 
-        router.showCreateContentView()
+        showCreateDeckWithPaywallCheck()
+    }
+
+    private func showCreateDeckWithPaywallCheck() {
+        let hadCreatedFirstDeck = interactor.currentUser?.didCreateFirstDeck == true
+        let wasPremium = interactor.isPremium
+        let deckCountBefore = interactor.decks.count
+
+        router.showCreateContentView(onDismiss: { [weak self] in
+            guard let self else { return }
+            guard !hadCreatedFirstDeck,
+                  !wasPremium,
+                  interactor.decks.count > deckCountBefore else { return }
+
+            interactor.trackEvent(event: Event.firstDeckPaywallShown)
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(0.6))
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_deck_created"))
+            }
+        })
     }
 
     func onViewAllDecksPressed() {
@@ -178,7 +197,7 @@ class HomePresenter {
                 router.showPaywallView(delegate: PaywallDelegate(source: "home_deck_limit"))
                 return
             }
-            router.showCreateContentView()
+            showCreateDeckWithPaywallCheck()
         default:
             break
         }
@@ -209,7 +228,7 @@ class HomePresenter {
                 router.showDeckDetailView(deck: deck)
             }
         } else if id.hasPrefix("create") {
-            router.showCreateContentView()
+            showCreateDeckWithPaywallCheck()
         }
     }
     
@@ -296,7 +315,7 @@ class HomePresenter {
                 router.showPaywallView(delegate: PaywallDelegate(source: "home_deck_limit"))
                 return
             }
-            router.showCreateContentView()
+            showCreateDeckWithPaywallCheck()
         default:
             break
         }
@@ -328,6 +347,7 @@ extension HomePresenter {
         case quickActionOpen(actionType: String)
         case quickActionFail
         case onCreateDeckLimitHit
+        case firstDeckPaywallShown
 
         var eventName: String {
             switch self {
@@ -353,6 +373,7 @@ extension HomePresenter {
             case .quickActionOpen:          return "HomeView_QuickAction_Open"
             case .quickActionFail:          return "HomeView_QuickAction_Fail"
             case .onCreateDeckLimitHit:     return "HomeView_DeckLimit_Hit"
+            case .firstDeckPaywallShown:    return "HomeView_FirstDeck_Paywall_Shown"
             }
         }
 

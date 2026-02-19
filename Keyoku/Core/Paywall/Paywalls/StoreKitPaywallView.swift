@@ -109,7 +109,7 @@ struct StoreKitPaywallView: View {
                 isMain: true
             )
         }
-        .frame(height: 220)
+        .frame(height: 180)
     }
 
     private func floatingCard(
@@ -127,7 +127,7 @@ struct StoreKitPaywallView: View {
                     endPoint: .bottomTrailing
                 )
             )
-            .frame(width: isMain ? 180 : 160, height: isMain ? 120 : 105)
+            .frame(width: isMain ? 160 : 140, height: isMain ? 105 : 90)
             .overlay {
                 if isMain {
                     VStack(spacing: 6) {

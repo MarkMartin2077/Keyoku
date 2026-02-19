@@ -56,7 +56,22 @@ class DecksPresenter {
             return
         }
 
-        router.showCreateContentView()
+        let hadCreatedFirstDeck = interactor.currentUser?.didCreateFirstDeck == true
+        let wasPremium = interactor.isPremium
+        let deckCountBefore = interactor.decks.count
+
+        router.showCreateContentView(onDismiss: { [weak self] in
+            guard let self else { return }
+            guard !hadCreatedFirstDeck,
+                  !wasPremium,
+                  interactor.decks.count > deckCountBefore else { return }
+
+            interactor.trackEvent(event: Event.firstDeckPaywallShown)
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(0.6))
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_deck_created"))
+            }
+        })
     }
     
     func onDeckPressed(deck: DeckModel) {
@@ -91,6 +106,7 @@ extension DecksPresenter {
         case onDeleteDeckSuccess(deckId: String)
         case onDeleteDeckFail(error: Error)
         case onAddDeckLimitHit
+        case firstDeckPaywallShown
 
         var eventName: String {
             switch self {
@@ -102,6 +118,7 @@ extension DecksPresenter {
             case .onDeleteDeckSuccess:      return "DecksView_DeleteDeck_Success"
             case .onDeleteDeckFail:         return "DecksView_DeleteDeck_Fail"
             case .onAddDeckLimitHit:        return "DecksView_DeckLimit_Hit"
+            case .firstDeckPaywallShown:    return "DecksView_FirstDeck_Paywall_Shown"
             }
         }
         

@@ -4,7 +4,7 @@ import SwiftUI
 protocol HomeRouter: GlobalRouter {
     func showDevSettingsView()
     func showDeckDetailView(deck: DeckModel)
-    func showCreateContentView()
+    func showCreateContentView(onDismiss: (() -> Void)?)
     func showDecksView(delegate: DecksDelegate)
     func showPaywallView(delegate: PaywallDelegate)
 }
