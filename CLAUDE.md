@@ -39,6 +39,12 @@ This documentation is organized into focused files for better maintainability. E
   - Common mistakes to avoid
   - Quick lookup for frequently used features
 
+- **Testing Guide**: @.claude/docs/testing-guide.md
+  - Unit tests (Swift Testing) vs UI tests (XCTest)
+  - GIVEN/WHEN/THEN pattern and mock services
+  - Finding elements, accessibility identifiers, and common gotchas
+  - Checklist for writing new tests
+
 ### Required Actions
 
 When the user triggers specific requests, follow these action workflows:

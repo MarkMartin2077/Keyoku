@@ -22,7 +22,16 @@
       "WebFetch(domain:azamsharp.com)",
       "WebFetch(domain:levelup.gitconnected.com)",
       "Bash(echo:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(swiftlint lint:*)",
+      "Bash(PATH=/opt/homebrew/bin:$PATH swiftlint lint:*)",
+      "Bash(/opt/homebrew/bin/swiftlint lint:*)",
+      "Bash(env -i HOME=\"$HOME\" /opt/homebrew/bin/swiftlint lint:*)",
+      "Bash(done)",
+      "Bash(wc -l:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git rm:*)",
+      "Bash(git status:*)"
     ],
     "deny": [],
     "ask": []
