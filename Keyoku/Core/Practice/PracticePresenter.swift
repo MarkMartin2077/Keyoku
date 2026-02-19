@@ -109,6 +109,10 @@ class PracticePresenter {
             ))
             interactor.playHaptic(option: .lessonComplete())
             recordStreakEvent()
+
+            if learnedCount == flashcards.count, !interactor.isPremium {
+                showDeckMasteredPremiumPrompt()
+            }
         }
     }
 
@@ -169,6 +173,22 @@ class PracticePresenter {
             currentSwipeOffset = 0
             hasRecordedCompletion = false
         }
+    }
+
+    // MARK: - Premium Prompt
+
+    private func showDeckMasteredPremiumPrompt() {
+        router.showDeckMasteredPremiumPromptModal(
+            onSeeOfferPressed: { [weak self] in
+                self?.router.dismissModal()
+                self?.interactor.trackEvent(event: Event.deckMasteredPaywallAccepted)
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "deck_mastered"))
+            },
+            onDismissPressed: { [weak self] in
+                self?.router.dismissModal()
+                self?.interactor.trackEvent(event: Event.deckMasteredPaywallDismissed)
+            }
+        )
     }
 
     // MARK: - Private
@@ -246,6 +266,8 @@ extension PracticePresenter {
         case onStreakEventFailed(error: Error)
         case onStreakCelebrationDismissed
         case onPersistLearnedFail(error: Error)
+        case deckMasteredPaywallAccepted
+        case deckMasteredPaywallDismissed
 
         var eventName: String {
             switch self {
@@ -261,6 +283,8 @@ extension PracticePresenter {
             case .onStreakEventFailed:          return "PracticeView_Streak_Failed"
             case .onStreakCelebrationDismissed: return "PracticeView_Streak_Celebration_Dismissed"
             case .onPersistLearnedFail:         return "PracticeView_Persist_Learned_Fail"
+            case .deckMasteredPaywallAccepted:  return "PracticeView_DeckMastered_Paywall_Accepted"
+            case .deckMasteredPaywallDismissed: return "PracticeView_DeckMastered_Paywall_Dismissed"
             }
         }
 

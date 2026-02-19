@@ -9,7 +9,7 @@ import SwiftUI
 
 @MainActor
 protocol PracticeRouter: GlobalRouter {
-    
+    func showPaywallView(delegate: PaywallDelegate)
 }
 
 extension CoreRouter: PracticeRouter { }

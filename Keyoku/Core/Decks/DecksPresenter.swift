@@ -69,11 +69,25 @@ class DecksPresenter {
             interactor.trackEvent(event: Event.firstDeckPaywallShown)
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(0.6))
-                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_deck_created"))
+                self?.showFirstDeckPremiumPrompt()
             }
         })
     }
     
+    private func showFirstDeckPremiumPrompt() {
+        router.showFirstDeckPremiumPromptModal(
+            onSeeOfferPressed: { [weak self] in
+                self?.router.dismissModal()
+                self?.interactor.trackEvent(event: Event.firstDeckPaywallAccepted)
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_deck_created"))
+            },
+            onDismissPressed: { [weak self] in
+                self?.router.dismissModal()
+                self?.interactor.trackEvent(event: Event.firstDeckPaywallDismissed)
+            }
+        )
+    }
+
     func onDeckPressed(deck: DeckModel) {
         interactor.trackEvent(event: Event.onDeckPressed(deck: deck))
         router.showDeckDetailView(deck: deck)
@@ -107,6 +121,8 @@ extension DecksPresenter {
         case onDeleteDeckFail(error: Error)
         case onAddDeckLimitHit
         case firstDeckPaywallShown
+        case firstDeckPaywallAccepted
+        case firstDeckPaywallDismissed
 
         var eventName: String {
             switch self {
@@ -118,7 +134,9 @@ extension DecksPresenter {
             case .onDeleteDeckSuccess:      return "DecksView_DeleteDeck_Success"
             case .onDeleteDeckFail:         return "DecksView_DeleteDeck_Fail"
             case .onAddDeckLimitHit:        return "DecksView_DeckLimit_Hit"
-            case .firstDeckPaywallShown:    return "DecksView_FirstDeck_Paywall_Shown"
+            case .firstDeckPaywallShown:     return "DecksView_FirstDeck_Paywall_Shown"
+            case .firstDeckPaywallAccepted:  return "DecksView_FirstDeck_Paywall_Accepted"
+            case .firstDeckPaywallDismissed: return "DecksView_FirstDeck_Paywall_Dismissed"
             }
         }
         

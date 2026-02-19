@@ -158,9 +158,23 @@ class HomePresenter {
             interactor.trackEvent(event: Event.firstDeckPaywallShown)
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(0.6))
-                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_deck_created"))
+                self?.showFirstDeckPremiumPrompt()
             }
         })
+    }
+
+    private func showFirstDeckPremiumPrompt() {
+        router.showFirstDeckPremiumPromptModal(
+            onSeeOfferPressed: { [weak self] in
+                self?.router.dismissModal()
+                self?.interactor.trackEvent(event: Event.firstDeckPaywallAccepted)
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_deck_created"))
+            },
+            onDismissPressed: { [weak self] in
+                self?.router.dismissModal()
+                self?.interactor.trackEvent(event: Event.firstDeckPaywallDismissed)
+            }
+        )
     }
 
     func onViewAllDecksPressed() {
@@ -348,6 +362,8 @@ extension HomePresenter {
         case quickActionFail
         case onCreateDeckLimitHit
         case firstDeckPaywallShown
+        case firstDeckPaywallAccepted
+        case firstDeckPaywallDismissed
 
         var eventName: String {
             switch self {
@@ -373,7 +389,9 @@ extension HomePresenter {
             case .quickActionOpen:          return "HomeView_QuickAction_Open"
             case .quickActionFail:          return "HomeView_QuickAction_Fail"
             case .onCreateDeckLimitHit:     return "HomeView_DeckLimit_Hit"
-            case .firstDeckPaywallShown:    return "HomeView_FirstDeck_Paywall_Shown"
+            case .firstDeckPaywallShown:     return "HomeView_FirstDeck_Paywall_Shown"
+            case .firstDeckPaywallAccepted:  return "HomeView_FirstDeck_Paywall_Accepted"
+            case .firstDeckPaywallDismissed: return "HomeView_FirstDeck_Paywall_Dismissed"
             }
         }
 

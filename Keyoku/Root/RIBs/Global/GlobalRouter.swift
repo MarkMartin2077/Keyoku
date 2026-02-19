@@ -92,6 +92,40 @@ extension GlobalRouter {
         }
     }
     
+    func showFirstDeckPremiumPromptModal(onSeeOfferPressed: @escaping () -> Void, onDismissPressed: @escaping () -> Void) {
+        router.showModal(transition: .move(edge: .bottom), backgroundColor: Color.black.opacity(0.6)) {
+            CustomModalView(
+                title: "Great start!",
+                subtitle: "Unlock unlimited decks with a free 3-day trial of Premium.",
+                primaryButtonTitle: "See the offer",
+                primaryButtonAction: {
+                    onSeeOfferPressed()
+                },
+                secondaryButtonTitle: "Maybe later",
+                secondaryButtonAction: {
+                    onDismissPressed()
+                }
+            )
+        }
+    }
+
+    func showDeckMasteredPremiumPromptModal(onSeeOfferPressed: @escaping () -> Void, onDismissPressed: @escaping () -> Void) {
+        router.showModal(transition: .move(edge: .bottom), backgroundColor: Color.black.opacity(0.6)) {
+            CustomModalView(
+                title: "You're on a roll!",
+                subtitle: "Keep the momentum going — try Premium free for 3 days.",
+                primaryButtonTitle: "See the offer",
+                primaryButtonAction: {
+                    onSeeOfferPressed()
+                },
+                secondaryButtonTitle: "Maybe later",
+                secondaryButtonAction: {
+                    onDismissPressed()
+                }
+            )
+        }
+    }
+
     func dismissAlert() {
         router.dismissAlert()
     }
