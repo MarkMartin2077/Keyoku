@@ -49,7 +49,7 @@ struct SearchView: View {
             Text("Search your library")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            Text("Find decks by name")
+            Text("Find decks by name or card content")
                 .font(.subheadline)
                 .foregroundStyle(.tertiary)
         }
@@ -77,6 +77,18 @@ struct SearchView: View {
         .listRowBackground(Color.clear)
     }
 
+    // MARK: - Helpers
+
+    private func deckSubtitle(for deck: DeckModel) -> String {
+        let cardCount = deck.flashcards.count
+        let cardLabel = "\(cardCount) card\(cardCount == 1 ? "" : "s")"
+        let matchCount = presenter.matchingCardCount(in: deck)
+        if matchCount > 0 {
+            return "\(cardLabel) · \(matchCount) match\(matchCount == 1 ? "" : "es")"
+        }
+        return cardLabel
+    }
+
     // MARK: - Deck Results
 
     private var decksResultsSection: some View {
@@ -89,7 +101,7 @@ struct SearchView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(deck.name)
                             .font(.headline)
-                        Text("\(deck.flashcards.count) card\(deck.flashcards.count == 1 ? "" : "s")")
+                        Text(deckSubtitle(for: deck))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

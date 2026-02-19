@@ -55,6 +55,12 @@ extension CoreBuilder {
                         decksView(router: router, delegate: DecksDelegate())
                     }
                     .any()
+                }),
+                TabBarScreen(title: String(localized: "Profile"), systemImage: "person.fill", screen: {
+                    RouterView { router in
+                        profileView(router: router, delegate: ProfileDelegate())
+                    }
+                    .any()
                 })
             ],
             searchView: {

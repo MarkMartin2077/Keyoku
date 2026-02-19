@@ -50,6 +50,21 @@ class DeckDetailPresenter {
         deck?.displayImageUrlString
     }
 
+    var learnedCount: Int {
+        flashcards.filter(\.isLearned).count
+    }
+
+    var stillStudyingCount: Int {
+        flashcards.count - learnedCount
+    }
+
+    var practiceSubtitle: String {
+        if learnedCount > 0 {
+            return "\(learnedCount) learned \u{00B7} \(stillStudyingCount) to study"
+        }
+        return "Study all \(flashcards.count) cards"
+    }
+
     // MARK: - Edit Card State
 
     var editingFlashcard: FlashcardModel?
@@ -133,6 +148,41 @@ class DeckDetailPresenter {
         router.showPracticeView(deck: deck)
     }
 
+    func onResetLearnedStatus() {
+        interactor.trackEvent(event: Event.onResetLearnedStatus)
+        guard let currentDeck = deck else { return }
+
+        let resetFlashcards = currentDeck.flashcards.map { card in
+            FlashcardModel(
+                flashcardId: card.flashcardId,
+                question: card.question,
+                answer: card.answer,
+                deckId: card.deckId,
+                isLearned: false
+            )
+        }
+
+        let updatedDeck = DeckModel(
+            deckId: currentDeck.deckId,
+            name: currentDeck.name,
+            color: currentDeck.color,
+            imageUrl: currentDeck.imageUrl,
+            sourceText: currentDeck.sourceText,
+            createdAt: currentDeck.createdAt,
+            flashcards: resetFlashcards,
+            clickCount: currentDeck.clickCount
+        )
+
+        do {
+            try interactor.updateDeck(updatedDeck)
+            interactor.trackEvent(event: Event.onResetLearnedStatusSuccess(cardCount: resetFlashcards.count))
+            interactor.playHaptic(option: .medium)
+        } catch {
+            interactor.trackEvent(event: Event.onResetLearnedStatusFail(error: error))
+            router.showAlert(error: error)
+        }
+    }
+
     // MARK: - Manual Card Management
 
     func onAddCardPressed(question: String, answer: String) {
@@ -186,7 +236,7 @@ class DeckDetailPresenter {
 
         let updatedFlashcards = currentDeck.flashcards.map { card in
             if card.flashcardId == flashcardId {
-                return FlashcardModel(flashcardId: flashcardId, question: trimmedQuestion, answer: trimmedAnswer, deckId: currentDeck.deckId)
+                return FlashcardModel(flashcardId: flashcardId, question: trimmedQuestion, answer: trimmedAnswer, deckId: currentDeck.deckId, isLearned: card.isLearned)
             }
             return card
         }
@@ -198,7 +248,8 @@ class DeckDetailPresenter {
             imageUrl: currentDeck.imageUrl,
             sourceText: currentDeck.sourceText,
             createdAt: currentDeck.createdAt,
-            flashcards: updatedFlashcards
+            flashcards: updatedFlashcards,
+            clickCount: currentDeck.clickCount
         )
 
         do {
@@ -280,7 +331,8 @@ class DeckDetailPresenter {
             imageUrl: imageUrl,
             sourceText: currentDeck.sourceText,
             createdAt: currentDeck.createdAt,
-            flashcards: currentDeck.flashcards
+            flashcards: currentDeck.flashcards,
+            clickCount: currentDeck.clickCount
         )
 
         do {
@@ -437,7 +489,8 @@ class DeckDetailPresenter {
             imageUrl: currentDeck.imageUrl,
             sourceText: updatedSourceText,
             createdAt: currentDeck.createdAt,
-            flashcards: currentDeck.flashcards + flashcardsWithDeckId
+            flashcards: currentDeck.flashcards + flashcardsWithDeckId,
+            clickCount: currentDeck.clickCount
         )
 
         try interactor.updateDeck(updatedDeck)
@@ -490,6 +543,9 @@ extension DeckDetailPresenter {
         case onDisappear(delegate: DeckDetailDelegate)
         // Practice
         case onPracticePressed
+        case onResetLearnedStatus
+        case onResetLearnedStatusSuccess(cardCount: Int)
+        case onResetLearnedStatusFail(error: Error)
         // Manual card management
         case onAddCardPressed
         case onAddCardEmptyFields
@@ -531,6 +587,9 @@ extension DeckDetailPresenter {
             case .onAppear:                     return "DeckDetailView_Appear"
             case .onDisappear:                  return "DeckDetailView_Disappear"
             case .onPracticePressed:            return "DeckDetailView_Practice_Pressed"
+            case .onResetLearnedStatus:         return "DeckDetailView_ResetLearned_Pressed"
+            case .onResetLearnedStatusSuccess:  return "DeckDetailView_ResetLearned_Success"
+            case .onResetLearnedStatusFail:     return "DeckDetailView_ResetLearned_Fail"
             case .onAddCardPressed:             return "DeckDetailView_AddCard_Pressed"
             case .onAddCardEmptyFields:         return "DeckDetailView_AddCard_EmptyFields"
             case .onAddCardSuccess:             return "DeckDetailView_AddCard_Success"
@@ -579,7 +638,11 @@ extension DeckDetailPresenter {
                 return ["flashcard_id": id]
             case .onEditDeckColorChanged(color: let color):
                 return ["color": color]
-            case .onAddCardFail(error: let error), .onDeleteCardFail(error: let error), .onEditCardSaveFail(error: let error), .onEditDeckSaveFail(error: let error), .onPDFExtractFail(error: let error), .onPDFPickerFail(error: let error), .onGenerateCardsFail(error: let error):
+            case .onResetLearnedStatusSuccess(cardCount: let count):
+                return ["card_count": count]
+            case .onAddCardFail(error: let error), .onDeleteCardFail(error: let error), .onEditCardSaveFail(error: let error),
+                 .onEditDeckSaveFail(error: let error), .onPDFExtractFail(error: let error), .onPDFPickerFail(error: let error),
+                 .onGenerateCardsFail(error: let error), .onResetLearnedStatusFail(error: let error):
                 return error.eventParameters
             case .onSourceInputModeChanged(mode: let mode):
                 return ["source_input_mode": mode]
@@ -602,7 +665,7 @@ extension DeckDetailPresenter {
 
         var type: LogType {
             switch self {
-            case .onAddCardFail, .onDeleteCardFail, .onEditCardSaveFail, .onEditDeckSaveFail, .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail:
+            case .onAddCardFail, .onDeleteCardFail, .onEditCardSaveFail, .onEditDeckSaveFail, .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail, .onResetLearnedStatusFail:
                 return .severe
             default:
                 return .analytic

@@ -13,16 +13,18 @@ class FlashcardEntity {
     @Attribute(.unique) var id: String = UUID().uuidString
     var question: String = ""
     var answer: String = ""
+    var isLearned: Bool = false
     var deck: DeckEntity?
 
-    init(id: String = UUID().uuidString, question: String, answer: String) {
+    init(id: String = UUID().uuidString, question: String, answer: String, isLearned: Bool = false) {
         self.id = id
         self.question = question
         self.answer = answer
+        self.isLearned = isLearned
     }
 
     convenience init(from model: FlashcardModel) {
-        self.init(id: model.flashcardId, question: model.question, answer: model.answer)
+        self.init(id: model.flashcardId, question: model.question, answer: model.answer, isLearned: model.isLearned)
     }
 
     func toModel() -> FlashcardModel {
@@ -30,7 +32,8 @@ class FlashcardEntity {
             flashcardId: id,
             question: question,
             answer: answer,
-            deckId: deck?.id
+            deckId: deck?.id,
+            isLearned: isLearned
         )
     }
 }

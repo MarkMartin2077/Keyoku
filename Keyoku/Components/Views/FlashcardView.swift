@@ -17,26 +17,24 @@ struct FlashcardView: View {
     @State private var rotation: Double = 0
     
     var body: some View {
-        Button {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                rotation += 180
-                showingAnswer.toggle()
+        cardContent
+            .rotation3DEffect(
+                .degrees(rotation),
+                axis: (x: 0, y: 1, z: 0),
+                perspective: 0.5
+            )
+            .onTapGesture {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    rotation += 180
+                    showingAnswer.toggle()
+                }
             }
-        } label: {
-            cardContent
-                .rotation3DEffect(
-                    .degrees(rotation),
-                    axis: (x: 0, y: 1, z: 0),
-                    perspective: 0.5
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(showingAnswer ? "Answer: \(answer)" : "Question: \(question)")
-        .accessibilityHint("Tap to flip to \(showingAnswer ? "question" : "answer")")
-        .onChange(of: question) {
-            showingAnswer = false
-            rotation = 0
-        }
+            .accessibilityLabel(showingAnswer ? "Answer: \(answer)" : "Question: \(question)")
+            .accessibilityHint("Tap to flip to \(showingAnswer ? "question" : "answer")")
+            .onChange(of: question) {
+                showingAnswer = false
+                rotation = 0
+            }
     }
     
     private var cardContent: some View {

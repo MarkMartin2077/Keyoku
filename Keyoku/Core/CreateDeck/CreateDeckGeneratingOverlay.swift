@@ -204,6 +204,12 @@ struct CreateDeckGeneratingOverlay: View {
                 .onReceive(Timer.publish(every: 3.5, on: .main, in: .common).autoconnect()) { _ in
                     currentPhraseIndex += 1
                 }
+
+            Text("AI-generated content can make mistakes. Verify accuracy with your source material.")
+                .font(.caption2)
+                .foregroundStyle(.quaternary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 12)
         }
     }
 

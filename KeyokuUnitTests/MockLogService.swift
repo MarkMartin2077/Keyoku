@@ -20,6 +20,12 @@
 import SwiftUI
 @testable import Keyoku
 
+struct IdentifiedUser {
+    let userId: String
+    let name: String?
+    let email: String?
+}
+
 @MainActor
 class MockLogService: @preconcurrency LogService {
 
@@ -27,13 +33,13 @@ class MockLogService: @preconcurrency LogService {
     var events: [AnyLoggableEvent] = []
 
     /// Users identified via LogManager.identifyUser
-    var identifiedUsers: [(userId: String, name: String?, email: String?)] = []
+    var identifiedUsers: [IdentifiedUser] = []
 
     /// User properties added via LogManager.addUserProperties
     var userProperties: [[String: Any]] = []
 
     func identifyUser(userId: String, name: String?, email: String?) {
-        identifiedUsers.append((userId, name, email))
+        identifiedUsers.append(IdentifiedUser(userId: userId, name: name, email: email))
     }
 
     func addUserProperties(dict: [String: Any], isHighPriority: Bool) {

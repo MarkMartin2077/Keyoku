@@ -47,7 +47,8 @@ class MockDeckPersistence: DeckService {
             imageUrl: deck.imageUrl,
             sourceText: deck.sourceText,
             createdAt: deck.createdAt,
-            flashcards: deck.flashcards + [flashcard]
+            flashcards: deck.flashcards + [flashcard],
+            clickCount: deck.clickCount
         )
         decks[index] = updatedDeck
     }
@@ -60,7 +61,8 @@ class MockDeckPersistence: DeckService {
                 imageUrl: deck.imageUrl,
                 sourceText: deck.sourceText,
                 createdAt: deck.createdAt,
-                flashcards: deck.flashcards.filter { $0.flashcardId != id }
+                flashcards: deck.flashcards.filter { $0.flashcardId != id },
+                clickCount: deck.clickCount
             )
             decks[deckIndex] = updatedDeck
             return

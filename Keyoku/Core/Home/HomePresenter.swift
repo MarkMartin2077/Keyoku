@@ -10,6 +10,12 @@ class HomePresenter {
 
     private(set) var showNotificationButton: Bool = false
     
+    // MARK: - User Data
+
+    var userName: String? {
+        interactor.currentUser?.firstNameCalculated
+    }
+
     // MARK: - Streak Data
 
     var currentStreak: Int {
@@ -20,6 +26,29 @@ class HomePresenter {
 
     var decks: [DeckModel] {
         interactor.decks
+    }
+
+    var recentDecks: [DeckModel] {
+        decks.sorted {
+            if $0.clickCount != $1.clickCount {
+                return $0.clickCount > $1.clickCount
+            }
+            return $0.createdAt > $1.createdAt
+        }
+    }
+
+    var studiedDecks: [DeckModel] {
+        decks
+            .filter { deck in deck.flashcards.contains(where: { $0.isLearned }) }
+            .sorted { lhs, rhs in
+                let lhsUnlearned = lhs.flashcards.filter { !$0.isLearned }.count
+                let rhsUnlearned = rhs.flashcards.filter { !$0.isLearned }.count
+                return lhsUnlearned > rhsUnlearned
+            }
+    }
+
+    var hasStudiedDecks: Bool {
+        !studiedDecks.isEmpty
     }
 
     var sortedDecks: [DeckModel] {
@@ -74,6 +103,21 @@ class HomePresenter {
 
     func onDeckPressed(deck: DeckModel) {
         interactor.trackEvent(event: Event.onDeckPressed(deck: deck))
+
+        if let latest = interactor.getDeck(id: deck.deckId) {
+            let updated = DeckModel(
+                deckId: latest.deckId,
+                name: latest.name,
+                color: latest.color,
+                imageUrl: latest.imageUrl,
+                sourceText: latest.sourceText,
+                createdAt: latest.createdAt,
+                flashcards: latest.flashcards,
+                clickCount: latest.clickCount + 1
+            )
+            try? interactor.updateDeck(updated)
+        }
+
         router.showDeckDetailView(deck: deck)
     }
 
@@ -195,10 +239,6 @@ class HomePresenter {
         #endif
     }
     
-    func onSettingsPressed() {
-        router.showSettingsView()
-    }
-
     // MARK: - Spotlight
 
     func handleSpotlightActivity(_ userActivity: NSUserActivity) {

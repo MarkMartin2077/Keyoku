@@ -285,7 +285,8 @@ class FlashcardManager {
                     imageUrl: deck.imageUrl,
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
-                    flashcards: deck.flashcards + [flashcard]
+                    flashcards: deck.flashcards + [flashcard],
+                    clickCount: deck.clickCount
                 )
                 decks[deckIndex] = updatedDeck
                 pushDeckToRemote(updatedDeck)
@@ -323,7 +324,8 @@ class FlashcardManager {
                     imageUrl: deck.imageUrl,
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
-                    flashcards: deck.flashcards.filter { $0.flashcardId != id }
+                    flashcards: deck.flashcards.filter { $0.flashcardId != id },
+                    clickCount: deck.clickCount
                 )
                 decks[deckIndex] = updatedDeck
                 pushDeckToRemote(updatedDeck)
@@ -334,6 +336,37 @@ class FlashcardManager {
             logManager?.trackEvent(event: Event.deleteFlashcardFail(error: error))
             throw error
         }
+    }
+
+    // MARK: - Migration
+
+    /// Adopts anonymous decks into the current signed-in user's account.
+    ///
+    /// Local storage (SwiftData) is NOT user-partitioned, so after a UID change the
+    /// anonymous decks may already be loaded in memory from the local fallback inside
+    /// `logIn()`. This method avoids duplication by checking each deck's ID against
+    /// the current in-memory array before inserting. Regardless, every deck is pushed
+    /// to the new user's remote path so Firestore stays in sync.
+    ///
+    /// - Parameter decksToMigrate: The anonymous user's decks captured before auth.
+    func migrateDecks(_ decksToMigrate: [DeckModel]) {
+        logManager?.trackEvent(event: Event.migrateDecksStart(count: decksToMigrate.count))
+
+        let currentDeckIds = Set(decks.map { $0.deckId })
+
+        for deck in decksToMigrate {
+            if !currentDeckIds.contains(deck.deckId) {
+                // Deck was lost during logIn (e.g. remote succeeded and overwrote local).
+                // Re-save locally and add to the in-memory array.
+                try? local.saveDeck(deck: deck)
+                decks.insert(deck, at: 0)
+            }
+
+            // Always push to remote under the new userId so Firestore has the data.
+            pushDeckToRemote(deck)
+        }
+
+        logManager?.trackEvent(event: Event.migrateDecksSuccess(count: decksToMigrate.count))
     }
 
     // MARK: - Remote Sync Helpers
@@ -437,6 +470,8 @@ class FlashcardManager {
         case remoteDeleteFail(error: Error)
         case uploadDeckImageSuccess(deckId: String)
         case uploadDeckImageFail(error: Error)
+        case migrateDecksStart(count: Int)
+        case migrateDecksSuccess(count: Int)
 
         var eventName: String {
             switch self {
@@ -472,6 +507,8 @@ class FlashcardManager {
             case .remoteDeleteFail:         return "FlashcardMan_RemoteDelete_Fail"
             case .uploadDeckImageSuccess:   return "FlashcardMan_UploadDeckImage_Success"
             case .uploadDeckImageFail:      return "FlashcardMan_UploadDeckImage_Fail"
+            case .migrateDecksStart:        return "FlashcardMan_MigrateDecks_Start"
+            case .migrateDecksSuccess:      return "FlashcardMan_MigrateDecks_Success"
             }
         }
 
@@ -497,6 +534,8 @@ class FlashcardManager {
                 return ["flashcard_id": id]
             case .saveDeckImageSuccess(fileName: let fileName):
                 return ["file_name": fileName]
+            case .migrateDecksStart(count: let count), .migrateDecksSuccess(count: let count):
+                return ["deck_count": count]
             case .loadDecksFail(error: let error),
                     .createDeckFail(error: let error),
                     .updateDeckFail(error: let error),

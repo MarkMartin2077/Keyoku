@@ -23,7 +23,34 @@ class SearchPresenter {
     var filteredDecks: [DeckModel] {
         let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         guard !query.isEmpty else { return [] }
-        return interactor.decks.filter { $0.name.lowercased().localizedStandardContains(query) }
+
+        let matched = interactor.decks.filter { deck in
+            if deck.name.lowercased().localizedStandardContains(query) {
+                return true
+            }
+            return deck.flashcards.contains { card in
+                card.question.lowercased().localizedStandardContains(query) ||
+                card.answer.lowercased().localizedStandardContains(query)
+            }
+        }
+
+        return matched.sorted { deck1, deck2 in
+            let d1Cards = matchingCardCount(in: deck1)
+            let d2Cards = matchingCardCount(in: deck2)
+            if d1Cards != d2Cards {
+                return d1Cards > d2Cards
+            }
+            return false
+        }
+    }
+
+    func matchingCardCount(in deck: DeckModel) -> Int {
+        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !query.isEmpty else { return 0 }
+        return deck.flashcards.filter { card in
+            card.question.lowercased().localizedStandardContains(query) ||
+            card.answer.lowercased().localizedStandardContains(query)
+        }.count
     }
 
     init(interactor: SearchInteractor, router: SearchRouter) {

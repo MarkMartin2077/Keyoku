@@ -6,6 +6,7 @@ protocol HomeInteractor: GlobalInteractor {
     var decks: [DeckModel] { get }
     func loadDecks()
     func getDeck(id: String) -> DeckModel?
+    func updateDeck(_ deck: DeckModel) throws
 
     func schedulePushNotificationsForTheNextWeek()
     func requestPushAuthorization() async throws -> Bool
@@ -14,6 +15,9 @@ protocol HomeInteractor: GlobalInteractor {
 
     // Spotlight
     func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)?
+
+    // User
+    var currentUser: UserModel? { get }
 
     // Streaks
     var currentStreakData: CurrentStreakData { get }

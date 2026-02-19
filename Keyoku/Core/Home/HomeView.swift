@@ -27,13 +27,14 @@ struct HomeView: View {
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
+        let name = presenter.userName.map { ", \($0)" } ?? ""
         switch hour {
         case 5..<12:
-            return "Good morning"
+            return "☀️ Good morning\(name)"
         case 12..<17:
-            return "Good afternoon"
+            return "🌤️ Good afternoon\(name)"
         default:
-            return "Good evening"
+            return "🌙 Good evening\(name)"
         }
     }
 
@@ -41,7 +42,10 @@ struct HomeView: View {
         ScrollView {
             VStack(spacing: 20) {
                 heroSection
-                yourDecksSection
+                recentDecksSection
+                if !presenter.decks.isEmpty {
+                    continueStudyingSection
+                }
             }
             .padding()
         }
@@ -64,12 +68,6 @@ struct HomeView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 if presenter.showNotificationButton {
                     pushNotificationButton
-                }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Settings", systemImage: "gear") {
-                    presenter.onSettingsPressed()
                 }
             }
         }
@@ -103,6 +101,8 @@ struct HomeView: View {
             Text(greeting)
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 12) {
@@ -127,12 +127,12 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Your Decks Section
+    // MARK: - Recent Decks Section
 
-    private var yourDecksSection: some View {
+    private var recentDecksSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Your Decks")
+                Text("Recent Decks")
                     .font(.title3)
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -147,12 +147,12 @@ struct HomeView: View {
                     }
             }
 
-            if presenter.sortedDecks.isEmpty {
+            if presenter.recentDecks.isEmpty {
                 emptyDecksCard
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        ForEach(presenter.sortedDecks) { deck in
+                        ForEach(presenter.recentDecks) { deck in
                             deckCard(deck: deck)
                                 .card3DScroll()
                         }
@@ -161,6 +161,105 @@ struct HomeView: View {
                 }
                 .scrollTargetBehavior(.viewAligned)
             }
+        }
+    }
+
+    // MARK: - Continue Studying Section
+
+    private var continueStudyingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Continue Studying")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if presenter.hasStudiedDecks {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                    ForEach(presenter.studiedDecks) { deck in
+                        studyCard(deck: deck)
+                    }
+                }
+            } else {
+                emptyStudyCard
+            }
+        }
+    }
+
+    private func studyCard(deck: DeckModel) -> some View {
+        let learnedCount = deck.flashcards.filter { $0.isLearned }.count
+        let totalCount = deck.flashcards.count
+        let progress = totalCount > 0 ? Double(learnedCount) / Double(totalCount) : 0
+
+        return HStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(deck.color.color)
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(deck.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text("\(learnedCount) / \(totalCount) learned")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.secondary.opacity(0.2))
+                            .frame(height: 4)
+
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(.green)
+                            .frame(width: geo.size.width * progress, height: 4)
+                    }
+                }
+                .frame(height: 4)
+            }
+            .padding(12)
+        }
+        .background {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .anyButton(.press) {
+            presenter.onDeckPressed(deck: deck)
+        }
+    }
+
+    private var emptyStudyCard: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "book.closed")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+
+            Text("No decks studied yet")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Text("Practice a deck to track your progress")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
+                }
         }
     }
 

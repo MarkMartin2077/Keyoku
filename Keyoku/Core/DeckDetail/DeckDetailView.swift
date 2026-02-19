@@ -108,7 +108,7 @@ struct DeckDetailView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Practice")
                             .font(.headline)
-                        Text("Study all \(presenter.flashcards.count) cards")
+                        Text(presenter.practiceSubtitle)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -198,21 +198,30 @@ struct DeckDetailView: View {
     }
 
     private func flashcardRow(flashcard: FlashcardModel) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(flashcard.question)
-                .font(.headline)
-            Text(flashcard.answer)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(flashcard.question)
+                    .font(.headline)
+                Text(flashcard.answer)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if flashcard.isLearned {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.body)
+                    .accessibilityHidden(true)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .anyButton(.press) {
             presenter.onEditCardPressed(flashcard: flashcard)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Question: \(flashcard.question), Answer: \(flashcard.answer)")
+        .accessibilityLabel("Question: \(flashcard.question), Answer: \(flashcard.answer)\(flashcard.isLearned ? ", learned" : "")")
         .accessibilityHint("Tap to edit this card")
     }
 
@@ -238,6 +247,14 @@ struct DeckDetailView: View {
                 presenter.onEditDeckPressed()
             } label: {
                 Label("Edit Deck", systemImage: "pencil")
+            }
+
+            if presenter.learnedCount > 0 {
+                Button(role: .destructive) {
+                    presenter.onResetLearnedStatus()
+                } label: {
+                    Label("Reset Progress", systemImage: "arrow.counterclockwise")
+                }
             }
         } label: {
             Image(systemName: "ellipsis.circle")

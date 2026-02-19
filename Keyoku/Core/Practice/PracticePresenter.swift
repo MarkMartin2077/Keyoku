@@ -14,36 +14,51 @@ class PracticePresenter {
     private let interactor: PracticeInteractor
     private let router: PracticeRouter
 
+    let deckId: String
     let deckName: String
     let deckColor: DeckColor
     private(set) var flashcards: [FlashcardModel]
-    private(set) var currentIndex: Int = 0
     private var hasRecordedCompletion: Bool = false
 
+    // Swipe state
+    private(set) var selectedIndex: Int = 0
+    var cardOffsets: [String: Bool] = [:]
+    var currentSwipeOffset: CGFloat = 0
+
+    // Streak celebration
     var showStreakCelebration: Bool = false
     var newStreakCount: Int = 0
 
     var currentCard: FlashcardModel? {
-        guard !flashcards.isEmpty, currentIndex < flashcards.count else { return nil }
-        return flashcards[currentIndex]
+        guard !flashcards.isEmpty, selectedIndex < flashcards.count else { return nil }
+        return flashcards[selectedIndex]
+    }
+
+    var isSessionComplete: Bool {
+        !flashcards.isEmpty && selectedIndex >= flashcards.count
     }
 
     var progress: Double {
         guard !flashcards.isEmpty else { return 0 }
-        return Double(currentIndex + 1) / Double(flashcards.count)
+        return Double(selectedIndex) / Double(flashcards.count)
     }
 
-    var canGoPrevious: Bool {
-        currentIndex > 0
+    var learnedCount: Int {
+        cardOffsets.values.filter { $0 == true }.count
     }
 
-    var canGoNext: Bool {
-        currentIndex < flashcards.count - 1
+    var stillLearningCount: Int {
+        cardOffsets.values.filter { $0 == false }.count
+    }
+
+    var canUndo: Bool {
+        selectedIndex > 0
     }
 
     init(interactor: PracticeInteractor, router: PracticeRouter, deck: DeckModel) {
         self.interactor = interactor
         self.router = router
+        self.deckId = deck.deckId
         self.deckName = deck.name
         self.deckColor = deck.color
         self.flashcards = deck.flashcards
@@ -54,47 +69,142 @@ class PracticePresenter {
 
         if flashcards.count == 1, !hasRecordedCompletion {
             hasRecordedCompletion = true
-            interactor.trackEvent(event: Event.onPracticeSessionComplete(deckName: deckName, cardsCount: flashcards.count))
+            interactor.trackEvent(event: Event.onPracticeSessionComplete(deckName: deckName, learnedCount: 0, stillLearningCount: 0, totalCards: 1))
             interactor.playHaptic(option: .lessonComplete())
             recordStreakEvent()
         }
     }
 
     func onViewDisappear(delegate: PracticeDelegate) {
-        interactor.trackEvent(event: Event.onDisappear(delegate: delegate, cardsViewed: currentIndex + 1))
+        interactor.trackEvent(event: Event.onDisappear(delegate: delegate, cardsViewed: selectedIndex))
     }
 
-    func onPreviousPressed() {
-        guard canGoPrevious else { return }
-        interactor.trackEvent(event: Event.onPreviousPressed(fromIndex: currentIndex))
+    // MARK: - Swipe Actions
+
+    func onCardSwiped(isLearned: Bool) {
+        guard let card = currentCard else { return }
+
+        cardOffsets[card.flashcardId] = isLearned
         interactor.playHaptic(option: .flashcardFlip())
 
-        withAnimation(.easeInOut(duration: 0.2)) {
-            currentIndex -= 1
-        }
-    }
-
-    func onNextPressed() {
-        guard canGoNext else { return }
-        interactor.trackEvent(event: Event.onNextPressed(fromIndex: currentIndex))
-        interactor.playHaptic(option: .flashcardFlip())
-
-        withAnimation(.easeInOut(duration: 0.2)) {
-            currentIndex += 1
+        if isLearned {
+            interactor.trackEvent(event: Event.onCardSwipedLearned(flashcardId: card.flashcardId))
+        } else {
+            interactor.trackEvent(event: Event.onCardSwipedStillLearning(flashcardId: card.flashcardId))
         }
 
-        // Record completion when reaching the last card
-        if currentIndex == flashcards.count - 1, !hasRecordedCompletion {
+        // Persist learned status
+        persistLearnedStatus(flashcardId: card.flashcardId, isLearned: isLearned)
+
+        selectedIndex += 1
+
+        // Check session completion
+        if selectedIndex >= flashcards.count, !hasRecordedCompletion {
             hasRecordedCompletion = true
-            interactor.trackEvent(event: Event.onPracticeSessionComplete(deckName: deckName, cardsCount: flashcards.count))
+            interactor.trackEvent(event: Event.onPracticeSessionComplete(
+                deckName: deckName,
+                learnedCount: learnedCount,
+                stillLearningCount: stillLearningCount,
+                totalCards: flashcards.count
+            ))
             interactor.playHaptic(option: .lessonComplete())
             recordStreakEvent()
+        }
+    }
+
+    func onSwipeChanged(offset: CGFloat) {
+        currentSwipeOffset = offset
+    }
+
+    func onUndoPressed() {
+        guard canUndo else { return }
+
+        selectedIndex -= 1
+
+        guard let card = currentCard else { return }
+        let previousIsLearned = cardOffsets[card.flashcardId]
+        cardOffsets.removeValue(forKey: card.flashcardId)
+        currentSwipeOffset = 0
+        interactor.playHaptic(option: .light)
+
+        interactor.trackEvent(event: Event.onUndoPressed(flashcardId: card.flashcardId))
+
+        // Revert learned status to what it was before this session
+        let originalIsLearned = card.isLearned
+        if previousIsLearned != nil {
+            persistLearnedStatus(flashcardId: card.flashcardId, isLearned: originalIsLearned)
         }
     }
 
     func onStreakCelebrationDismissed() {
         interactor.trackEvent(event: Event.onStreakCelebrationDismissed)
         showStreakCelebration = false
+    }
+
+    func onShufflePressed() {
+        interactor.trackEvent(event: Event.onShufflePressed)
+        interactor.playHaptic(option: .medium)
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            flashcards.shuffle()
+            selectedIndex = 0
+            cardOffsets = [:]
+            currentSwipeOffset = 0
+            hasRecordedCompletion = false
+        }
+    }
+
+    func onPracticeAgainPressed() {
+        interactor.trackEvent(event: Event.onPracticeAgainPressed)
+        interactor.playHaptic(option: .medium)
+
+        // Refresh flashcards from interactor to get latest state
+        if let deck = interactor.getDeck(id: deckId) {
+            flashcards = deck.flashcards
+        }
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            selectedIndex = 0
+            cardOffsets = [:]
+            currentSwipeOffset = 0
+            hasRecordedCompletion = false
+        }
+    }
+
+    // MARK: - Private
+
+    private func persistLearnedStatus(flashcardId: String, isLearned: Bool) {
+        guard let deck = interactor.getDeck(id: deckId) else { return }
+
+        let updatedFlashcards = deck.flashcards.map { card in
+            if card.flashcardId == flashcardId {
+                return FlashcardModel(
+                    flashcardId: card.flashcardId,
+                    question: card.question,
+                    answer: card.answer,
+                    deckId: card.deckId,
+                    isLearned: isLearned
+                )
+            }
+            return card
+        }
+
+        let updatedDeck = DeckModel(
+            deckId: deck.deckId,
+            name: deck.name,
+            color: deck.color,
+            imageUrl: deck.imageUrl,
+            sourceText: deck.sourceText,
+            createdAt: deck.createdAt,
+            flashcards: updatedFlashcards,
+            clickCount: deck.clickCount
+        )
+
+        do {
+            try interactor.updateDeck(updatedDeck)
+        } catch {
+            interactor.trackEvent(event: Event.onPersistLearnedFail(error: error))
+        }
     }
 
     private func recordStreakEvent() {
@@ -119,16 +229,6 @@ class PracticePresenter {
             }
         }
     }
-
-    func onShufflePressed() {
-        interactor.trackEvent(event: Event.onShufflePressed)
-        interactor.playHaptic(option: .medium)
-
-        withAnimation(.easeInOut(duration: 0.3)) {
-            flashcards.shuffle()
-            currentIndex = 0
-        }
-    }
 }
 
 extension PracticePresenter {
@@ -136,25 +236,31 @@ extension PracticePresenter {
     enum Event: LoggableEvent {
         case onAppear(delegate: PracticeDelegate)
         case onDisappear(delegate: PracticeDelegate, cardsViewed: Int)
-        case onPreviousPressed(fromIndex: Int)
-        case onNextPressed(fromIndex: Int)
+        case onCardSwipedLearned(flashcardId: String)
+        case onCardSwipedStillLearning(flashcardId: String)
+        case onUndoPressed(flashcardId: String)
         case onShufflePressed
-        case onPracticeSessionComplete(deckName: String, cardsCount: Int)
+        case onPracticeAgainPressed
+        case onPracticeSessionComplete(deckName: String, learnedCount: Int, stillLearningCount: Int, totalCards: Int)
         case onStreakEventRecorded(deckName: String)
         case onStreakEventFailed(error: Error)
         case onStreakCelebrationDismissed
+        case onPersistLearnedFail(error: Error)
 
         var eventName: String {
             switch self {
             case .onAppear:                     return "PracticeView_Appear"
             case .onDisappear:                  return "PracticeView_Disappear"
-            case .onPreviousPressed:            return "PracticeView_Previous_Pressed"
-            case .onNextPressed:                return "PracticeView_Next_Pressed"
+            case .onCardSwipedLearned:          return "PracticeView_Card_Swiped_Learned"
+            case .onCardSwipedStillLearning:    return "PracticeView_Card_Swiped_StillLearning"
+            case .onUndoPressed:                return "PracticeView_Undo_Pressed"
             case .onShufflePressed:             return "PracticeView_Shuffle_Pressed"
+            case .onPracticeAgainPressed:       return "PracticeView_PracticeAgain_Pressed"
             case .onPracticeSessionComplete:    return "PracticeView_Session_Complete"
-            case .onStreakEventRecorded:         return "PracticeView_Streak_Recorded"
-            case .onStreakEventFailed:           return "PracticeView_Streak_Failed"
-            case .onStreakCelebrationDismissed:  return "PracticeView_Streak_Celebration_Dismissed"
+            case .onStreakEventRecorded:        return "PracticeView_Streak_Recorded"
+            case .onStreakEventFailed:          return "PracticeView_Streak_Failed"
+            case .onStreakCelebrationDismissed: return "PracticeView_Streak_Celebration_Dismissed"
+            case .onPersistLearnedFail:         return "PracticeView_Persist_Learned_Fail"
             }
         }
 
@@ -166,13 +272,15 @@ extension PracticePresenter {
                 var params = delegate.eventParameters ?? [:]
                 params["cards_viewed"] = cardsViewed
                 return params
-            case .onPreviousPressed(fromIndex: let index), .onNextPressed(fromIndex: let index):
-                return ["from_index": index]
-            case .onPracticeSessionComplete(deckName: let deckName, cardsCount: let cardsCount):
-                return ["deck_name": deckName, "cards_count": cardsCount]
+            case .onCardSwipedLearned(flashcardId: let id), .onCardSwipedStillLearning(flashcardId: let id):
+                return ["flashcard_id": id]
+            case .onUndoPressed(flashcardId: let id):
+                return ["flashcard_id": id]
+            case .onPracticeSessionComplete(deckName: let name, learnedCount: let learned, stillLearningCount: let stillLearning, totalCards: let total):
+                return ["deck_name": name, "learned_count": learned, "still_learning_count": stillLearning, "total_cards": total]
             case .onStreakEventRecorded(deckName: let deckName):
                 return ["deck_name": deckName]
-            case .onStreakEventFailed(error: let error):
+            case .onStreakEventFailed(error: let error), .onPersistLearnedFail(error: let error):
                 return error.eventParameters
             default:
                 return nil
@@ -181,7 +289,7 @@ extension PracticePresenter {
 
         var type: LogType {
             switch self {
-            case .onStreakEventFailed:
+            case .onStreakEventFailed, .onPersistLearnedFail:
                 return .severe
             default:
                 return .analytic

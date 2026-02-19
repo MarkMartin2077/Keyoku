@@ -67,6 +67,12 @@ struct CoreInteractor: GlobalInteractor {
         try await authManager.signInAnonymously()
     }
 
+    /// Signs out Firebase Auth only, without tearing down other managers.
+    /// Used before SSO sign-in to avoid the `credentialAlreadyInUse` link conflict.
+    func signOutAuthOnly() throws {
+        try authManager.signOut()
+    }
+
     func signInApple() async throws -> (user: UserAuthInfo, isNewUser: Bool) {
         try await authManager.signInApple()
     }
@@ -290,6 +296,10 @@ struct CoreInteractor: GlobalInteractor {
 
     func saveDeckImage(data: Data) throws -> String {
         try flashcardManager.saveDeckImage(data: data)
+    }
+
+    func migrateDecks(_ decksToMigrate: [DeckModel]) {
+        flashcardManager.migrateDecks(decksToMigrate)
     }
 
     // MARK: StreakManager

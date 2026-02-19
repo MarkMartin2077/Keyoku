@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftfulUI
 
 struct ProfileDelegate {
     var eventParameters: [String: Any]? {
@@ -7,13 +8,15 @@ struct ProfileDelegate {
 }
 
 struct ProfileView: View {
-    
+
     @State var presenter: ProfilePresenter
     let delegate: ProfileDelegate
-    
+
     var body: some View {
         List {
-            Text("Hello, world!")
+            profileHeaderSection
+            studyStatsSection
+            accountSection
         }
         .navigationTitle("Profile")
         .toolbar {
@@ -28,7 +31,149 @@ struct ProfileView: View {
             presenter.onViewDisappear(delegate: delegate)
         }
     }
-    
+
+    // MARK: - Profile Header
+
+    private var profileHeaderSection: some View {
+        Section {
+            VStack(spacing: 16) {
+                if let imageUrl = presenter.profileImageUrl {
+                    ImageLoaderView(urlString: imageUrl)
+                        .aspectRatio(1, contentMode: .fill)
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .frame(width: 80, height: 80)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 4) {
+                    Text(presenter.profileName ?? "Guest")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+
+                    if let email = presenter.profileEmail {
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else if presenter.isAnonymousUser {
+                        Text("Anonymous account")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if presenter.isAnonymousUser {
+                    Text("Save & back-up account")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.accent)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(.accent.opacity(0.15))
+                        }
+                        .anyButton(.press) {
+                            presenter.onCreateAccountPressed()
+                        }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .removeListRowFormatting()
+        }
+    }
+
+    // MARK: - Study Stats
+
+    private var studyStatsSection: some View {
+        Section {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                statCard(icon: "flame.fill", iconColor: .orange, value: "\(presenter.currentStreak)", label: "Day Streak")
+                statCard(icon: "menucard.fill", iconColor: .blue, value: "\(presenter.totalDecks)", label: "Total Decks")
+                statCard(icon: "rectangle.portrait.on.rectangle.portrait.fill", iconColor: .purple, value: "\(presenter.totalCards)", label: "Total Cards")
+                statCard(icon: "checkmark.circle.fill", iconColor: .green, value: "\(presenter.learnedCards)", label: "Learned")
+            }
+            .padding(.vertical, 4)
+            .removeListRowFormatting()
+        } header: {
+            Text("Study Stats")
+        }
+    }
+
+    private func statCard(icon: String, iconColor: Color, value: String, label: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(iconColor)
+
+            Text(value)
+                .font(.title)
+                .fontWeight(.bold)
+
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
+                }
+        }
+    }
+
+    // MARK: - Account
+
+    private var accountSection: some View {
+        Section {
+            if !presenter.isAnonymousUser {
+                accountRow(icon: "rectangle.portrait.and.arrow.right", title: "Sign out") {
+                    presenter.onSignOutPressed()
+                }
+            }
+
+            accountRow(icon: "trash", title: "Delete account", tint: .red) {
+                presenter.onDeleteAccountPressed()
+            }
+        } header: {
+            Text("Account")
+        }
+    }
+
+    private func accountRow(
+        icon: String,
+        title: String,
+        tint: Color = .primary,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(tint == .primary ? .secondary : tint)
+                .frame(width: 24)
+
+            Text(title)
+                .foregroundStyle(tint)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .anyButton(.highlight) {
+            action()
+        }
+        .removeListRowFormatting()
+    }
+
+    // MARK: - Toolbar
+
     private var settingsButton: some View {
         Image(systemName: "gear")
             .font(.headline)
@@ -40,18 +185,44 @@ struct ProfileView: View {
     }
 }
 
-#Preview {
+#Preview("Signed in") {
     let container = DevPreview.shared.container()
+    container.register(AuthManager.self, service: AuthManager(service: MockAuthService(user: UserAuthInfo.mock(isAnonymous: false))))
+    container.register(UserManager.self, service: UserManager(services: MockUserServices(user: .mock)))
     let builder = CoreBuilder(interactor: CoreInteractor(container: container))
     let delegate = ProfileDelegate()
-    
+
+    return RouterView { router in
+        builder.profileView(router: router, delegate: delegate)
+    }
+}
+
+#Preview("Anonymous") {
+    let container = DevPreview.shared.container()
+    container.register(AuthManager.self, service: AuthManager(service: MockAuthService(user: UserAuthInfo.mock(isAnonymous: true))))
+    container.register(UserManager.self, service: UserManager(services: MockUserServices(user: .mock)))
+    let builder = CoreBuilder(interactor: CoreInteractor(container: container))
+    let delegate = ProfileDelegate()
+
+    return RouterView { router in
+        builder.profileView(router: router, delegate: delegate)
+    }
+}
+
+#Preview("No auth") {
+    let container = DevPreview.shared.container()
+    container.register(AuthManager.self, service: AuthManager(service: MockAuthService(user: nil)))
+    container.register(UserManager.self, service: UserManager(services: MockUserServices(user: nil)))
+    let builder = CoreBuilder(interactor: CoreInteractor(container: container))
+    let delegate = ProfileDelegate()
+
     return RouterView { router in
         builder.profileView(router: router, delegate: delegate)
     }
 }
 
 extension CoreBuilder {
-    
+
     func profileView(router: AnyRouter, delegate: ProfileDelegate = ProfileDelegate()) -> some View {
         ProfileView(
             presenter: ProfilePresenter(
@@ -61,15 +232,15 @@ extension CoreBuilder {
             delegate: delegate
         )
     }
-    
+
 }
 
 extension CoreRouter {
-    
+
     func showProfileView(delegate: ProfileDelegate) {
         router.showScreen(.push) { router in
             builder.profileView(router: router, delegate: delegate)
         }
     }
-    
+
 }

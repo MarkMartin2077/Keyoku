@@ -20,6 +20,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     let sourceText: String
     let createdAt: Date
     let flashcards: [FlashcardModel]
+    let clickCount: Int
 
     init(
         deckId: String = UUID().uuidString,
@@ -28,7 +29,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         imageUrl: String? = nil,
         sourceText: String,
         createdAt: Date = .now,
-        flashcards: [FlashcardModel] = []
+        flashcards: [FlashcardModel] = [],
+        clickCount: Int = 0
     ) {
         self.deckId = deckId
         self.name = name
@@ -37,6 +39,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         self.sourceText = sourceText
         self.createdAt = createdAt
         self.flashcards = flashcards
+        self.clickCount = clickCount
     }
 
     init(entity: DeckEntity) {
@@ -47,6 +50,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         self.sourceText = entity.sourceText
         self.createdAt = entity.createdAt
         self.flashcards = entity.flashcards.map { FlashcardModel(entity: $0) }
+        self.clickCount = entity.clickCount
     }
     
     mutating func updateDeckImage(imageName: String) {
@@ -61,6 +65,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         case sourceText = "source_text"
         case createdAt = "created_at"
         case flashcards
+        case clickCount = "click_count"
     }
 
     var eventParameters: [String: Any] {
@@ -71,7 +76,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
             "deck_\(CodingKeys.imageUrl.rawValue)": imageUrl,
             "deck_\(CodingKeys.sourceText.rawValue)": sourceText,
             "deck_\(CodingKeys.createdAt.rawValue)": createdAt,
-            "deck_flashcard_count": flashcards.count
+            "deck_flashcard_count": flashcards.count,
+            "deck_\(CodingKeys.clickCount.rawValue)": clickCount
         ]
         return dict.compactMapValues({ $0 })
     }
@@ -91,7 +97,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     }
 
     func toEntity() -> DeckEntity {
-        let entity = DeckEntity(id: deckId, name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, createdAt: createdAt)
+        let entity = DeckEntity(id: deckId, name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, createdAt: createdAt, clickCount: clickCount)
         entity.flashcards = flashcards.map { flashcard in
             let flashcardEntity = flashcard.toEntity()
             flashcardEntity.deck = entity
@@ -114,7 +120,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
                 color: .orange,
                 sourceText: "Core Spanish vocabulary, grammar, and conversational phrases for beginners",
                 createdAt: now,
-                flashcards: allCards.filter { $0.deckId == "deck1" }
+                flashcards: allCards.filter { $0.deckId == "deck1" },
+                clickCount: 5
             ),
             DeckModel(
                 deckId: "deck2",
@@ -122,7 +129,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
                 color: .teal,
                 sourceText: "Introductory biology covering cells, genetics, evolution, and homeostasis",
                 createdAt: now.addingTimeInterval(-86400),
-                flashcards: allCards.filter { $0.deckId == "deck2" }
+                flashcards: allCards.filter { $0.deckId == "deck2" },
+                clickCount: 2
             ),
             DeckModel(
                 deckId: "deck3",
@@ -130,7 +138,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
                 color: .indigo,
                 sourceText: "Major historical events, causes, and their lasting impact on civilization",
                 createdAt: now.addingTimeInterval(-172800),
-                flashcards: allCards.filter { $0.deckId == "deck3" }
+                flashcards: allCards.filter { $0.deckId == "deck3" },
+                clickCount: 8
             ),
             DeckModel(
                 deckId: "deck4",
@@ -138,7 +147,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
                 color: .green,
                 sourceText: "Python fundamentals including data types, classes, and common patterns",
                 createdAt: now.addingTimeInterval(-259200),
-                flashcards: allCards.filter { $0.deckId == "deck4" }
+                flashcards: allCards.filter { $0.deckId == "deck4" },
+                clickCount: 0
             )
         ]
     }

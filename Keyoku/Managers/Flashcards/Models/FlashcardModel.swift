@@ -17,17 +17,20 @@ struct FlashcardModel: StringIdentifiable, Codable, Sendable {
     let question: String
     let answer: String
     let deckId: String?
+    let isLearned: Bool
 
     init(
         flashcardId: String = UUID().uuidString,
         question: String,
         answer: String,
-        deckId: String? = nil
+        deckId: String? = nil,
+        isLearned: Bool = false
     ) {
         self.flashcardId = flashcardId
         self.question = question
         self.answer = answer
         self.deckId = deckId
+        self.isLearned = isLearned
     }
 
     init(entity: FlashcardEntity) {
@@ -35,6 +38,7 @@ struct FlashcardModel: StringIdentifiable, Codable, Sendable {
         self.question = entity.question
         self.answer = entity.answer
         self.deckId = entity.deck?.id
+        self.isLearned = entity.isLearned
     }
 
     enum CodingKeys: String, CodingKey {
@@ -42,6 +46,7 @@ struct FlashcardModel: StringIdentifiable, Codable, Sendable {
         case question
         case answer
         case deckId = "deck_id"
+        case isLearned = "is_learned"
     }
 
     var eventParameters: [String: Any] {
@@ -49,13 +54,14 @@ struct FlashcardModel: StringIdentifiable, Codable, Sendable {
             "flashcard_\(CodingKeys.flashcardId.rawValue)": flashcardId,
             "flashcard_\(CodingKeys.question.rawValue)": question,
             "flashcard_\(CodingKeys.answer.rawValue)": answer,
-            "flashcard_\(CodingKeys.deckId.rawValue)": deckId
+            "flashcard_\(CodingKeys.deckId.rawValue)": deckId,
+            "flashcard_\(CodingKeys.isLearned.rawValue)": isLearned
         ]
         return dict.compactMapValues({ $0 })
     }
 
     func toEntity() -> FlashcardEntity {
-        FlashcardEntity(id: flashcardId, question: question, answer: answer)
+        FlashcardEntity(id: flashcardId, question: question, answer: answer, isLearned: isLearned)
     }
 
     static var mock: Self {
@@ -69,13 +75,15 @@ struct FlashcardModel: StringIdentifiable, Codable, Sendable {
                 flashcardId: "flashcard1",
                 question: "How do you say 'Good morning' in Spanish?",
                 answer: "Buenos días. It's used as a greeting from sunrise until around noon, and is one of the most common everyday phrases in Spanish-speaking countries.",
-                deckId: "deck1"
+                deckId: "deck1",
+                isLearned: true
             ),
             FlashcardModel(
                 flashcardId: "flashcard2",
                 question: "What is the difference between 'ser' and 'estar'?",
                 answer: "Both mean 'to be,' but 'ser' is used for permanent traits like identity and origin, while 'estar' is used for temporary states like emotions and locations.",
-                deckId: "deck1"
+                deckId: "deck1",
+                isLearned: true
             ),
             FlashcardModel(
                 flashcardId: "flashcard3",
@@ -118,7 +126,8 @@ struct FlashcardModel: StringIdentifiable, Codable, Sendable {
                 flashcardId: "flashcard9",
                 question: "What is the powerhouse of the cell?",
                 answer: "The mitochondria. They generate most of the cell's supply of adenosine triphosphate (ATP), which is used as a source of chemical energy to power cellular processes.",
-                deckId: "deck2"
+                deckId: "deck2",
+                isLearned: true
             ),
             FlashcardModel(
                 flashcardId: "flashcard10",
