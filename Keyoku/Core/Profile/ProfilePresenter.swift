@@ -43,6 +43,12 @@ class ProfilePresenter {
         }
     }
 
+    // MARK: - Premium
+
+    var isPremium: Bool {
+        interactor.isPremium
+    }
+
     init(interactor: ProfileInteractor, router: ProfileRouter) {
         self.interactor = interactor
         self.router = router
@@ -132,6 +138,18 @@ class ProfilePresenter {
         }
     }
 
+    func onUpgradeToPremiumPressed() {
+        interactor.trackEvent(event: Event.upgradeToPremiumPressed)
+        router.showPaywallView(delegate: PaywallDelegate(source: "profile_upgrade"))
+    }
+
+    func onManageSubscriptionPressed() {
+        interactor.trackEvent(event: Event.manageSubscriptionPressed)
+        if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
+            UIApplication.shared.open(url)
+        }
+    }
+
     func onCreateAccountPressed() {
         interactor.trackEvent(event: Event.createAccountPressed)
 
@@ -162,6 +180,8 @@ extension ProfilePresenter {
         case deleteAccountSuccess
         case deleteAccountFail(error: Error)
         case createAccountPressed
+        case upgradeToPremiumPressed
+        case manageSubscriptionPressed
 
         var eventName: String {
             switch self {
@@ -176,6 +196,8 @@ extension ProfilePresenter {
             case .deleteAccountSuccess:         return "ProfileView_DeleteAccount_Success"
             case .deleteAccountFail:            return "ProfileView_DeleteAccount_Fail"
             case .createAccountPressed:         return "ProfileView_CreateAccount_Pressed"
+            case .upgradeToPremiumPressed:      return "ProfileView_UpgradePremium_Pressed"
+            case .manageSubscriptionPressed:    return "ProfileView_ManageSubscription_Pressed"
             }
         }
 

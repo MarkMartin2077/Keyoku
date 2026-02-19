@@ -61,6 +61,10 @@ class HomePresenter {
         decks.reduce(0) { $0 + $1.flashcards.count }
     }
 
+    var canCreateDeck: Bool {
+        interactor.isPremium || decks.count < Constants.freeTierDeckLimit
+    }
+
     init(interactor: HomeInteractor, router: HomeRouter) {
         self.interactor = interactor
         self.router = router
@@ -91,6 +95,11 @@ class HomePresenter {
 
         switch actionType {
         case "com.keyoku.create":
+            guard canCreateDeck else {
+                interactor.trackEvent(event: Event.onCreateDeckLimitHit)
+                router.showPaywallView(delegate: PaywallDelegate(source: "home_deck_limit"))
+                return
+            }
             router.showCreateContentView()
         default:
             break
@@ -125,6 +134,13 @@ class HomePresenter {
 
     func onCreatePressed() {
         interactor.trackEvent(event: Event.onCreatePressed)
+
+        guard canCreateDeck else {
+            interactor.trackEvent(event: Event.onCreateDeckLimitHit)
+            router.showPaywallView(delegate: PaywallDelegate(source: "home_deck_limit"))
+            return
+        }
+
         router.showCreateContentView()
     }
 
@@ -157,6 +173,11 @@ class HomePresenter {
                 router.showDeckDetailView(deck: deck)
             }
         case "create":
+            guard canCreateDeck else {
+                interactor.trackEvent(event: Event.onCreateDeckLimitHit)
+                router.showPaywallView(delegate: PaywallDelegate(source: "home_deck_limit"))
+                return
+            }
             router.showCreateContentView()
         default:
             break
@@ -270,6 +291,11 @@ class HomePresenter {
 
         switch actionType {
         case "com.keyoku.create":
+            guard canCreateDeck else {
+                interactor.trackEvent(event: Event.onCreateDeckLimitHit)
+                router.showPaywallView(delegate: PaywallDelegate(source: "home_deck_limit"))
+                return
+            }
             router.showCreateContentView()
         default:
             break
@@ -301,6 +327,7 @@ extension HomePresenter {
         case spotlightOpenFail
         case quickActionOpen(actionType: String)
         case quickActionFail
+        case onCreateDeckLimitHit
 
         var eventName: String {
             switch self {
@@ -325,6 +352,7 @@ extension HomePresenter {
             case .spotlightOpenFail:        return "HomeView_Spotlight_Open_Fail"
             case .quickActionOpen:          return "HomeView_QuickAction_Open"
             case .quickActionFail:          return "HomeView_QuickAction_Fail"
+            case .onCreateDeckLimitHit:     return "HomeView_DeckLimit_Hit"
             }
         }
 

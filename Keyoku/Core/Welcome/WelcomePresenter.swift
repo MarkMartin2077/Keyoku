@@ -27,6 +27,7 @@ class WelcomePresenter {
     }
     
     func onGetStartedPressed() {
+        interactor.trackEvent(event: Event.getStartedPressed)
         router.showOnboardingCompletedView(delegate: OnboardingCompletedDelegate())
     }
         
@@ -62,12 +63,14 @@ extension WelcomePresenter {
         case onAppear(delegate: WelcomeDelegate)
         case onDisappear(delegate: WelcomeDelegate)
         case didSignIn(isNewUser: Bool)
+        case getStartedPressed
         case signInPressed
         
         var eventName: String {
             switch self {
             case .onAppear:           return "WelcomeView_Appear"
             case .onDisappear:        return "WelcomeView_Disappear"
+            case .getStartedPressed:  return "WelcomeView_GetStarted_Pressed"
             case .didSignIn:          return "WelcomeView_DidSignIn"
             case .signInPressed:      return "WelcomeView_SignIn_Pressed"
             }

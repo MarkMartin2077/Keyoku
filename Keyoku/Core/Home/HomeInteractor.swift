@@ -19,6 +19,9 @@ protocol HomeInteractor: GlobalInteractor {
     // User
     var currentUser: UserModel? { get }
 
+    // Purchases
+    var isPremium: Bool { get }
+
     // Streaks
     var currentStreakData: CurrentStreakData { get }
 }

@@ -11,6 +11,7 @@ import SwiftUI
 protocol DecksRouter: GlobalRouter {
     func showDeckDetailView(deck: DeckModel)
     func showCreateContentView()
+    func showPaywallView(delegate: PaywallDelegate)
 }
 
 extension CoreRouter: DecksRouter {

@@ -31,6 +31,9 @@ struct SearchView: View {
         }
         .navigationTitle("Search")
         .searchable(text: $presenter.searchText, prompt: "Search decks")
+        .onSubmit(of: .search) {
+            presenter.onSearchSubmitted()
+        }
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }

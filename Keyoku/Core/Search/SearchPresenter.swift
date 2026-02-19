@@ -67,6 +67,12 @@ class SearchPresenter {
         interactor.trackEvent(event: Event.onDisappear(delegate: delegate))
     }
 
+    func onSearchSubmitted() {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return }
+        interactor.trackEvent(event: Event.onSearchSubmitted(query: query, resultCount: filteredDecks.count))
+    }
+
     func onDeckPressed(deck: DeckModel) {
         interactor.trackEvent(event: Event.onDeckPressed(deck: deck))
         router.showDeckDetailView(deck: deck)
@@ -79,13 +85,15 @@ extension SearchPresenter {
     enum Event: LoggableEvent {
         case onAppear(delegate: SearchDelegate)
         case onDisappear(delegate: SearchDelegate)
+        case onSearchSubmitted(query: String, resultCount: Int)
         case onDeckPressed(deck: DeckModel)
 
         var eventName: String {
             switch self {
             case .onAppear:         return "SearchView_Appear"
             case .onDisappear:      return "SearchView_Disappear"
-            case .onDeckPressed:    return "SearchView_Deck_Pressed"
+            case .onSearchSubmitted: return "SearchView_Search_Submitted"
+            case .onDeckPressed:     return "SearchView_Deck_Pressed"
             }
         }
 
@@ -93,6 +101,8 @@ extension SearchPresenter {
             switch self {
             case .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
                 return delegate.eventParameters
+            case .onSearchSubmitted(query: let query, resultCount: let count):
+                return ["search_query": query, "result_count": count]
             case .onDeckPressed(deck: let deck):
                 return deck.eventParameters
             }

@@ -8,9 +8,15 @@
 import SwiftUI
 
 struct PaywallDelegate {
-    
+
+    let source: String
+
+    init(source: String = "unknown") {
+        self.source = source
+    }
+
     var eventParameters: [String: Any]? {
-        nil
+        ["paywall_source": source]
     }
 }
 

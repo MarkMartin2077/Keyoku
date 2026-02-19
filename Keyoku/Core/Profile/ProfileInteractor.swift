@@ -6,6 +6,7 @@ protocol ProfileInteractor: GlobalInteractor {
     var auth: UserAuthInfo? { get }
     var decks: [DeckModel] { get }
     var currentStreakData: CurrentStreakData { get }
+    var isPremium: Bool { get }
     func signOut() async throws
     func deleteAccount() async throws
 }

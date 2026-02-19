@@ -46,6 +46,7 @@ class AppPresenter {
 
             do {
                 try await interactor.logIn(user: user, isNewUser: false)
+                interactor.trackEvent(event: Event.existingAuthSuccess)
             } catch {
                 interactor.trackEvent(event: Event.existingAuthFail(error: error))
                 try? await Task.sleep(for: .seconds(5))
@@ -111,6 +112,7 @@ extension AppPresenter {
         case onAppear
         case onDisappear
         case existingAuthStart
+        case existingAuthSuccess
         case existingAuthFail(error: Error)
         case anonAuthStart
         case anonAuthSuccess
@@ -125,6 +127,7 @@ extension AppPresenter {
             case .onAppear:             return "AppView_Appear"
             case .onDisappear:          return "AppView_Disappear"
             case .existingAuthStart:    return "AppView_ExistingAuth_Start"
+            case .existingAuthSuccess:  return "AppView_ExistingAuth_Success"
             case .existingAuthFail:     return "AppView_ExistingAuth_Fail"
             case .anonAuthStart:        return "AppView_AnonAuth_Start"
             case .anonAuthSuccess:      return "AppView_AnonAuth_Success"

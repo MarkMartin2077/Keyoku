@@ -16,11 +16,11 @@ struct StoreKitPaywallView: View {
     var body: some View {
         SubscriptionStoreView(productIDs: productIds) {
             VStack(spacing: 8) {
-                Text("My App 🤙")
+                Text("Keyoku Premium")
                     .font(.largeTitle)
                     .fontWeight(.semibold)
-                
-                Text("Get premium access to unlock all features.")
+
+                Text("Unlimited decks, unlimited learning.")
                     .font(.subheadline)
             }
             .foregroundStyle(.white)

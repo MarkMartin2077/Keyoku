@@ -65,6 +65,33 @@ struct ProfileView: View {
                     }
                 }
 
+                if presenter.isPremium {
+                    Label("Premium", systemImage: "crown.fill")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.orange)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background {
+                            Capsule()
+                                .fill(.orange.opacity(0.15))
+                        }
+                } else {
+                    Text("Upgrade to Premium")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.orange)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(.orange.opacity(0.15))
+                        }
+                        .anyButton(.press) {
+                            presenter.onUpgradeToPremiumPressed()
+                        }
+                }
+
                 if presenter.isAnonymousUser {
                     Text("Save & back-up account")
                         .font(.subheadline)
@@ -119,6 +146,12 @@ struct ProfileView: View {
 
     private var accountSection: some View {
         Section {
+            if presenter.isPremium {
+                accountRow(icon: "creditcard", title: "Manage Subscription") {
+                    presenter.onManageSubscriptionPressed()
+                }
+            }
+
             if !presenter.isAnonymousUser {
                 accountRow(icon: "rectangle.portrait.and.arrow.right", title: "Sign out") {
                     presenter.onSignOutPressed()

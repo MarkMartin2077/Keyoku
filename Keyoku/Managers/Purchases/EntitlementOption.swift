@@ -11,7 +11,7 @@ enum EntitlementOption: Codable, CaseIterable {
     var productId: String {
         switch self {
         case .yearly:
-            return "organization.app.yearly"
+            return "markmartin89.Keyoku.yearly"
         }
     }
     

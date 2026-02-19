@@ -13,6 +13,7 @@ protocol DecksInteractor: GlobalInteractor {
     func loadDecks()
     func createDeck(name: String, color: DeckColor, imageUrl: String?, sourceText: String) throws
     func deleteDeck(id: String) throws
+    var isPremium: Bool { get }
 }
 
 extension CoreInteractor: DecksInteractor { }

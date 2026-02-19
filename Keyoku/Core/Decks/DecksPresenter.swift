@@ -26,6 +26,10 @@ class DecksPresenter {
         return decks.filter { $0.name.lowercased().localizedStandardContains(query) }
     }
 
+    var canCreateDeck: Bool {
+        interactor.isPremium || decks.count < Constants.freeTierDeckLimit
+    }
+
     init(interactor: DecksInteractor, router: DecksRouter) {
         self.interactor = interactor
         self.router = router
@@ -45,6 +49,13 @@ class DecksPresenter {
     
     func onAddDeckPressed() {
         interactor.trackEvent(event: Event.onAddDeckPressed)
+
+        guard canCreateDeck else {
+            interactor.trackEvent(event: Event.onAddDeckLimitHit)
+            router.showPaywallView(delegate: PaywallDelegate(source: "decks_deck_limit"))
+            return
+        }
+
         router.showCreateContentView()
     }
     
@@ -79,6 +90,7 @@ extension DecksPresenter {
         case onDeleteDeckPressed(deck: DeckModel)
         case onDeleteDeckSuccess(deckId: String)
         case onDeleteDeckFail(error: Error)
+        case onAddDeckLimitHit
 
         var eventName: String {
             switch self {
@@ -89,6 +101,7 @@ extension DecksPresenter {
             case .onDeleteDeckPressed:      return "DecksView_DeleteDeck_Pressed"
             case .onDeleteDeckSuccess:      return "DecksView_DeleteDeck_Success"
             case .onDeleteDeckFail:         return "DecksView_DeleteDeck_Fail"
+            case .onAddDeckLimitHit:        return "DecksView_DeckLimit_Hit"
             }
         }
         
