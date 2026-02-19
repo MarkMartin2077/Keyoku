@@ -113,6 +113,8 @@ struct SettingsView: View {
                 }
             }
             .rowFormatting()
+            .accessibilityLabel(isPremium ? "Premium plan" : "Free plan")
+            .accessibilityHint(isPremium ? "Manage subscription" : "")
             .anyButton(.highlight) {}
             .disabled(!isPremium)
             .removeListRowFormatting()

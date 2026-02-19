@@ -224,8 +224,13 @@ struct UserModel: StringIdentifiable, Codable {
         return [
             UserModel(
                 userId: "user1",
+                email: "alex@example.com",
+                displayName: "Alex",
+                firstName: "Alex",
                 creationDate: now,
-                didCompleteOnboarding: true
+                submittedName: "Alex",
+                didCompleteOnboarding: true,
+                didCreateFirstDeck: true
             ),
             UserModel(
                 userId: "user2",

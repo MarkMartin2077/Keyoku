@@ -222,13 +222,16 @@ extension DeckDetailPresenter {
             flashcardItemsGenerated = streamedFlashcards.count
         }
 
-        // Final quality pass: remove any cards with incomplete answers
-        let qualityCards = streamedFlashcards.suffix(from: countBeforeBatch).filter { card in
+        applyQualityFilter(from: countBeforeBatch)
+    }
+
+    private func applyQualityFilter(from startIndex: Int) {
+        let qualityCards = streamedFlashcards.suffix(from: startIndex).filter { card in
             let answer = card.answer.trimmingCharacters(in: .whitespacesAndNewlines)
             let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
             return answer.count >= Self.minAnswerLength && endsCleanly
         }
-        streamedFlashcards = Array(streamedFlashcards.prefix(countBeforeBatch)) + Array(qualityCards)
+        streamedFlashcards = Array(streamedFlashcards.prefix(startIndex)) + Array(qualityCards)
         flashcardItemsGenerated = streamedFlashcards.count
     }
 }

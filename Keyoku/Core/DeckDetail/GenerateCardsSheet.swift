@@ -305,6 +305,7 @@ struct GenerateCardsSheet: View {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color.accentColor)
                     )
+                    .accessibilityLabel("Done")
                     .anyButton(.press) {
                         presenter.onGenerateCardsSuccessDismissed()
                         dismiss()

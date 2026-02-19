@@ -64,29 +64,153 @@ struct FlashcardModel: StringIdentifiable, Codable, Sendable {
 
     static var mocks: [Self] {
         [
+            // Deck 1 — Spanish Essentials
             FlashcardModel(
                 flashcardId: "flashcard1",
-                question: "What is the capital of Japan?",
-                answer: "Tokyo",
+                question: "How do you say 'Good morning' in Spanish?",
+                answer: "Buenos días. It's used as a greeting from sunrise until around noon, and is one of the most common everyday phrases in Spanish-speaking countries.",
                 deckId: "deck1"
             ),
             FlashcardModel(
                 flashcardId: "flashcard2",
-                question: "What does 'こんにちは' mean?",
-                answer: "Hello",
+                question: "What is the difference between 'ser' and 'estar'?",
+                answer: "Both mean 'to be,' but 'ser' is used for permanent traits like identity and origin, while 'estar' is used for temporary states like emotions and locations.",
                 deckId: "deck1"
             ),
             FlashcardModel(
                 flashcardId: "flashcard3",
-                question: "How do you say 'Thank you' in Japanese?",
-                answer: "ありgatou",
+                question: "How do you conjugate 'hablar' in present tense?",
+                answer: "Yo hablo, tú hablas, él/ella habla, nosotros hablamos, vosotros habláis, ellos/ellas hablan. It follows the regular -ar verb pattern.",
                 deckId: "deck1"
             ),
             FlashcardModel(
                 flashcardId: "flashcard4",
-                question: "What is 1 + 1?",
-                answer: "2",
+                question: "What does '¿Cómo te llamas?' mean?",
+                answer: "It means 'What is your name?' Literally translated it asks 'How do you call yourself?' The formal version is '¿Cómo se llama usted?'",
+                deckId: "deck1"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard5",
+                question: "How do you order food at a restaurant in Spanish?",
+                answer: "Use 'Me gustaría...' (I would like) or 'Quisiera...' (I'd like) followed by the item. For example: 'Me gustaría un café, por favor.'",
+                deckId: "deck1"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard6",
+                question: "What are the four definite articles in Spanish?",
+                answer: "El (masculine singular), la (feminine singular), los (masculine plural), and las (feminine plural). They correspond to 'the' in English.",
+                deckId: "deck1"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard7",
+                question: "How do you express the future tense simply?",
+                answer: "Use 'ir + a + infinitive.' For example: 'Voy a estudiar' means 'I am going to study.' This is the most common way to talk about future plans in everyday conversation.",
+                deckId: "deck1"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard8",
+                question: "What is the difference between 'por' and 'para'?",
+                answer: "'Por' expresses cause, duration, and exchange (por la mañana, gracias por). 'Para' expresses purpose, destination, and deadlines (para ti, para mañana).",
+                deckId: "deck1"
+            ),
+            // Deck 2 — Biology 101
+            FlashcardModel(
+                flashcardId: "flashcard9",
+                question: "What is the powerhouse of the cell?",
+                answer: "The mitochondria. They generate most of the cell's supply of adenosine triphosphate (ATP), which is used as a source of chemical energy to power cellular processes.",
                 deckId: "deck2"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard10",
+                question: "What is the difference between DNA and RNA?",
+                answer: "DNA is double-stranded and uses deoxyribose sugar with thymine. RNA is single-stranded and uses ribose sugar with uracil. DNA stores genetic info; RNA helps express it.",
+                deckId: "deck2"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard11",
+                question: "What are the stages of mitosis?",
+                answer: "Prophase, metaphase, anaphase, and telophase (PMAT). During mitosis a single cell divides to produce two identical daughter cells with the same number of chromosomes.",
+                deckId: "deck2"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard12",
+                question: "What is natural selection?",
+                answer: "The process where organisms with favorable traits are more likely to survive and reproduce. Over generations, these traits become more common in the population, driving evolution.",
+                deckId: "deck2"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard13",
+                question: "What is the function of ribosomes?",
+                answer: "Ribosomes are the cellular structures responsible for protein synthesis. They read messenger RNA sequences and translate them into polypeptide chains that fold into functional proteins.",
+                deckId: "deck2"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard14",
+                question: "What is homeostasis?",
+                answer: "The ability of an organism to maintain stable internal conditions despite external changes. Examples include body temperature regulation, blood pH balance, and glucose levels.",
+                deckId: "deck2"
+            ),
+            // Deck 3 — World History
+            FlashcardModel(
+                flashcardId: "flashcard15",
+                question: "What caused the fall of the Roman Empire?",
+                answer: "A combination of military overspending, political instability, barbarian invasions, economic decline, and overreliance on slave labor weakened Rome over centuries until its fall in 476 AD.",
+                deckId: "deck3"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard16",
+                question: "What was the significance of the printing press?",
+                answer: "Invented by Gutenberg around 1440, it made books affordable and widely available, fueling the Renaissance, the Reformation, and the Scientific Revolution by democratizing knowledge.",
+                deckId: "deck3"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard17",
+                question: "What were the main causes of World War I?",
+                answer: "Militarism, alliances, imperialism, and nationalism (MAIN). The assassination of Archduke Franz Ferdinand in 1914 was the immediate trigger that set the alliance system into motion.",
+                deckId: "deck3"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard18",
+                question: "What was the Cold War?",
+                answer: "A geopolitical rivalry between the US and Soviet Union from 1947–1991. It featured an arms race, proxy wars, and ideological conflict between capitalism and communism, but no direct military confrontation.",
+                deckId: "deck3"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard19",
+                question: "Why was the Silk Road historically important?",
+                answer: "It was a network of trade routes connecting East and West from the 2nd century BC. It facilitated the exchange of goods like silk and spices, as well as ideas, religions, and technologies across civilizations.",
+                deckId: "deck3"
+            ),
+            // Deck 4 — Python Basics
+            FlashcardModel(
+                flashcardId: "flashcard20",
+                question: "What is the difference between a list and a tuple in Python?",
+                answer: "Lists are mutable (can be changed after creation) and use square brackets []. Tuples are immutable (cannot be changed) and use parentheses (). Tuples are faster and can be used as dictionary keys.",
+                deckId: "deck4"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard21",
+                question: "What does 'self' refer to in a Python class?",
+                answer: "It refers to the current instance of the class. It allows access to the attributes and methods of the object. It must be the first parameter of instance methods, though Python passes it automatically.",
+                deckId: "deck4"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard22",
+                question: "How does a dictionary work in Python?",
+                answer: "A dictionary stores key-value pairs using curly braces {}. Keys must be unique and immutable. Access values with dict[key]. Common methods include .get(), .keys(), .values(), and .items().",
+                deckId: "deck4"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard23",
+                question: "What is a list comprehension?",
+                answer: "A concise way to create lists: [expression for item in iterable if condition]. For example, [x**2 for x in range(10) if x % 2 == 0] creates a list of squares of even numbers from 0 to 9.",
+                deckId: "deck4"
+            ),
+            FlashcardModel(
+                flashcardId: "flashcard24",
+                question: "What is the difference between '==' and 'is' in Python?",
+                answer: "'==' checks if two objects have the same value (equality). 'is' checks if two variables point to the exact same object in memory (identity). Use '==' for value comparison in most cases.",
+                deckId: "deck4"
             )
         ]
     }

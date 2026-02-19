@@ -53,3 +53,6 @@ fastlane/report.json
 # Environment-specific files
 .env
 .env.*
+
+# API keys and secrets
+Keyoku/Utilities/Keys.swift

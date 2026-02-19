@@ -141,6 +141,7 @@ struct HomeView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.accent)
+                    .accessibilityLabel("View all decks")
                     .anyButton(.press) {
                         presenter.onViewAllDecksPressed()
                     }
@@ -264,6 +265,7 @@ struct HomeView: View {
         .anyButton(.press) {
             presenter.onCreatePressed()
         }
+        .accessibilityIdentifier("CreateNewButton")
     }
 
     // MARK: - Dev Settings
@@ -277,6 +279,7 @@ struct HomeView: View {
             .padding(.vertical, 6)
             .background(Color.accent)
             .cornerRadius(12)
+            .accessibilityLabel("Developer settings")
             .anyButton(.press) {
                 presenter.onDevSettingsPressed()
             }

@@ -16,18 +16,35 @@ struct CoreInteractor: GlobalInteractor {
     private let streakManager: StreakManager
 
     init(container: DependencyContainer) {
-        self.appState = container.resolve(AppState.self)!
-        self.authManager = container.resolve(AuthManager.self)!
-        self.userManager = container.resolve(UserManager.self)!
-        self.logManager = container.resolve(LogManager.self)!
-        self.abTestManager = container.resolve(ABTestManager.self)!
-        self.purchaseManager = container.resolve(PurchaseManager.self)!
-        self.pushManager = container.resolve(PushManager.self)!
-        self.hapticManager = container.resolve(HapticManager.self)!
-        self.soundEffectManager = container.resolve(SoundEffectManager.self)!
-        self.flashcardManager = container.resolve(FlashcardManager.self)!
-        self.spotlightManager = container.resolve(SpotlightManager.self)!
-        self.streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey)!
+        guard
+            let appState = container.resolve(AppState.self),
+            let authManager = container.resolve(AuthManager.self),
+            let userManager = container.resolve(UserManager.self),
+            let logManager = container.resolve(LogManager.self),
+            let abTestManager = container.resolve(ABTestManager.self),
+            let purchaseManager = container.resolve(PurchaseManager.self),
+            let pushManager = container.resolve(PushManager.self),
+            let hapticManager = container.resolve(HapticManager.self),
+            let soundEffectManager = container.resolve(SoundEffectManager.self),
+            let flashcardManager = container.resolve(FlashcardManager.self),
+            let spotlightManager = container.resolve(SpotlightManager.self),
+            let streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey)
+        else {
+            fatalError("CoreInteractor: One or more managers not registered in DependencyContainer. Check Dependencies.swift initialization.")
+        }
+
+        self.appState = appState
+        self.authManager = authManager
+        self.userManager = userManager
+        self.logManager = logManager
+        self.abTestManager = abTestManager
+        self.purchaseManager = purchaseManager
+        self.pushManager = pushManager
+        self.hapticManager = hapticManager
+        self.soundEffectManager = soundEffectManager
+        self.flashcardManager = flashcardManager
+        self.spotlightManager = spotlightManager
+        self.streakManager = streakManager
     }
     
     // MARK: APP STATE

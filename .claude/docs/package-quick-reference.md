@@ -239,6 +239,9 @@ func logIn(user: UserAuthInfo, isNewUser: Bool) async throws {
 - [ ] Screen builder method in CoreBuilder extension
 - [ ] Screen can be dismissed properly
 - [ ] Works in both signed-in and signed-out states
+- [ ] Unit tests use `makeManager` tuple pattern returning `(Manager, MockLogService)`
+- [ ] Unit tests verify analytics events with `mockLog.hasEvent(named:)` for key operations
+- [ ] UI tests use local `let app` in each test (not a class property)
 
 ---
 

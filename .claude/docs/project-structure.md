@@ -448,15 +448,21 @@ The template includes example implementations to demonstrate patterns. **These a
 
 ## Testing Setup
 
-### Unit Tests
-- Located in `SwiftfulStarterProjectUnitTests/`
-- Basic structure provided, mockable architecture enables easy testing
-- Presenters and Interactors can be tested in isolation
+### Unit Tests (Swift Testing)
+- Located in `KeyokuUnitTests/`
+- Uses Swift Testing framework (`import Testing`, `@Test`, `@Suite`, `#expect`)
+- **MockLogService** captures analytics events for verification — inject via `LogManager(services: [mockLog])`
+- **makeManager tuple pattern**: helpers return `(Manager, MockLogService)` so tests can verify both state changes and analytics events
+- Key operations should assert both `_Start` and `_Success` events via `mockLog.hasEvent(named:)`
+- Mock services: `MockAuthService`, `MockFlashcardServices`, `MockStreakServices`
+- Mark test suites `@MainActor` when testing `@MainActor` types
 
-### UI Tests
-- Located in `SwiftfulStarterProjectUITests/`
-- Launch arguments for test configuration
-- `SIGNED_IN` argument controls signed-in state for tests
+### UI Tests (XCTest)
+- Located in `KeyokuUITests/`
+- Uses local `let app = XCUIApplication()` in each test (not a class property) to avoid `@MainActor` concurrency conflicts
+- `["UI_TESTING"]` launch argument is always required — activates mock config
+- `["UI_TESTING", "SIGNED_IN"]` for signed-in state tests
+- Prefer longer flow-based tests over many small tests (fewer app launches = faster suite)
 - App uses `Utilities.isUITesting` to detect test environment
 
 ### Entry Points for Testing

@@ -106,30 +106,39 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
 
     static var mocks: [Self] {
         let now = Date()
+        let allCards = FlashcardModel.mocks
         return [
             DeckModel(
                 deckId: "deck1",
-                name: "Japanese Basics",
-                color: .red,
-                sourceText: "Common Japanese phrases and vocabulary",
+                name: "Spanish Essentials",
+                color: .orange,
+                sourceText: "Core Spanish vocabulary, grammar, and conversational phrases for beginners",
                 createdAt: now,
-                flashcards: Array(FlashcardModel.mocks.prefix(3))
+                flashcards: allCards.filter { $0.deckId == "deck1" }
             ),
             DeckModel(
                 deckId: "deck2",
-                name: "Math Fundamentals",
-                color: .blue,
-                sourceText: "Basic math concepts",
+                name: "Biology 101",
+                color: .teal,
+                sourceText: "Introductory biology covering cells, genetics, evolution, and homeostasis",
                 createdAt: now.addingTimeInterval(-86400),
-                flashcards: [FlashcardModel.mocks[3]]
+                flashcards: allCards.filter { $0.deckId == "deck2" }
             ),
             DeckModel(
                 deckId: "deck3",
-                name: "Empty Deck",
-                color: .green,
-                sourceText: "A deck with no cards yet",
+                name: "World History",
+                color: .indigo,
+                sourceText: "Major historical events, causes, and their lasting impact on civilization",
                 createdAt: now.addingTimeInterval(-172800),
-                flashcards: []
+                flashcards: allCards.filter { $0.deckId == "deck3" }
+            ),
+            DeckModel(
+                deckId: "deck4",
+                name: "Python Basics",
+                color: .green,
+                sourceText: "Python fundamentals including data types, classes, and common patterns",
+                createdAt: now.addingTimeInterval(-259200),
+                flashcards: allCards.filter { $0.deckId == "deck4" }
             )
         ]
     }

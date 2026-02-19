@@ -58,7 +58,7 @@ class SettingsPresenter {
     func onPrivacyPolicyPressed() {
         interactor.trackEvent(event: Event.privacyPolicyPressed)
 
-        if let url = URL(string: "https://boatneck-pickle-bfa.notion.site/Privacy-Policy-4c140d62f69d406eb2906db09dad1781") {
+        if let url = URL(string: Constants.privacyPolicyUrlString) {
             UIApplication.shared.open(url)
         }
     }
@@ -66,7 +66,7 @@ class SettingsPresenter {
     func onTermsOfServicePressed() {
         interactor.trackEvent(event: Event.termsOfServicePressed)
 
-        if let url = URL(string: "https://boatneck-pickle-bfa.notion.site/Terms-of-Service-ef9a22b727d74a07afd8a50a7b3e8e6c") {
+        if let url = URL(string: Constants.termsOfServiceUrlString) {
             UIApplication.shared.open(url)
         }
     }

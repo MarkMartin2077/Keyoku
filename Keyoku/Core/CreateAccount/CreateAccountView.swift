@@ -49,11 +49,12 @@ struct CreateAccountView: View {
                 )
                 .frame(height: 55)
                 .frame(maxWidth: 400)
+                .accessibilityLabel("Sign in with Apple")
                 .anyButton(.press) {
                     presenter.onSignInApplePressed(delegate: delegate)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
+
                 SignInGoogleButtonView(
                     type: .signIn,
                     backgroundColor: .googleRed,
@@ -61,6 +62,7 @@ struct CreateAccountView: View {
                 )
                 .frame(height: 55)
                 .frame(maxWidth: 400)
+                .accessibilityLabel("Sign in with Google")
                 .anyButton(.press) {
                     presenter.onSignInGooglePressed(delegate: delegate)
                 }

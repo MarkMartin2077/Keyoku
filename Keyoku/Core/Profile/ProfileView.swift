@@ -33,6 +33,7 @@ struct ProfileView: View {
         Image(systemName: "gear")
             .font(.headline)
             .foregroundStyle(.accent)
+            .accessibilityLabel("Settings")
             .anyButton {
                 presenter.onSettingsButtonPressed()
             }

@@ -13,6 +13,7 @@ protocol DeckDetailInteractor: GlobalInteractor {
     func addFlashcard(question: String, answer: String, toDeckId: String) throws
     func deleteFlashcard(id: String, fromDeckId: String) throws
     func updateDeck(_ deck: DeckModel) throws
+    func saveDeckImage(data: Data) throws -> String
 }
 
 extension CoreInteractor: DeckDetailInteractor { }

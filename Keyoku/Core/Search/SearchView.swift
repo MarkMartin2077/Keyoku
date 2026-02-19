@@ -97,8 +97,12 @@ struct SearchView: View {
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
                 }
                 .contentShape(Rectangle())
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(deck.name), \(deck.flashcards.count) \(deck.flashcards.count == 1 ? "card" : "cards")")
+                .accessibilityHint("Opens deck")
                 .anyButton(.highlight) {
                     presenter.onDeckPressed(deck: deck)
                 }

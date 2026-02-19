@@ -154,6 +154,7 @@ struct StreakCelebrationView: View {
             }
             .opacity(showButton ? 1.0 : 0.0)
             .animation(.easeIn(duration: 0.3), value: showButton)
+            .accessibilityLabel("Continue")
             .anyButton(.press) {
                 onDismiss?()
             }

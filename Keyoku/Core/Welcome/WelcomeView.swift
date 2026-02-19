@@ -227,6 +227,7 @@ struct WelcomeView: View {
                 .foregroundStyle(.secondary)
                 .padding(8)
                 .tappableBackground()
+                .accessibilityLabel("Sign in to existing account")
                 .anyButton(.press) {
                     presenter.onSignInPressed()
                 }

@@ -103,16 +103,18 @@ struct CreateDeckView: View {
         }
     }
 
-    private var deckPreviewCard: some View {
-        let displayName = presenter.deckName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hasName = !displayName.isEmpty
+    @FocusState private var isNameFieldFocused: Bool
 
-        return VStack(alignment: .leading, spacing: 8) {
-            Text(hasName ? displayName : "Deck Name")
+    private var deckPreviewCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("", text: $presenter.deckName, prompt: Text("Deck Name").foregroundStyle(.white.opacity(0.5)))
                 .font(.headline)
-                .foregroundStyle(.white.opacity(hasName ? 1.0 : 0.5))
+                .foregroundStyle(.white)
+                .tint(.white)
+                .focused($isNameFieldFocused)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
+                .accessibilityIdentifier("DeckNameField")
 
             Spacer(minLength: 0)
 
@@ -151,6 +153,10 @@ struct CreateDeckView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .onTapGesture {
+            isNameFieldFocused = true
+        }
         .animation(.smooth(duration: 0.3), value: presenter.selectedColor)
         .animation(.smooth(duration: 0.3), value: presenter.selectedImage != nil)
     }
@@ -159,8 +165,6 @@ struct CreateDeckView: View {
 
     private var deckInfoSection: some View {
         Section {
-            TextField("Name", text: $presenter.deckName)
-
             colorPicker
 
             coverImagePicker
@@ -264,6 +268,7 @@ struct CreateDeckView: View {
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(.white, .black.opacity(0.5))
                         .padding(8)
+                        .accessibilityLabel("Remove cover image")
                         .anyButton(.press) {
                             selectedPhotoItem = nil
                             presenter.onRemoveImage()
@@ -283,6 +288,7 @@ struct CreateDeckView: View {
                             .fill(.ultraThinMaterial)
                     }
                 }
+                .accessibilityLabel("Select cover image from photos")
             }
         }
         .onChange(of: selectedPhotoItem) { _, newItem in
@@ -449,6 +455,7 @@ struct CreateDeckView: View {
         .anyButton(.press) {
             presenter.onGeneratePressed()
         }
+        .accessibilityIdentifier("GenerateButton")
         .disabled(!presenter.canGenerate)
         .accessibilityHint(presenter.canGenerate ? "" : "Enter a deck name and source text to generate")
     }
@@ -475,9 +482,11 @@ struct CreateDeckView: View {
                     : AnyShapeStyle(Color.gray)
                 )
         }
+        .accessibilityHint(presenter.canCreateEmpty ? "Creates an empty deck" : "Enter a deck name to create")
         .anyButton(.press) {
             presenter.onCreateEmptyPressed()
         }
+        .accessibilityIdentifier("CreateEmptyDeckButton")
         .disabled(!presenter.canCreateEmpty)
     }
     

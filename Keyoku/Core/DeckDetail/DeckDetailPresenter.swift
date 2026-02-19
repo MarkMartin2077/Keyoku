@@ -27,8 +27,16 @@ class DeckDetailPresenter {
     private let router: DeckDetailRouter
     let deckId: String
 
-    let deckName: String
-    let deckColor: DeckColor
+    private let _initialDeckName: String
+    private let _initialDeckColor: DeckColor
+
+    var deckName: String {
+        deck?.name ?? _initialDeckName
+    }
+
+    var deckColor: DeckColor {
+        deck?.color ?? _initialDeckColor
+    }
 
     var deck: DeckModel? {
         interactor.getDeck(id: deckId)
@@ -41,6 +49,18 @@ class DeckDetailPresenter {
     var deckImageUrlString: String? {
         deck?.displayImageUrlString
     }
+
+    // MARK: - Edit Card State
+
+    var editingFlashcard: FlashcardModel?
+
+    // MARK: - Edit Deck State
+
+    var showEditDeckSheet: Bool = false
+    var editDeckName: String = ""
+    var editDeckColor: DeckColor = .blue
+    var editDeckImage: UIImage?
+    var editDeckImageChanged: Bool = false
 
     // MARK: - Generation State
 
@@ -91,8 +111,8 @@ class DeckDetailPresenter {
         self.interactor = interactor
         self.router = router
         self.deckId = deck.deckId
-        self.deckName = deck.name
-        self.deckColor = deck.color
+        self._initialDeckName = deck.name
+        self._initialDeckColor = deck.color
     }
 
     // MARK: - Lifecycle
@@ -148,6 +168,134 @@ class DeckDetailPresenter {
                 router.showAlert(error: error)
             }
         }
+    }
+
+    // MARK: - Edit Card
+
+    func onEditCardPressed(flashcard: FlashcardModel) {
+        interactor.trackEvent(event: Event.onEditCardPressed(flashcard: flashcard))
+        editingFlashcard = flashcard
+    }
+
+    func onSaveEditedCard(flashcardId: String, question: String, answer: String) {
+        let trimmedQuestion = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAnswer = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedQuestion.isEmpty, !trimmedAnswer.isEmpty else { return }
+        guard let currentDeck = deck else { return }
+
+        let updatedFlashcards = currentDeck.flashcards.map { card in
+            if card.flashcardId == flashcardId {
+                return FlashcardModel(flashcardId: flashcardId, question: trimmedQuestion, answer: trimmedAnswer, deckId: currentDeck.deckId)
+            }
+            return card
+        }
+
+        let updatedDeck = DeckModel(
+            deckId: currentDeck.deckId,
+            name: currentDeck.name,
+            color: currentDeck.color,
+            imageUrl: currentDeck.imageUrl,
+            sourceText: currentDeck.sourceText,
+            createdAt: currentDeck.createdAt,
+            flashcards: updatedFlashcards
+        )
+
+        do {
+            try interactor.updateDeck(updatedDeck)
+            editingFlashcard = nil
+            interactor.trackEvent(event: Event.onEditCardSaved(flashcardId: flashcardId))
+        } catch {
+            interactor.trackEvent(event: Event.onEditCardSaveFail(error: error))
+            router.showAlert(error: error)
+        }
+    }
+
+    func onCancelEditCard() {
+        interactor.trackEvent(event: Event.onEditCardCancelled)
+        editingFlashcard = nil
+    }
+
+    // MARK: - Edit Deck
+
+    func onEditDeckPressed() {
+        guard let currentDeck = deck else { return }
+        interactor.trackEvent(event: Event.onEditDeckPressed)
+        editDeckName = currentDeck.name
+        editDeckColor = currentDeck.color
+        editDeckImageChanged = false
+
+        if let imageFileURL = currentDeck.imageFileURL,
+           let data = try? Data(contentsOf: imageFileURL) {
+            editDeckImage = UIImage(data: data)
+        } else {
+            editDeckImage = nil
+        }
+
+        showEditDeckSheet = true
+    }
+
+    func onEditDeckColorSelected(_ color: DeckColor) {
+        interactor.trackEvent(event: Event.onEditDeckColorChanged(color: color.rawValue))
+        editDeckColor = color
+    }
+
+    func onEditDeckImageDataLoaded(_ data: Data) {
+        interactor.trackEvent(event: Event.onEditDeckImageSelected)
+        editDeckImage = UIImage(data: data)
+        editDeckImageChanged = true
+    }
+
+    func onEditDeckRemoveImage() {
+        interactor.trackEvent(event: Event.onEditDeckImageRemoved)
+        editDeckImage = nil
+        editDeckImageChanged = true
+    }
+
+    func onSaveEditedDeck() {
+        let trimmedName = editDeckName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        guard let currentDeck = deck else { return }
+
+        var imageUrl = currentDeck.imageUrl
+
+        if editDeckImageChanged {
+            if let image = editDeckImage, let data = image.jpegData(compressionQuality: 0.8) {
+                do {
+                    imageUrl = try interactor.saveDeckImage(data: data)
+                } catch {
+                    interactor.trackEvent(event: Event.onEditDeckSaveFail(error: error))
+                    router.showAlert(error: error)
+                    return
+                }
+            } else {
+                imageUrl = nil
+            }
+        }
+
+        let updatedDeck = DeckModel(
+            deckId: currentDeck.deckId,
+            name: trimmedName,
+            color: editDeckColor,
+            imageUrl: imageUrl,
+            sourceText: currentDeck.sourceText,
+            createdAt: currentDeck.createdAt,
+            flashcards: currentDeck.flashcards
+        )
+
+        do {
+            try interactor.updateDeck(updatedDeck)
+            showEditDeckSheet = false
+            interactor.trackEvent(event: Event.onEditDeckSaved)
+        } catch {
+            interactor.trackEvent(event: Event.onEditDeckSaveFail(error: error))
+            router.showAlert(error: error)
+        }
+    }
+
+    func onCancelEditDeck() {
+        interactor.trackEvent(event: Event.onEditDeckCancelled)
+        showEditDeckSheet = false
     }
 
     // MARK: - Generation Actions
@@ -350,6 +498,19 @@ extension DeckDetailPresenter {
         case onDeleteCardPressed(flashcard: FlashcardModel)
         case onDeleteCardSuccess(flashcardId: String)
         case onDeleteCardFail(error: Error)
+        // Edit card
+        case onEditCardPressed(flashcard: FlashcardModel)
+        case onEditCardSaved(flashcardId: String)
+        case onEditCardSaveFail(error: Error)
+        case onEditCardCancelled
+        // Edit deck
+        case onEditDeckPressed
+        case onEditDeckSaved
+        case onEditDeckSaveFail(error: Error)
+        case onEditDeckCancelled
+        case onEditDeckColorChanged(color: String)
+        case onEditDeckImageSelected
+        case onEditDeckImageRemoved
         // Generation
         case onGenerateSheetOpened
         case onSourceInputModeChanged(mode: String)
@@ -377,6 +538,17 @@ extension DeckDetailPresenter {
             case .onDeleteCardPressed:          return "DeckDetailView_DeleteCard_Pressed"
             case .onDeleteCardSuccess:          return "DeckDetailView_DeleteCard_Success"
             case .onDeleteCardFail:             return "DeckDetailView_DeleteCard_Fail"
+            case .onEditCardPressed:             return "DeckDetailView_EditCard_Pressed"
+            case .onEditCardSaved:               return "DeckDetailView_EditCard_Saved"
+            case .onEditCardSaveFail:            return "DeckDetailView_EditCard_SaveFail"
+            case .onEditCardCancelled:           return "DeckDetailView_EditCard_Cancelled"
+            case .onEditDeckPressed:             return "DeckDetailView_EditDeck_Pressed"
+            case .onEditDeckSaved:               return "DeckDetailView_EditDeck_Saved"
+            case .onEditDeckSaveFail:            return "DeckDetailView_EditDeck_SaveFail"
+            case .onEditDeckCancelled:           return "DeckDetailView_EditDeck_Cancelled"
+            case .onEditDeckColorChanged:        return "DeckDetailView_EditDeck_ColorChanged"
+            case .onEditDeckImageSelected:       return "DeckDetailView_EditDeck_ImageSelected"
+            case .onEditDeckImageRemoved:        return "DeckDetailView_EditDeck_ImageRemoved"
             case .onGenerateSheetOpened:        return "DeckDetailView_GenerateSheet_Opened"
             case .onSourceInputModeChanged:     return "DeckDetailView_SourceInputMode_Changed"
             case .onPDFFileSelected:            return "DeckDetailView_PDF_Selected"
@@ -401,7 +573,13 @@ extension DeckDetailPresenter {
                 return flashcard.eventParameters
             case .onDeleteCardSuccess(flashcardId: let id):
                 return ["flashcard_id": id]
-            case .onAddCardFail(error: let error), .onDeleteCardFail(error: let error), .onPDFExtractFail(error: let error), .onPDFPickerFail(error: let error), .onGenerateCardsFail(error: let error):
+            case .onEditCardPressed(flashcard: let flashcard):
+                return flashcard.eventParameters
+            case .onEditCardSaved(flashcardId: let id):
+                return ["flashcard_id": id]
+            case .onEditDeckColorChanged(color: let color):
+                return ["color": color]
+            case .onAddCardFail(error: let error), .onDeleteCardFail(error: let error), .onEditCardSaveFail(error: let error), .onEditDeckSaveFail(error: let error), .onPDFExtractFail(error: let error), .onPDFPickerFail(error: let error), .onGenerateCardsFail(error: let error):
                 return error.eventParameters
             case .onSourceInputModeChanged(mode: let mode):
                 return ["source_input_mode": mode]
@@ -424,7 +602,7 @@ extension DeckDetailPresenter {
 
         var type: LogType {
             switch self {
-            case .onAddCardFail, .onDeleteCardFail, .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail:
+            case .onAddCardFail, .onDeleteCardFail, .onEditCardSaveFail, .onEditDeckSaveFail, .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail:
                 return .severe
             default:
                 return .analytic

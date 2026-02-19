@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftfulUI
+import PhotosUI
 
 struct DeckDetailDelegate {
     let deck: DeckModel
@@ -25,6 +26,13 @@ struct DeckDetailView: View {
     @State private var showGenerateSheet: Bool = false
     @State private var newQuestion: String = ""
     @State private var newAnswer: String = ""
+
+    // Edit card state
+    @State private var editQuestion: String = ""
+    @State private var editAnswer: String = ""
+
+    // Edit deck state
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         List {
@@ -51,9 +59,15 @@ struct DeckDetailView: View {
         .sheet(isPresented: $showAddCardSheet) {
             addCardSheet
         }
-        .sheet(isPresented: $showGenerateSheet, onDismiss: {}) {
-            GenerateCardsSheet(presenter: presenter)
+        .sheet(item: $presenter.editingFlashcard) { flashcard in
+            editCardSheet(flashcard: flashcard)
         }
+        .sheet(isPresented: $presenter.showEditDeckSheet) {
+            editDeckSheet
+        }
+        .sheet(isPresented: $showGenerateSheet, content: {
+            GenerateCardsSheet(presenter: presenter)
+        })
         .onChange(of: showGenerateSheet) { _, isPresented in
             if isPresented {
                 presenter.onGenerateSheetOpened()
@@ -138,6 +152,7 @@ struct DeckDetailView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(Color.accentColor, lineWidth: 1.5)
                     )
+                    .accessibilityLabel("Add flashcard manually")
                     .anyButton(.press) {
                         showAddCardSheet = true
                     }
@@ -155,6 +170,7 @@ struct DeckDetailView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.accentColor)
                 )
+                .accessibilityLabel("Generate flashcards with AI")
                 .anyButton(.press) {
                     showGenerateSheet = true
                 }
@@ -189,9 +205,15 @@ struct DeckDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .anyButton(.press) {
+            presenter.onEditCardPressed(flashcard: flashcard)
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Question: \(flashcard.question), Answer: \(flashcard.answer)")
+        .accessibilityHint("Tap to edit this card")
     }
 
     // MARK: - Add Menu
@@ -209,9 +231,17 @@ struct DeckDetailView: View {
             } label: {
                 Label("Generate with AI", systemImage: "apple.intelligence")
             }
+
+            Divider()
+
+            Button {
+                presenter.onEditDeckPressed()
+            } label: {
+                Label("Edit Deck", systemImage: "pencil")
+            }
         } label: {
-            Image(systemName: "plus")
-                .accessibilityLabel("Add flashcards")
+            Image(systemName: "ellipsis.circle")
+                .accessibilityLabel("Deck options")
         }
     }
 
@@ -253,6 +283,163 @@ struct DeckDetailView: View {
         newQuestion = ""
         newAnswer = ""
         showAddCardSheet = false
+    }
+
+    // MARK: - Edit Card Sheet
+
+    private func editCardSheet(flashcard: FlashcardModel) -> some View {
+        NavigationStack {
+            Form {
+                Section("Question") {
+                    TextField("Enter question", text: $editQuestion, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+                Section("Answer") {
+                    TextField("Enter answer", text: $editAnswer, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .navigationTitle("Edit Card")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        presenter.onCancelEditCard()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        presenter.onSaveEditedCard(flashcardId: flashcard.flashcardId, question: editQuestion, answer: editAnswer)
+                    }
+                    .disabled(editQuestion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || editAnswer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                editQuestion = flashcard.question
+                editAnswer = flashcard.answer
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    // MARK: - Edit Deck Sheet
+
+    private var editDeckSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Name") {
+                    TextField("Deck name", text: $presenter.editDeckName)
+                }
+
+                Section("Color") {
+                    editDeckColorPicker
+                }
+
+                Section("Cover Image") {
+                    editDeckCoverImagePicker
+                }
+            }
+            .navigationTitle("Edit Deck")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        selectedPhotoItem = nil
+                        presenter.onCancelEditDeck()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        selectedPhotoItem = nil
+                        presenter.onSaveEditedDeck()
+                    }
+                    .disabled(presenter.editDeckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private var editDeckColorPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(DeckColor.allCases, id: \.self) { deckColor in
+                    editDeckColorOption(deckColor)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func editDeckColorOption(_ deckColor: DeckColor) -> some View {
+        let isSelected = presenter.editDeckColor == deckColor
+        return Circle()
+            .fill(deckColor.color)
+            .frame(width: 36, height: 36)
+            .overlay {
+                if isSelected {
+                    Circle()
+                        .strokeBorder(.white, lineWidth: 2.5)
+                    Image(systemName: "checkmark")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                }
+            }
+            .scaleEffect(isSelected ? 1.15 : 1.0)
+            .shadow(color: deckColor.color.opacity(isSelected ? 0.6 : 0.3), radius: isSelected ? 4 : 2, y: 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+            .accessibilityLabel(isSelected ? "\(deckColor.displayName), selected" : deckColor.displayName)
+            .anyButton(.press) {
+                presenter.onEditDeckColorSelected(deckColor)
+            }
+    }
+
+    private var editDeckCoverImagePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let image = presenter.editDeckImage {
+                ZStack(alignment: .topTrailing) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 160)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .black.opacity(0.5))
+                        .padding(8)
+                        .accessibilityLabel("Remove cover image")
+                        .anyButton(.press) {
+                            selectedPhotoItem = nil
+                            presenter.onEditDeckRemoveImage()
+                        }
+                }
+            } else {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                        Text("Add Cover Image")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.ultraThinMaterial)
+                    }
+                }
+                .accessibilityLabel("Select cover image from photos")
+            }
+        }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    presenter.onEditDeckImageDataLoaded(data)
+                }
+            }
+        }
     }
 }
 
