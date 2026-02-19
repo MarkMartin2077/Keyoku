@@ -91,42 +91,27 @@ struct ProfileView: View {
 
     private var studyStatsSection: some View {
         Section {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                statCard(icon: "flame.fill", iconColor: .orange, value: "\(presenter.currentStreak)", label: "Day Streak")
-                statCard(icon: "menucard.fill", iconColor: .blue, value: "\(presenter.totalDecks)", label: "Total Decks")
-                statCard(icon: "rectangle.portrait.on.rectangle.portrait.fill", iconColor: .purple, value: "\(presenter.totalCards)", label: "Total Cards")
-                statCard(icon: "checkmark.circle.fill", iconColor: .green, value: "\(presenter.learnedCards)", label: "Learned")
-            }
-            .padding(.vertical, 4)
-            .removeListRowFormatting()
+            statRow(icon: "flame.fill", iconColor: .orange, label: "Day Streak", value: "\(presenter.currentStreak)")
+            statRow(icon: "menucard.fill", iconColor: .blue, label: "Total Decks", value: "\(presenter.totalDecks)")
+            statRow(icon: "rectangle.portrait.on.rectangle.portrait.fill", iconColor: .purple, label: "Total Cards", value: "\(presenter.totalCards)")
+            statRow(icon: "checkmark.circle.fill", iconColor: .green, label: "Learned", value: "\(presenter.learnedCards)")
         } header: {
             Text("Study Stats")
         }
     }
 
-    private func statCard(icon: String, iconColor: Color, value: String, label: String) -> some View {
-        VStack(spacing: 8) {
+    private func statRow(icon: String, iconColor: Color, label: String, value: String) -> some View {
+        HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.title2)
                 .foregroundStyle(iconColor)
-
-            Text(value)
-                .font(.title)
-                .fontWeight(.bold)
+                .frame(width: 24)
 
             Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(value)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
         }
     }
 
