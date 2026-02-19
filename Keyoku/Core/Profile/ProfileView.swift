@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftfulUI
+import StoreKit
 
 struct ProfileDelegate {
     var eventParameters: [String: Any]? {
@@ -11,6 +12,8 @@ struct ProfileView: View {
 
     @State var presenter: ProfilePresenter
     let delegate: ProfileDelegate
+
+    @State private var showManageSubscription = false
 
     var body: some View {
         List {
@@ -24,6 +27,7 @@ struct ProfileView: View {
                 settingsButton
             }
         }
+        .manageSubscriptionsSheet(isPresented: $showManageSubscription)
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }
@@ -149,6 +153,7 @@ struct ProfileView: View {
             if presenter.isPremium {
                 accountRow(icon: "creditcard", title: "Manage Subscription") {
                     presenter.onManageSubscriptionPressed()
+                    showManageSubscription = true
                 }
             }
 

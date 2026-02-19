@@ -145,9 +145,6 @@ class ProfilePresenter {
 
     func onManageSubscriptionPressed() {
         interactor.trackEvent(event: Event.manageSubscriptionPressed)
-        if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
-            UIApplication.shared.open(url)
-        }
     }
 
     func onCreateAccountPressed() {
