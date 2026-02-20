@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftfulUI
 import PhotosUI
 import UniformTypeIdentifiers
+import FoundationModels
 
 struct CreateDeckDelegate {
 
@@ -24,6 +25,8 @@ struct CreateDeckView: View {
     @State private var showingPDFPicker: Bool = false
     let delegate: CreateDeckDelegate
 
+    private var model: SystemLanguageModel { .default }
+
     var body: some View {
         Form {
             deckPreviewSection
@@ -31,8 +34,17 @@ struct CreateDeckView: View {
             creationModePicker
 
             if presenter.creationMode == .generate {
-                cardAmountSection
-                sourceTextSection
+                if case .available = model.availability {
+                    cardAmountSection
+                    sourceTextSection
+                } else if case .unavailable(let reason) = model.availability {
+                    Section {
+                        AppleIntelligenceUnavailableView(
+                            reason: reason,
+                            onOpenSettings: nil
+                        )
+                    }
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -424,7 +436,9 @@ struct CreateDeckView: View {
     private var bottomActionButton: some View {
         switch presenter.creationMode {
         case .generate:
-            generateButton
+            if case .available = model.availability {
+                generateButton
+            }
         case .empty:
             createEmptyButton
         }

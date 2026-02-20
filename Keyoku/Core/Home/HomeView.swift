@@ -338,28 +338,37 @@ struct HomeView: View {
     // MARK: - Floating Create Button
 
     private var floatingCreateButton: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .font(.headline)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.headline)
 
-            Text("Create New")
-                .font(.headline)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [.accent, .accent.opacity(0.8)],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                Text("Create New")
+                    .font(.headline)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [.accent, .accent.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
-                )
+            }
+
+            if !presenter.isPremium {
+                Text("\(presenter.decks.count) of \(Constants.freeTierDeckLimit) free decks")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.horizontal)
-        .padding(.bottom, 12)
+        .padding(.bottom, 8)
+        .background(.bar)
         .accessibilityHint("Create a new deck")
         .anyButton(.press) {
             presenter.onCreatePressed()

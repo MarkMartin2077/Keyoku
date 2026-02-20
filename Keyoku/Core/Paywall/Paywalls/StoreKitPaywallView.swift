@@ -13,6 +13,8 @@ struct StoreKitPaywallView: View {
     var onInAppPurchaseStart: ((Product) async -> Void)?
     var onInAppPurchaseCompletion: ((Product, Result<Product.PurchaseResult, any Error>) async -> Void)?
 
+    @State private var savingsPercent: Int?
+
     var body: some View {
         SubscriptionStoreView(productIDs: productIds) {
             VStack(spacing: 16) {
@@ -26,9 +28,29 @@ struct StoreKitPaywallView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    featureRow(icon: "infinity", text: "Unlimited decks")
+                    featureRow(icon: "apple.intelligence", text: "AI flashcard generation")
+                    featureRow(icon: "flame.fill", text: "Streak tracking & stats")
+                }
+                .padding(.top, 4)
+
+                if let savingsPercent {
+                    Text("Save \(savingsPercent)% with the yearly plan")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.accentColor))
+                }
             }
             .foregroundStyle(.primary)
             .multilineTextAlignment(.center)
+            .task {
+                await loadSavings()
+            }
             .containerBackground(for: .subscriptionStore) {
                 ZStack {
                     Color(.systemBackground)
@@ -78,6 +100,39 @@ struct StoreKitPaywallView: View {
         .subscriptionStoreControlStyle(.prominentPicker)
         .onInAppPurchaseStart(perform: onInAppPurchaseStart)
         .onInAppPurchaseCompletion(perform: onInAppPurchaseCompletion)
+    }
+
+    // MARK: - Savings Calculation
+
+    private func loadSavings() async {
+        guard let products = try? await Product.products(for: Set(productIds)) else { return }
+
+        let yearly = products.first { $0.subscription?.subscriptionPeriod.unit == .year }
+        let monthly = products.first { $0.subscription?.subscriptionPeriod.unit == .month }
+
+        guard let yearlyPrice = yearly?.price, let monthlyPrice = monthly?.price else { return }
+
+        let monthlyAnnual = monthlyPrice * 12
+        guard monthlyAnnual > yearlyPrice else { return }
+
+        let savings = monthlyAnnual - yearlyPrice
+        let percent = Int(NSDecimalNumber(decimal: savings * 100 / monthlyAnnual).doubleValue.rounded())
+        guard percent > 0 else { return }
+
+        savingsPercent = percent
+    }
+
+    // MARK: - Feature Row
+
+    private func featureRow(icon: String, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(.accent)
+                .frame(width: 20)
+            Text(text)
+                .font(.subheadline)
+        }
     }
 
     // MARK: - Hero Illustration

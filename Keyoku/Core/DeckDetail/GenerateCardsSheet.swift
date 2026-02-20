@@ -9,12 +9,15 @@ import SwiftUI
 import SwiftfulUI
 import Combine
 import UniformTypeIdentifiers
+import FoundationModels
 
 struct GenerateCardsSheet: View {
 
     let presenter: DeckDetailPresenter
     @Environment(\.dismiss) private var dismiss
     @State private var showingPDFPicker: Bool = false
+
+    private var model: SystemLanguageModel { .default }
 
     var body: some View {
         NavigationStack {
@@ -61,15 +64,27 @@ struct GenerateCardsSheet: View {
 
     // MARK: - Form Content
 
+    @ViewBuilder
     private var formContent: some View {
-        Form {
-            sourceTextSection
-            cardAmountSection
-        }
-        .safeAreaInset(edge: .bottom) {
-            generateButton
-                .padding()
-                .background(.bar)
+        if case .unavailable(let reason) = model.availability {
+            Form {
+                Section {
+                    AppleIntelligenceUnavailableView(
+                        reason: reason,
+                        onOpenSettings: nil
+                    )
+                }
+            }
+        } else {
+            Form {
+                sourceTextSection
+                cardAmountSection
+            }
+            .safeAreaInset(edge: .bottom) {
+                generateButton
+                    .padding()
+                    .background(.bar)
+            }
         }
     }
 

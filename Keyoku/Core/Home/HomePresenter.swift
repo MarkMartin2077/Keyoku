@@ -66,8 +66,12 @@ class HomePresenter {
         decks.reduce(0) { $0 + $1.flashcards.count }
     }
 
+    var isPremium: Bool {
+        interactor.isPremium
+    }
+
     var canCreateDeck: Bool {
-        interactor.isPremium || decks.count < Constants.freeTierDeckLimit
+        isPremium || decks.count < Constants.freeTierDeckLimit
     }
 
     init(interactor: HomeInteractor, router: HomeRouter) {
