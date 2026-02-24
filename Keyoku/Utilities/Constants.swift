@@ -15,7 +15,7 @@ struct Constants {
     static let streakKey = "daily" // daily streaks
     static let xpKey = "general" // general XP
     static let progressKey = "general" // general progress
-    static let freeTierDeckLimit = 2
+    static let freeTierDeckLimit = 5
 
     static var mixpanelDistinctId: String? {
         #if MOCK
