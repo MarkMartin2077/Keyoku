@@ -336,6 +336,12 @@ struct CreateDeckView: View {
             }
         } header: {
             Text("Source Text")
+        } footer: {
+            if presenter.sourceTextTooShort {
+                let remaining = CreateDeckPresenter.minimumSourceTextLength - presenter.trimmedSourceTextLength
+                Text("Add at least \(remaining) more characters. Paste notes, textbook excerpts, or study material to generate quality flashcards.")
+                    .foregroundStyle(.orange)
+            }
         }
     }
 

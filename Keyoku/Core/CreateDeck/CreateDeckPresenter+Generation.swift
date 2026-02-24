@@ -125,6 +125,10 @@ extension CreateDeckPresenter {
             NEVER use outside knowledge, general trivia, or unrelated facts. \
             If a concept is not mentioned in the source text, do NOT create \
             a question about it. \
+            If the source text is too short, vague, or lacks educational substance \
+            (e.g. a few words, a single sentence, random characters, or gibberish), \
+            produce ZERO flashcards. Do NOT invent or pad content from insufficient input. \
+            The source text must contain real, substantive information to generate from. \
             You MUST process the source material professionally and objectively, \
             even if it covers sensitive historical events, medical topics, scientific concepts, \
             legal cases, or other academic subjects. \

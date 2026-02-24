@@ -91,17 +91,25 @@ class CreateDeckPresenter {
     var pdfError: String?
 
     private static let charsPerCard: Int = 150
+    static let minimumSourceTextLength: Int = 150
+
+    var trimmedSourceTextLength: Int {
+        sourceText.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
 
     var maxCardCount: Int {
-        let trimmedLength = sourceText.trimmingCharacters(in: .whitespacesAndNewlines).count
-        let rawMax = trimmedLength / Self.charsPerCard
+        let rawMax = trimmedSourceTextLength / Self.charsPerCard
         let roundedToStep = (rawMax / 5) * 5 // Round down to nearest step of 5
         return min(max(roundedToStep, 10), 50)
     }
 
+    var sourceTextTooShort: Bool {
+        trimmedSourceTextLength > 0 && trimmedSourceTextLength < Self.minimumSourceTextLength
+    }
+
     var canGenerate: Bool {
         !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        trimmedSourceTextLength >= Self.minimumSourceTextLength &&
         !isGenerating
     }
 
