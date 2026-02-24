@@ -248,6 +248,10 @@ class PracticePresenter {
                 if updatedStreak > previousStreak {
                     newStreakCount = updatedStreak
                     showStreakCelebration = true
+
+                    if updatedStreak == 3 || updatedStreak == 7 {
+                        AppStoreRatingsHelper.requestReviewIfNeeded()
+                    }
                 }
             } catch {
                 interactor.trackEvent(event: Event.onStreakEventFailed(error: error))

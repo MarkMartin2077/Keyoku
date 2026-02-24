@@ -570,7 +570,7 @@
 				CODE_SIGN_ENTITLEMENTS = Keyoku/SupportingFiles/Keyoku.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"Keyoku/SupportingFiles/Preview Content\"";
@@ -584,6 +584,7 @@
 				INFOPLIST_FILE = Keyoku/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Keyoku;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app needs access to your calendar";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "This app tracks user data to make improvements to user experience.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -601,7 +602,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2;
 				OTHER_SWIFT_FLAGS = "-DMOCK";
 				PRODUCT_BUNDLE_IDENTIFIER = com.markmartin89.Keyoku.mock;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -863,7 +864,7 @@
 				CODE_SIGN_ENTITLEMENTS = Keyoku/SupportingFiles/Keyoku.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"Keyoku/SupportingFiles/Preview Content\"";
@@ -877,6 +878,7 @@
 				INFOPLIST_FILE = Keyoku/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Keyoku;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app needs access to your calendar";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "This app tracks user data to make improvements to user experience.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -894,7 +896,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2;
 				OTHER_SWIFT_FLAGS = "-DDEV";
 				PRODUCT_BUNDLE_IDENTIFIER = com.markmartin89.Keyoku.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -915,7 +917,7 @@
 				CODE_SIGN_ENTITLEMENTS = Keyoku/SupportingFiles/Keyoku.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"Keyoku/SupportingFiles/Preview Content\"";
@@ -929,6 +931,7 @@
 				INFOPLIST_FILE = Keyoku/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Keyoku;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app needs access to your calendar";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "This app tracks user data to make improvements to user experience.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -946,7 +949,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.markmartin89.Keyoku;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

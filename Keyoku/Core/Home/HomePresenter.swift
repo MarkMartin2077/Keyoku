@@ -160,9 +160,15 @@ class HomePresenter {
 
         router.showCreateContentView(onDismiss: { [weak self] in
             guard let self else { return }
+
+            let newDeckCount = interactor.decks.count
+            if newDeckCount > deckCountBefore, newDeckCount >= 3 {
+                AppStoreRatingsHelper.requestReviewIfNeeded()
+            }
+
             guard !hadCreatedFirstDeck,
                   !wasPremium,
-                  interactor.decks.count > deckCountBefore else { return }
+                  newDeckCount > deckCountBefore else { return }
 
             interactor.trackEvent(event: Event.firstDeckPaywallShown)
             Task { @MainActor [weak self] in
