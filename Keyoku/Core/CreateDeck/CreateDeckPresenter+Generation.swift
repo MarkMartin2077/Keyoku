@@ -291,9 +291,8 @@ extension CreateDeckPresenter {
 
             // Reject prompt-leaked cards: the phrase "source text" is specific to our prompt
             // and should never appear in a real educational flashcard.
-            let question = card.question.lowercased()
-            let answer = card.answer.lowercased()
-            if question.contains("source text") || answer.contains("source text") { return false }
+            let lowercasedQuestion = card.question.lowercased()
+            if lowercasedQuestion.contains("source text") || answer.lowercased().contains("source text") { return false }
 
             return true
         }

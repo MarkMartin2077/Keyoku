@@ -251,9 +251,8 @@ extension DeckDetailPresenter {
             let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
             guard answer.count >= Self.minAnswerLength && endsCleanly else { return false }
 
-            let question = card.question.lowercased()
-            let answer = card.answer.lowercased()
-            if question.contains("source text") || answer.contains("source text") { return false }
+            let lowercasedQuestion = card.question.lowercased()
+            if lowercasedQuestion.contains("source text") || answer.lowercased().contains("source text") { return false }
 
             return true
         }
