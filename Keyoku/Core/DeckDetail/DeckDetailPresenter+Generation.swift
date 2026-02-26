@@ -117,7 +117,7 @@ extension DeckDetailPresenter {
     private func looksLikeGibberish(_ text: String) -> Bool {
         let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline })
 
-        if words.count < 5 && text.count > 100 {
+        if words.count < 5 && text.count > 200 {
             return true
         }
 
@@ -128,7 +128,7 @@ extension DeckDetailPresenter {
             return true
         }
 
-        if text.count > 100 {
+        if text.count > 200 {
             let anchors: Set<String> = [
                 "the", "a", "an", "in", "is", "it", "of", "to", "and", "or",
                 "on", "be", "are", "was", "for", "this", "that", "with", "not",
@@ -252,7 +252,8 @@ extension DeckDetailPresenter {
             guard answer.count >= Self.minAnswerLength && endsCleanly else { return false }
 
             let lowercasedQuestion = card.question.lowercased()
-            if lowercasedQuestion.contains("source text") || answer.lowercased().contains("source text") { return false }
+            let leakPhrases = ["source text", "in the text", "the text"]
+            if leakPhrases.contains(where: { lowercasedQuestion.contains($0) }) { return false }
 
             return true
         }

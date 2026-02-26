@@ -91,7 +91,7 @@ class CreateDeckPresenter {
     var pdfError: String?
 
     private static let charsPerCard: Int = 150
-    static let minimumSourceTextLength: Int = 150
+    static let minimumSourceTextLength: Int = 300
 
     var trimmedSourceTextLength: Int {
         sourceText.trimmingCharacters(in: .whitespacesAndNewlines).count

@@ -147,7 +147,7 @@ extension CreateDeckPresenter {
         let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline })
 
         // Long text with almost no word boundaries = one big run of characters = gibberish
-        if words.count < 5 && text.count > 100 {
+        if words.count < 5 && text.count > 200 {
             return true
         }
 
@@ -161,7 +161,7 @@ extension CreateDeckPresenter {
 
         // No common English anchor words in a substantial block of text = likely keyboard mash.
         // Real English prose of 100+ chars almost always contains at least one of these.
-        if text.count > 100 {
+        if text.count > 200 {
             let anchors: Set<String> = [
                 "the", "a", "an", "in", "is", "it", "of", "to", "and", "or",
                 "on", "be", "are", "was", "for", "this", "that", "with", "not",
@@ -289,10 +289,13 @@ extension CreateDeckPresenter {
             let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
             guard answer.count >= Self.minAnswerLength && endsCleanly else { return false }
 
-            // Reject prompt-leaked cards: the phrase "source text" is specific to our prompt
-            // and should never appear in a real educational flashcard.
+            // Reject hallucinated or prompt-leaked cards. Good flashcard questions ask about
+            // a concept directly — they never meta-reference "the text" or "source text".
+            // Any question containing these phrases is the model pretending the source
+            // contains information it doesn't.
             let lowercasedQuestion = card.question.lowercased()
-            if lowercasedQuestion.contains("source text") || answer.lowercased().contains("source text") { return false }
+            let leakPhrases = ["source text", "in the text", "the text"]
+            if leakPhrases.contains(where: { lowercasedQuestion.contains($0) }) { return false }
 
             return true
         }
