@@ -112,6 +112,13 @@ struct GenerateCardsSheet: View {
             case .pdf:
                 pdfUploadContent
             }
+
+            if presenter.sourceTextTooShort {
+                let remaining = DeckDetailPresenter.minimumSourceTextLength - presenter.trimmedSourceTextLength
+                Text("Add at least \(remaining) more characters. Paste notes, textbook excerpts, or study material to generate quality flashcards.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
         } header: {
             Text("Source Text")
         }

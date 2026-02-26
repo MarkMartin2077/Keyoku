@@ -104,16 +104,24 @@ class DeckDetailPresenter {
     var generatedFlashcardCount: Int = 0
 
     private static let charsPerCard: Int = 150
+    static let minimumSourceTextLength: Int = 300
+
+    var trimmedSourceTextLength: Int {
+        sourceText.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+
+    var sourceTextTooShort: Bool {
+        trimmedSourceTextLength > 0 && trimmedSourceTextLength < Self.minimumSourceTextLength
+    }
 
     var maxCardCount: Int {
-        let trimmedLength = sourceText.trimmingCharacters(in: .whitespacesAndNewlines).count
-        let rawMax = trimmedLength / Self.charsPerCard
+        let rawMax = trimmedSourceTextLength / Self.charsPerCard
         let roundedToStep = (rawMax / 5) * 5
         return min(max(roundedToStep, 10), 50)
     }
 
     var canGenerate: Bool {
-        !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        trimmedSourceTextLength >= Self.minimumSourceTextLength &&
         !isGeneratingCards
     }
 
