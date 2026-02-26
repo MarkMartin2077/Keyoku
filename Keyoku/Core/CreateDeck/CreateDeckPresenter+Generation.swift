@@ -141,40 +141,6 @@ extension CreateDeckPresenter {
         return LanguageModelSession(instructions: instructions)
     }
 
-    /// Fast deterministic check for obvious gibberish before hitting the model.
-    /// Returns true if the text looks like gibberish (no spaces, repeated tokens, no real words).
-    private func looksLikeGibberish(_ text: String) -> Bool {
-        let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline })
-
-        // Long text with almost no word boundaries = one big run of characters = gibberish
-        if words.count < 5 && text.count > 200 {
-            return true
-        }
-
-        // Enough tokens but almost all identical = repetitive gibberish
-        let lowercasedWords = words.map { $0.lowercased() }
-        let uniqueWords = Set(lowercasedWords)
-        let uniqueRatio = Double(uniqueWords.count) / Double(max(1, words.count))
-        if words.count >= 5 && uniqueRatio < 0.25 {
-            return true
-        }
-
-        // No common English anchor words in a substantial block of text = likely keyboard mash.
-        // Real English prose of 100+ chars almost always contains at least one of these.
-        if text.count > 200 {
-            let anchors: Set<String> = [
-                "the", "a", "an", "in", "is", "it", "of", "to", "and", "or",
-                "on", "be", "are", "was", "for", "this", "that", "with", "not",
-                "have", "as", "at", "by", "from", "we", "he", "she", "you", "they"
-            ]
-            if uniqueWords.isDisjoint(with: anchors) {
-                return true
-            }
-        }
-
-        return false
-    }
-
     /// Validates a single chunk before generation.
     /// Returns true only if the chunk passes the programmatic gibberish check.
     func validateChunk(_ text: String) -> Bool {

@@ -114,34 +114,6 @@ extension DeckDetailPresenter {
         return LanguageModelSession(instructions: instructions)
     }
 
-    private func looksLikeGibberish(_ text: String) -> Bool {
-        let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline })
-
-        if words.count < 5 && text.count > 200 {
-            return true
-        }
-
-        let lowercasedWords = words.map { $0.lowercased() }
-        let uniqueWords = Set(lowercasedWords)
-        let uniqueRatio = Double(uniqueWords.count) / Double(max(1, words.count))
-        if words.count >= 5 && uniqueRatio < 0.25 {
-            return true
-        }
-
-        if text.count > 200 {
-            let anchors: Set<String> = [
-                "the", "a", "an", "in", "is", "it", "of", "to", "and", "or",
-                "on", "be", "are", "was", "for", "this", "that", "with", "not",
-                "have", "as", "at", "by", "from", "we", "he", "she", "you", "they"
-            ]
-            if uniqueWords.isDisjoint(with: anchors) {
-                return true
-            }
-        }
-
-        return false
-    }
-
     func validateChunk(_ text: String) -> Bool {
         !looksLikeGibberish(text)
     }
