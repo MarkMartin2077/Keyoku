@@ -114,16 +114,24 @@ extension DeckDetailPresenter {
         return LanguageModelSession(instructions: instructions)
     }
 
-    func validateChunk(_ text: String) async -> Bool {
-        let session = makeSession()
-        let prompt = "Identify the main topic of this text in a few words.\n\nText:\n\(text)"
+    private func looksLikeGibberish(_ text: String) -> Bool {
+        let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline })
 
-        do {
-            _ = try await session.respond(to: prompt, generating: TopicCheckResult.self)
+        if words.count < 5 && text.count > 100 {
             return true
-        } catch {
-            return false
         }
+
+        let uniqueWords = Set(words.map { $0.lowercased() })
+        let uniqueRatio = Double(uniqueWords.count) / Double(max(1, words.count))
+        if words.count >= 5 && uniqueRatio < 0.25 {
+            return true
+        }
+
+        return false
+    }
+
+    func validateChunk(_ text: String) -> Bool {
+        !looksLikeGibberish(text)
     }
 }
 
@@ -147,7 +155,7 @@ extension DeckDetailPresenter {
             let batchCards = min(cardsStillNeeded, maxCardsPerBatch)
 
             flashcardStatusText = "Validating..."
-            guard await validateChunk(chunk) else {
+            guard validateChunk(chunk) else {
                 flashcardSkippedBatches += 1
                 flashcardStatusText = "Skipped"
                 continue

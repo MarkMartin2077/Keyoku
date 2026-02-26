@@ -292,6 +292,11 @@ class CreateDeckPresenter {
 
         try await generateFlashcards()
         let flashcards = streamedFlashcards
+
+        guard !flashcards.isEmpty else {
+            throw AppError(String(localized: "No flashcards could be generated from this text. Try pasting actual study material like notes, a textbook excerpt, or an article."))
+        }
+
         generatedFlashcardCount = flashcards.count
         interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
 

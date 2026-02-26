@@ -476,6 +476,11 @@ class DeckDetailPresenter {
     private func performAddGeneration() async throws {
         try await generateFlashcards()
         let newCards = streamedFlashcards
+
+        guard !newCards.isEmpty else {
+            throw AppError(String(localized: "No flashcards could be generated from this text. Try pasting actual study material like notes, a textbook excerpt, or an article."))
+        }
+
         generatedFlashcardCount = newCards.count
         interactor.trackEvent(event: Event.onGenerateCardsSuccess(count: newCards.count))
 

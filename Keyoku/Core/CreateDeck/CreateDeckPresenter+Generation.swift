@@ -141,18 +141,30 @@ extension CreateDeckPresenter {
         return LanguageModelSession(instructions: instructions)
     }
 
-    /// Validates a single chunk by asking the model a minimal question.
-    /// Returns true if the chunk is safe to generate from.
-    func validateChunk(_ text: String) async -> Bool {
-        let session = makeSession()
-        let prompt = "Identify the main topic of this text in a few words.\n\nText:\n\(text)"
+    /// Fast deterministic check for obvious gibberish before hitting the model.
+    /// Returns true if the text looks like gibberish (no spaces, repeated tokens, etc.).
+    private func looksLikeGibberish(_ text: String) -> Bool {
+        let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline })
 
-        do {
-            _ = try await session.respond(to: prompt, generating: TopicCheckResult.self)
+        // Long text with almost no word boundaries = one big run of characters = gibberish
+        if words.count < 5 && text.count > 100 {
             return true
-        } catch {
-            return false
         }
+
+        // Enough tokens but almost all identical = repetitive gibberish
+        let uniqueWords = Set(words.map { $0.lowercased() })
+        let uniqueRatio = Double(uniqueWords.count) / Double(max(1, words.count))
+        if words.count >= 5 && uniqueRatio < 0.25 {
+            return true
+        }
+
+        return false
+    }
+
+    /// Validates a single chunk before generation.
+    /// Returns true only if the chunk passes the programmatic gibberish check.
+    func validateChunk(_ text: String) -> Bool {
+        !looksLikeGibberish(text)
     }
 }
 
@@ -176,7 +188,7 @@ extension CreateDeckPresenter {
             let batchCards = min(cardsStillNeeded, maxCardsPerBatch)
 
             flashcardStatusText = "Validating..."
-            guard await validateChunk(chunk) else {
+            guard validateChunk(chunk) else {
                 flashcardSkippedBatches += 1
                 flashcardStatusText = "Skipped"
                 continue

@@ -21,8 +21,3 @@ struct GeneratedFlashcardBatch {
     let cards: [GeneratedFlashcard]
 }
 
-@Generable
-struct TopicCheckResult {
-    @Guide(description: "The main topic of the text")
-    let topic: String
-}
