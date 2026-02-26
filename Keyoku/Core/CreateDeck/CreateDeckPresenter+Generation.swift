@@ -142,7 +142,7 @@ extension CreateDeckPresenter {
     }
 
     /// Fast deterministic check for obvious gibberish before hitting the model.
-    /// Returns true if the text looks like gibberish (no spaces, repeated tokens, etc.).
+    /// Returns true if the text looks like gibberish (no spaces, repeated tokens, no real words).
     private func looksLikeGibberish(_ text: String) -> Bool {
         let words = text.split(whereSeparator: { $0.isWhitespace || $0.isNewline })
 
@@ -152,10 +152,24 @@ extension CreateDeckPresenter {
         }
 
         // Enough tokens but almost all identical = repetitive gibberish
-        let uniqueWords = Set(words.map { $0.lowercased() })
+        let lowercasedWords = words.map { $0.lowercased() }
+        let uniqueWords = Set(lowercasedWords)
         let uniqueRatio = Double(uniqueWords.count) / Double(max(1, words.count))
         if words.count >= 5 && uniqueRatio < 0.25 {
             return true
+        }
+
+        // No common English anchor words in a substantial block of text = likely keyboard mash.
+        // Real English prose of 100+ chars almost always contains at least one of these.
+        if text.count > 100 {
+            let anchors: Set<String> = [
+                "the", "a", "an", "in", "is", "it", "of", "to", "and", "or",
+                "on", "be", "are", "was", "for", "this", "that", "with", "not",
+                "have", "as", "at", "by", "from", "we", "he", "she", "you", "they"
+            ]
+            if uniqueWords.isDisjoint(with: anchors) {
+                return true
+            }
         }
 
         return false
@@ -273,7 +287,15 @@ extension CreateDeckPresenter {
         let qualityCards = streamedFlashcards.suffix(from: startIndex).filter { card in
             let answer = card.answer.trimmingCharacters(in: .whitespacesAndNewlines)
             let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
-            return answer.count >= Self.minAnswerLength && endsCleanly
+            guard answer.count >= Self.minAnswerLength && endsCleanly else { return false }
+
+            // Reject prompt-leaked cards: the phrase "source text" is specific to our prompt
+            // and should never appear in a real educational flashcard.
+            let q = card.question.lowercased()
+            let a = card.answer.lowercased()
+            if q.contains("source text") || a.contains("source text") { return false }
+
+            return true
         }
         streamedFlashcards = Array(streamedFlashcards.prefix(startIndex)) + Array(qualityCards)
         flashcardItemsGenerated = streamedFlashcards.count

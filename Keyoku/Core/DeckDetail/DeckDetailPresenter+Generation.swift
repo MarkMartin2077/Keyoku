@@ -121,10 +121,22 @@ extension DeckDetailPresenter {
             return true
         }
 
-        let uniqueWords = Set(words.map { $0.lowercased() })
+        let lowercasedWords = words.map { $0.lowercased() }
+        let uniqueWords = Set(lowercasedWords)
         let uniqueRatio = Double(uniqueWords.count) / Double(max(1, words.count))
         if words.count >= 5 && uniqueRatio < 0.25 {
             return true
+        }
+
+        if text.count > 100 {
+            let anchors: Set<String> = [
+                "the", "a", "an", "in", "is", "it", "of", "to", "and", "or",
+                "on", "be", "are", "was", "for", "this", "that", "with", "not",
+                "have", "as", "at", "by", "from", "we", "he", "she", "you", "they"
+            ]
+            if uniqueWords.isDisjoint(with: anchors) {
+                return true
+            }
         }
 
         return false
@@ -237,7 +249,13 @@ extension DeckDetailPresenter {
         let qualityCards = streamedFlashcards.suffix(from: startIndex).filter { card in
             let answer = card.answer.trimmingCharacters(in: .whitespacesAndNewlines)
             let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
-            return answer.count >= Self.minAnswerLength && endsCleanly
+            guard answer.count >= Self.minAnswerLength && endsCleanly else { return false }
+
+            let q = card.question.lowercased()
+            let a = card.answer.lowercased()
+            if q.contains("source text") || a.contains("source text") { return false }
+
+            return true
         }
         streamedFlashcards = Array(streamedFlashcards.prefix(startIndex)) + Array(qualityCards)
         flashcardItemsGenerated = streamedFlashcards.count
