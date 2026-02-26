@@ -10,7 +10,7 @@ import XCTest
 @MainActor
 final class KeyokuSnapshotTestsLaunchTests: XCTestCase {
 
-    override class var runsForEachTargetApplicationUIConfiguration: Bool {
+    override static var runsForEachTargetApplicationUIConfiguration: Bool {
         true
     }
 

@@ -20,4 +20,3 @@ struct GeneratedFlashcardBatch {
     @Guide(description: "Array of generated flashcards")
     let cards: [GeneratedFlashcard]
 }
-
