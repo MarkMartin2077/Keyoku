@@ -80,6 +80,11 @@ class UserManager {
         let uid = try currentUserId()
         try await remote.markFirstDeckCreated(userId: uid)
     }
+
+    func saveSubscriptionStatus(isPremium: Bool, activeSubscription: String?) async throws {
+        let uid = try currentUserId()
+        try await remote.saveSubscriptionStatus(userId: uid, isPremium: isPremium, activeSubscription: activeSubscription)
+    }
     
     func saveUserName(name: String) async throws {
         let uid = try currentUserId()

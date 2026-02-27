@@ -61,6 +61,12 @@ class MockUserService: RemoteUserService {
         currentUser.markDidCreateFirstDeck()
         self.currentUser = currentUser
     }
+
+    func saveSubscriptionStatus(userId: String, isPremium: Bool, activeSubscription: String?) async throws {
+        guard var currentUser else { return }
+        currentUser.updateSubscriptionStatus(isPremium: isPremium, activeSubscription: activeSubscription)
+        self.currentUser = currentUser
+    }
     
     func streamUser(userId: String) -> AsyncThrowingStream<UserModel, any Error> {
         AsyncThrowingStream { continuation in

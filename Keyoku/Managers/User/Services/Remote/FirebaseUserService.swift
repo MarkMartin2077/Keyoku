@@ -61,6 +61,14 @@ struct FirebaseUserService: RemoteUserService {
             UserModel.CodingKeys.didCreateFirstDeck.rawValue: true
         ])
     }
+
+    func saveSubscriptionStatus(userId: String, isPremium: Bool, activeSubscription: String?) async throws {
+        var dict: [String: Any] = [
+            UserModel.CodingKeys.isPremium.rawValue: isPremium
+        ]
+        dict[UserModel.CodingKeys.activeSubscription.rawValue] = activeSubscription as Any
+        try await collection.document(userId).updateData(dict)
+    }
     
     func streamUser(userId: String) -> AsyncThrowingStream<UserModel, Error> {
         collection.streamDocument(id: userId)

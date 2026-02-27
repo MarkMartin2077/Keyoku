@@ -66,7 +66,7 @@ struct Dependencies {
             userManager = UserManager(services: ProductionUserServices(), logManager: logManager)
             abTestManager = ABTestManager(service: LocalABTestService(), logManager: logManager)
             purchaseManager = PurchaseManager(
-                service: StoreKitPurchaseService(), // RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey)
+                service: RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey),
                 logger: logManager
             )
             hapticManager = HapticManager(logger: logManager)
@@ -84,7 +84,7 @@ struct Dependencies {
 
             abTestManager = ABTestManager(service: FirebaseABTestService(), logManager: logManager)
             purchaseManager = PurchaseManager(
-                service: StoreKitPurchaseService(), // RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey)
+                service: RevenueCatPurchaseService(apiKey: Keys.revenueCatAPIKey),
                 logger: logManager
             )
             hapticManager = HapticManager(logger: logManager)

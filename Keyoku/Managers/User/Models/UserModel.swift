@@ -34,7 +34,9 @@ struct UserModel: StringIdentifiable, Codable {
     let fcmToken: String?
     private(set) var didCompleteOnboarding: Bool?
     private(set) var didCreateFirstDeck: Bool?
-    
+    private(set) var isPremium: Bool?
+    private(set) var activeSubscription: String?
+
     init(
         userId: String,
         email: String? = nil,
@@ -53,7 +55,9 @@ struct UserModel: StringIdentifiable, Codable {
         submittedProfileImage: String? = nil,
         fcmToken: String? = nil,
         didCompleteOnboarding: Bool? = nil,
-        didCreateFirstDeck: Bool? = nil
+        didCreateFirstDeck: Bool? = nil,
+        isPremium: Bool? = nil,
+        activeSubscription: String? = nil
     ) {
         self.userId = userId
         self.email = email
@@ -73,6 +77,8 @@ struct UserModel: StringIdentifiable, Codable {
         self.fcmToken = fcmToken
         self.didCompleteOnboarding = didCompleteOnboarding
         self.didCreateFirstDeck = didCreateFirstDeck
+        self.isPremium = isPremium
+        self.activeSubscription = activeSubscription
     }
     
     init(auth: UserAuthInfo, creationVersion: String?) {
@@ -111,6 +117,8 @@ struct UserModel: StringIdentifiable, Codable {
         case fcmToken = "fcm_token"
         case didCompleteOnboarding = "did_complete_onboarding"
         case didCreateFirstDeck = "did_create_first_deck"
+        case isPremium = "is_premium"
+        case activeSubscription = "active_subscription"
     }
     
     var eventParameters: [String: Any] {
@@ -134,7 +142,9 @@ struct UserModel: StringIdentifiable, Codable {
             "user_\(CodingKeys.submittedProfileImage.rawValue)": submittedProfileImage,
             "user_has_\(CodingKeys.fcmToken.rawValue)": (fcmToken?.count ?? 0) > 0,
             "user_\(CodingKeys.didCompleteOnboarding.rawValue)": didCompleteOnboarding,
-            "user_\(CodingKeys.didCreateFirstDeck.rawValue)": didCreateFirstDeck
+            "user_\(CodingKeys.didCreateFirstDeck.rawValue)": didCreateFirstDeck,
+            "user_\(CodingKeys.isPremium.rawValue)": isPremium,
+            "user_\(CodingKeys.activeSubscription.rawValue)": activeSubscription
         ]
         return dict.compactMapValues({ $0 })
     }
@@ -213,6 +223,11 @@ struct UserModel: StringIdentifiable, Codable {
 
     mutating func markDidCreateFirstDeck() {
         didCreateFirstDeck = true
+    }
+
+    mutating func updateSubscriptionStatus(isPremium: Bool, activeSubscription: String?) {
+        self.isPremium = isPremium
+        self.activeSubscription = activeSubscription
     }
     
     static var mock: Self {

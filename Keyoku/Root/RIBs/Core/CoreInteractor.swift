@@ -187,7 +187,9 @@ struct CoreInteractor: GlobalInteractor {
     }
     
     func restorePurchase() async throws -> [PurchasedEntitlement] {
-        try await purchaseManager.restorePurchase()
+        let entitlements = try await purchaseManager.restorePurchase()
+        await syncSubscriptionStatus()
+        return entitlements
     }
     
     func purchaseProduct(productId: String) async throws -> [PurchasedEntitlement] {
@@ -324,6 +326,13 @@ struct CoreInteractor: GlobalInteractor {
 
     // MARK: SHARED
 
+    private func syncSubscriptionStatus() async {
+        let activeEntitlement = purchaseManager.entitlements.first(where: { $0.isActive })
+        let isPremium = activeEntitlement != nil
+        let activeSubscription = activeEntitlement?.productId
+        try? await userManager.saveSubscriptionStatus(isPremium: isPremium, activeSubscription: activeSubscription)
+    }
+
     func logIn(user: UserAuthInfo, isNewUser: Bool) async throws {
         // Run all logins in parallel
         async let userLogin: Void = userManager.logIn(auth: user, isNewUser: isNewUser)
@@ -342,6 +351,9 @@ struct CoreInteractor: GlobalInteractor {
 
         // Add user properties
         logManager.addUserProperties(dict: Utilities.eventParameters, isHighPriority: false)
+
+        // Sync subscription status to Firestore
+        await syncSubscriptionStatus()
 
         // Index all content for Spotlight search
         spotlightManager.indexAllContent(decks: flashcardManager.decks)
