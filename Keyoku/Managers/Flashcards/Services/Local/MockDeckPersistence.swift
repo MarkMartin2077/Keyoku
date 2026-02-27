@@ -48,11 +48,12 @@ class MockDeckPersistence: DeckService {
             sourceText: deck.sourceText,
             createdAt: deck.createdAt,
             flashcards: deck.flashcards + [flashcard],
-            clickCount: deck.clickCount
+            clickCount: deck.clickCount,
+            lastStudiedAt: deck.lastStudiedAt
         )
         decks[index] = updatedDeck
     }
-    
+
     func deleteFlashcard(id: String) throws {
         for (deckIndex, deck) in decks.enumerated() where deck.flashcards.contains(where: { $0.flashcardId == id }) {
             let updatedDeck = DeckModel(
@@ -62,7 +63,8 @@ class MockDeckPersistence: DeckService {
                 sourceText: deck.sourceText,
                 createdAt: deck.createdAt,
                 flashcards: deck.flashcards.filter { $0.flashcardId != id },
-                clickCount: deck.clickCount
+                clickCount: deck.clickCount,
+                lastStudiedAt: deck.lastStudiedAt
             )
             decks[deckIndex] = updatedDeck
             return

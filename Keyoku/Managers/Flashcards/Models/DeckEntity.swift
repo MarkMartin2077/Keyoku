@@ -17,6 +17,7 @@ class DeckEntity {
     var sourceText: String = ""
     var createdAt: Date = Date.now
     var clickCount: Int = 0
+    var lastStudiedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \FlashcardEntity.deck)
     var flashcards: [FlashcardEntity] = []
@@ -26,7 +27,7 @@ class DeckEntity {
         set { colorRaw = newValue.rawValue }
     }
 
-    init(id: String = UUID().uuidString, name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, createdAt: Date = .now, clickCount: Int = 0) {
+    init(id: String = UUID().uuidString, name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, createdAt: Date = .now, clickCount: Int = 0, lastStudiedAt: Date? = nil) {
         self.id = id
         self.name = name
         self.colorRaw = color.rawValue
@@ -34,10 +35,11 @@ class DeckEntity {
         self.sourceText = sourceText
         self.createdAt = createdAt
         self.clickCount = clickCount
+        self.lastStudiedAt = lastStudiedAt
     }
 
     convenience init(from model: DeckModel) {
-        self.init(id: model.deckId, name: model.name, color: model.color, imageUrl: model.imageUrl, sourceText: model.sourceText, createdAt: model.createdAt, clickCount: model.clickCount)
+        self.init(id: model.deckId, name: model.name, color: model.color, imageUrl: model.imageUrl, sourceText: model.sourceText, createdAt: model.createdAt, clickCount: model.clickCount, lastStudiedAt: model.lastStudiedAt)
         self.flashcards = model.flashcards.map { flashcard in
             let entity = FlashcardEntity(from: flashcard)
             entity.deck = self
@@ -54,7 +56,8 @@ class DeckEntity {
             sourceText: sourceText,
             createdAt: createdAt,
             flashcards: flashcards.map { $0.toModel() },
-            clickCount: clickCount
+            clickCount: clickCount,
+            lastStudiedAt: lastStudiedAt
         )
     }
 }

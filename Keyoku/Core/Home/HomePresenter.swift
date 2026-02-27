@@ -45,12 +45,12 @@ class HomePresenter {
     var studiedDecks: [DeckModel] {
         decks
             .filter { deck in
-                deck.clickCount > 0 && deck.flashcards.contains(where: { !$0.isLearned })
+                deck.lastStudiedAt != nil && deck.flashcards.contains(where: { !$0.isLearned })
             }
             .sorted { lhs, rhs in
-                let lhsUnlearned = lhs.flashcards.filter { !$0.isLearned }.count
-                let rhsUnlearned = rhs.flashcards.filter { !$0.isLearned }.count
-                return lhsUnlearned > rhsUnlearned
+                let lDate = lhs.lastStudiedAt ?? .distantPast
+                let rDate = rhs.lastStudiedAt ?? .distantPast
+                return lDate > rDate
             }
     }
 
@@ -133,7 +133,8 @@ class HomePresenter {
                 sourceText: latest.sourceText,
                 createdAt: latest.createdAt,
                 flashcards: latest.flashcards,
-                clickCount: latest.clickCount + 1
+                clickCount: latest.clickCount + 1,
+                lastStudiedAt: latest.lastStudiedAt
             )
             try? interactor.updateDeck(updated)
         }

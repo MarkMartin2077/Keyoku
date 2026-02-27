@@ -158,6 +158,20 @@ class DeckDetailPresenter {
     func onPracticePressed() {
         guard let deck = deck else { return }
         interactor.trackEvent(event: Event.onPracticePressed)
+
+        let stamped = DeckModel(
+            deckId: deck.deckId,
+            name: deck.name,
+            color: deck.color,
+            imageUrl: deck.imageUrl,
+            sourceText: deck.sourceText,
+            createdAt: deck.createdAt,
+            flashcards: deck.flashcards,
+            clickCount: deck.clickCount,
+            lastStudiedAt: Date()
+        )
+        try? interactor.updateDeck(stamped)
+
         router.showPracticeView(deck: deck)
     }
 
@@ -183,7 +197,8 @@ class DeckDetailPresenter {
             sourceText: currentDeck.sourceText,
             createdAt: currentDeck.createdAt,
             flashcards: resetFlashcards,
-            clickCount: currentDeck.clickCount
+            clickCount: currentDeck.clickCount,
+            lastStudiedAt: currentDeck.lastStudiedAt
         )
 
         do {
@@ -262,7 +277,8 @@ class DeckDetailPresenter {
             sourceText: currentDeck.sourceText,
             createdAt: currentDeck.createdAt,
             flashcards: updatedFlashcards,
-            clickCount: currentDeck.clickCount
+            clickCount: currentDeck.clickCount,
+            lastStudiedAt: currentDeck.lastStudiedAt
         )
 
         do {
@@ -345,7 +361,8 @@ class DeckDetailPresenter {
             sourceText: currentDeck.sourceText,
             createdAt: currentDeck.createdAt,
             flashcards: currentDeck.flashcards,
-            clickCount: currentDeck.clickCount
+            clickCount: currentDeck.clickCount,
+            lastStudiedAt: currentDeck.lastStudiedAt
         )
 
         do {
@@ -508,7 +525,8 @@ class DeckDetailPresenter {
             sourceText: updatedSourceText,
             createdAt: currentDeck.createdAt,
             flashcards: currentDeck.flashcards + flashcardsWithDeckId,
-            clickCount: currentDeck.clickCount
+            clickCount: currentDeck.clickCount,
+            lastStudiedAt: currentDeck.lastStudiedAt
         )
 
         try interactor.updateDeck(updatedDeck)

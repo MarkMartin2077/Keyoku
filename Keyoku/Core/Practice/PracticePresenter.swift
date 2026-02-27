@@ -222,7 +222,8 @@ class PracticePresenter {
             sourceText: deck.sourceText,
             createdAt: deck.createdAt,
             flashcards: updatedFlashcards,
-            clickCount: deck.clickCount
+            clickCount: deck.clickCount,
+            lastStudiedAt: deck.lastStudiedAt
         )
 
         do {

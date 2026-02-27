@@ -21,6 +21,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     let createdAt: Date
     let flashcards: [FlashcardModel]
     let clickCount: Int
+    let lastStudiedAt: Date?
 
     init(
         deckId: String = UUID().uuidString,
@@ -30,7 +31,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         sourceText: String,
         createdAt: Date = .now,
         flashcards: [FlashcardModel] = [],
-        clickCount: Int = 0
+        clickCount: Int = 0,
+        lastStudiedAt: Date? = nil
     ) {
         self.deckId = deckId
         self.name = name
@@ -40,6 +42,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         self.createdAt = createdAt
         self.flashcards = flashcards
         self.clickCount = clickCount
+        self.lastStudiedAt = lastStudiedAt
     }
 
     init(entity: DeckEntity) {
@@ -51,6 +54,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         self.createdAt = entity.createdAt
         self.flashcards = entity.flashcards.map { FlashcardModel(entity: $0) }
         self.clickCount = entity.clickCount
+        self.lastStudiedAt = entity.lastStudiedAt
     }
     
     mutating func updateDeckImage(imageName: String) {
@@ -66,6 +70,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         case createdAt = "created_at"
         case flashcards
         case clickCount = "click_count"
+        case lastStudiedAt = "last_studied_at"
     }
 
     var eventParameters: [String: Any] {
@@ -77,7 +82,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
             "deck_\(CodingKeys.sourceText.rawValue)": sourceText,
             "deck_\(CodingKeys.createdAt.rawValue)": createdAt,
             "deck_flashcard_count": flashcards.count,
-            "deck_\(CodingKeys.clickCount.rawValue)": clickCount
+            "deck_\(CodingKeys.clickCount.rawValue)": clickCount,
+            "deck_\(CodingKeys.lastStudiedAt.rawValue)": lastStudiedAt
         ]
         return dict.compactMapValues({ $0 })
     }
@@ -97,7 +103,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
     }
 
     func toEntity() -> DeckEntity {
-        let entity = DeckEntity(id: deckId, name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, createdAt: createdAt, clickCount: clickCount)
+        let entity = DeckEntity(id: deckId, name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, createdAt: createdAt, clickCount: clickCount, lastStudiedAt: lastStudiedAt)
         entity.flashcards = flashcards.map { flashcard in
             let flashcardEntity = flashcard.toEntity()
             flashcardEntity.deck = entity
@@ -121,7 +127,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
                 sourceText: "Core Spanish vocabulary, grammar, and conversational phrases for beginners",
                 createdAt: now,
                 flashcards: allCards.filter { $0.deckId == "deck1" },
-                clickCount: 5
+                clickCount: 5,
+                lastStudiedAt: now.addingTimeInterval(-3600)
             ),
             DeckModel(
                 deckId: "deck2",
@@ -139,7 +146,8 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
                 sourceText: "Major historical events, causes, and their lasting impact on civilization",
                 createdAt: now.addingTimeInterval(-172800),
                 flashcards: allCards.filter { $0.deckId == "deck3" },
-                clickCount: 8
+                clickCount: 8,
+                lastStudiedAt: now.addingTimeInterval(-86400)
             ),
             DeckModel(
                 deckId: "deck4",

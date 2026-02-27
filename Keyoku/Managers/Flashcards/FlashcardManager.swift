@@ -286,7 +286,8 @@ class FlashcardManager {
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
                     flashcards: deck.flashcards + [flashcard],
-                    clickCount: deck.clickCount
+                    clickCount: deck.clickCount,
+                    lastStudiedAt: deck.lastStudiedAt
                 )
                 decks[deckIndex] = updatedDeck
                 pushDeckToRemote(updatedDeck)
@@ -325,7 +326,8 @@ class FlashcardManager {
                     sourceText: deck.sourceText,
                     createdAt: deck.createdAt,
                     flashcards: deck.flashcards.filter { $0.flashcardId != id },
-                    clickCount: deck.clickCount
+                    clickCount: deck.clickCount,
+                    lastStudiedAt: deck.lastStudiedAt
                 )
                 decks[deckIndex] = updatedDeck
                 pushDeckToRemote(updatedDeck)
