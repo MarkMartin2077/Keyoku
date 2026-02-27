@@ -21,6 +21,7 @@ class PaywallPresenter {
 
     private(set) var products: [AnyProduct] = []
     private(set) var productIds: [String] = EntitlementOption.allProductIds
+    private(set) var isProcessingPurchase: Bool = false
     
     init(interactor: PaywallInteractor, router: PaywallRouter) {
         self.interactor = interactor
@@ -103,7 +104,12 @@ class PaywallPresenter {
             switch value {
             case .success:
                 interactor.trackEvent(event: Event.purchaseSuccess(product: product))
-                router.dismissScreen()
+                isProcessingPurchase = true
+                Task {
+                    _ = try? await interactor.restorePurchase()
+                    isProcessingPurchase = false
+                    router.dismissScreen()
+                }
             case .pending:
                 interactor.trackEvent(event: Event.purchasePending(product: product))
             case .userCancelled:

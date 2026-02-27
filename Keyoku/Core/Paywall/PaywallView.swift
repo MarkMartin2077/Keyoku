@@ -29,6 +29,10 @@ struct PaywallView: View {
         ZStack {
             storeKitPaywall
             // customPaywall
+
+            if presenter.isProcessingPurchase {
+                purchaseProcessingOverlay
+            }
         }
         .task {
             await presenter.onLoadProducts()
@@ -38,6 +42,27 @@ struct PaywallView: View {
         }
         .onDisappear {
             presenter.onViewDisappear(delegate: delegate)
+        }
+    }
+
+    private var purchaseProcessingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .tint(.white)
+                    .scaleEffect(1.4)
+
+                Text("Processing purchase...")
+                    .foregroundStyle(.white)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            .padding(32)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
         }
     }
     
