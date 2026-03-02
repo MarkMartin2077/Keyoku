@@ -146,7 +146,35 @@ struct CoreInteractor: GlobalInteractor {
         let current = UserDefaults.standard.integer(forKey: "rating_sessions_since_prompt")
         UserDefaults.standard.set(current + 1, forKey: "rating_sessions_since_prompt")
     }
-    
+
+    // MARK: Paywall Cadence
+
+    var paywallLastShownDate: Date? {
+        let interval = UserDefaults.standard.double(forKey: "paywall_last_shown_date")
+        guard interval > 0 else { return nil }
+        return Date(timeIntervalSince1970: interval)
+    }
+
+    var sessionsSinceLastPaywall: Int {
+        UserDefaults.standard.integer(forKey: "sessions_since_last_paywall")
+    }
+
+    var paywallNonContextualShowCount: Int {
+        UserDefaults.standard.integer(forKey: "paywall_non_contextual_show_count")
+    }
+
+    func recordPaywallShown() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "paywall_last_shown_date")
+        UserDefaults.standard.set(0, forKey: "sessions_since_last_paywall")
+        let current = UserDefaults.standard.integer(forKey: "paywall_non_contextual_show_count")
+        UserDefaults.standard.set(current + 1, forKey: "paywall_non_contextual_show_count")
+    }
+
+    func incrementSessionsSinceLastPaywall() {
+        let current = UserDefaults.standard.integer(forKey: "sessions_since_last_paywall")
+        UserDefaults.standard.set(current + 1, forKey: "sessions_since_last_paywall")
+    }
+
     func saveUserName(name: String) async throws {
         try await userManager.saveUserName(name: name)
     }

@@ -24,6 +24,13 @@ protocol PracticeInteractor: GlobalInteractor {
     var sessionsSinceLastRatingPrompt: Int { get }
     func incrementSessionsSinceLastRatingPrompt()
     func schedulePushNotificationsForTheNextWeek(dueCount: Int, stillLearningCount: Int)
+
+    // Paywall cadence
+    var paywallLastShownDate: Date? { get }
+    var sessionsSinceLastPaywall: Int { get }
+    var paywallNonContextualShowCount: Int { get }
+    func recordPaywallShown()
+    func incrementSessionsSinceLastPaywall()
 }
 
 extension CoreInteractor: PracticeInteractor { }

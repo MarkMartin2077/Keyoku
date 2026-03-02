@@ -22,6 +22,7 @@ struct DeckDetailView: View {
     @State var presenter: DeckDetailPresenter
     let delegate: DeckDetailDelegate
 
+    @AppStorage("hasSeenSRSExplanation") private var hasSeenSRSExplanation: Bool = false
     @State private var showAddCardSheet: Bool = false
     @State private var showGenerateSheet: Bool = false
     @State private var showSessionSetup: Bool = false
@@ -170,6 +171,12 @@ struct DeckDetailView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Review only cards scheduled for today")
+
+                if !hasSeenSRSExplanation {
+                    SRSExplanationBannerView {
+                        hasSeenSRSExplanation = true
+                    }
+                }
             }
         }
     }
@@ -265,13 +272,13 @@ struct DeckDetailView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 6) {
+            VStack(alignment: .trailing, spacing: 4) {
                 cardStatusBadge(for: flashcard)
 
                 if flashcard.isLearned {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                        .font(.body)
+                        .font(.caption)
                         .accessibilityHidden(true)
                 }
             }
@@ -297,7 +304,7 @@ struct DeckDetailView: View {
             if dueDate <= Date() {
                 Image(systemName: "clock.badge.exclamationmark.fill")
                     .foregroundStyle(.orange)
-                    .font(.subheadline)
+                    .font(.caption)
                     .accessibilityHidden(true)
             } else {
                 let todayStart = Calendar.current.startOfDay(for: .now)

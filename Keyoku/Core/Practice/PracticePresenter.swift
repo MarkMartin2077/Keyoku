@@ -164,6 +164,7 @@ class PracticePresenter {
             recordStreakEvent()
             interactor.incrementSessionCount()
             interactor.incrementSessionsSinceLastRatingPrompt()
+            interactor.incrementSessionsSinceLastPaywall()
             checkAndSetRatingPrompt()
             showSessionMilestoneUpsellIfNeeded()
         }
@@ -263,18 +264,40 @@ class PracticePresenter {
     // MARK: - Premium Prompt
 
     private func showSessionMilestoneUpsellIfNeeded() {
-        guard !interactor.isPremium, interactor.completedSessionCount == 5 else { return }
+        guard !interactor.isPremium else { return }
 
+        let count = interactor.completedSessionCount
+
+        // Cap at 4 non-contextual shows total
+        guard interactor.paywallNonContextualShowCount < 4 else { return }
+
+        // First show fires exactly at session 5
+        if count == 5 {
+            showSessionMilestoneUpsell()
+            return
+        }
+
+        // Subsequent shows: 14+ days AND 3+ sessions since the last paywall shown
+        guard count > 5, let lastDate = interactor.paywallLastShownDate else { return }
+        let days = Calendar.current.dateComponents([.day], from: lastDate, to: Date()).day ?? 0
+        guard days >= 14, interactor.sessionsSinceLastPaywall >= 3 else { return }
+
+        showSessionMilestoneUpsell()
+    }
+
+    private func showSessionMilestoneUpsell() {
         interactor.trackEvent(event: Event.sessionMilestoneUpsellShown)
         router.showFirstDeckPremiumPromptModal(
             onSeeOfferPressed: { [weak self] in
                 self?.router.dismissModal()
                 self?.interactor.trackEvent(event: Event.sessionMilestoneUpsellAccepted)
+                self?.interactor.recordPaywallShown()
                 self?.router.showPaywallView(delegate: PaywallDelegate(source: "fifth_session_complete"))
             },
             onDismissPressed: { [weak self] in
                 self?.router.dismissModal()
                 self?.interactor.trackEvent(event: Event.sessionMilestoneUpsellDismissed)
+                self?.interactor.recordPaywallShown()
             }
         )
     }
