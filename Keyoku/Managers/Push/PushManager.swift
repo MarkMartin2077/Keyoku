@@ -72,7 +72,7 @@ class PushManager {
         let action: String
     }
 
-    private struct MessageTemplate {
+    private struct MessageTemplate { 
         let title: String
         let subtitle: String
         let action: String
