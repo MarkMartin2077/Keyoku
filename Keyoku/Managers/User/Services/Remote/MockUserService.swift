@@ -62,6 +62,15 @@ class MockUserService: RemoteUserService {
         self.currentUser = currentUser
     }
 
+    func markFirstPracticeCompleted(userId: String) async throws {
+        guard var currentUser else {
+            throw URLError(.unknown)
+        }
+
+        currentUser.markDidCompleteFirstPractice()
+        self.currentUser = currentUser
+    }
+
     func saveSubscriptionStatus(userId: String, isPremium: Bool, activeSubscription: String?) async throws {
         guard var currentUser else { return }
         currentUser.updateSubscriptionStatus(isPremium: isPremium, activeSubscription: activeSubscription)

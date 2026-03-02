@@ -10,6 +10,7 @@ import SwiftUI
 @MainActor
 protocol DeckDetailRouter: GlobalRouter {
     func showPracticeView(deck: DeckModel)
+    func showReviewDueView(deck: DeckModel)
 }
 
 extension CoreRouter: DeckDetailRouter { }

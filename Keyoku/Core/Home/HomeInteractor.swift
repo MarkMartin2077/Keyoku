@@ -8,7 +8,7 @@ protocol HomeInteractor: GlobalInteractor {
     func getDeck(id: String) -> DeckModel?
     func updateDeck(_ deck: DeckModel) throws
 
-    func schedulePushNotificationsForTheNextWeek()
+    func schedulePushNotificationsForTheNextWeek(dueCount: Int, stillLearningCount: Int)
     func requestPushAuthorization() async throws -> Bool
 
     func canRequestPushAuthorization() async -> Bool
@@ -21,9 +21,13 @@ protocol HomeInteractor: GlobalInteractor {
 
     // Purchases
     var isPremium: Bool { get }
+    var freeTierDeckLimit: Int { get }
 
     // Streaks
     var currentStreakData: CurrentStreakData { get }
+
+    // A/B Tests
+    var homePracticeLayout: HomePracticeLayoutOption { get }
 }
 
 extension CoreInteractor: HomeInteractor { }

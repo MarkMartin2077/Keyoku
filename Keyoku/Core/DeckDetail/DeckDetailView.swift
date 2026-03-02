@@ -33,6 +33,7 @@ struct DeckDetailView: View {
 
     // Edit deck state
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showImageLoadError: Bool = false
 
     var body: some View {
         List {
@@ -124,6 +125,36 @@ struct DeckDetailView: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Start studying all cards in this deck")
+
+            if presenter.hasDueReview {
+                Button {
+                    presenter.onReviewDuePressed()
+                } label: {
+                    HStack {
+                        Image(systemName: "clock.badge.checkmark")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Review Due")
+                                .font(.headline)
+                            Text("\(presenter.dueCount) card\(presenter.dueCount == 1 ? "" : "s") due now")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Review only cards scheduled for today")
+            }
         }
     }
 
@@ -379,7 +410,7 @@ struct DeckDetailView: View {
     private var editDeckColorPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(DeckColor.allCases, id: \.self) { deckColor in
+                ForEach(DeckColor.pickerColors, id: \.self) { deckColor in
                     editDeckColorOption(deckColor)
                 }
             }
@@ -454,8 +485,17 @@ struct DeckDetailView: View {
             Task {
                 if let data = try? await newItem.loadTransferable(type: Data.self) {
                     presenter.onEditDeckImageDataLoaded(data)
+                    return
                 }
+                // Loading failed — photo is likely iCloud-only and not cached on device.
+                selectedPhotoItem = nil
+                showImageLoadError = true
             }
+        }
+        .alert("Couldn't Load Photo", isPresented: $showImageLoadError) {
+            Button("OK") { }
+        } message: {
+            Text("This photo couldn't be loaded. If it's stored in iCloud, open the Photos app and download it to your device first, then try again.")
         }
     }
 }

@@ -23,6 +23,7 @@ struct CreateDeckView: View {
     @State var presenter: CreateDeckPresenter
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showingPDFPicker: Bool = false
+    @State private var showImageLoadError: Bool = false
     let delegate: CreateDeckDelegate
 
     private var model: SystemLanguageModel { .default }
@@ -43,6 +44,8 @@ struct CreateDeckView: View {
                             reason: reason,
                             onOpenSettings: nil
                         )
+                    } footer: {
+                        Text("You can still create a deck and add cards manually using the Start Empty tab.")
                     }
                 }
             }
@@ -199,6 +202,10 @@ struct CreateDeckView: View {
                 }
             }
             .pickerStyle(.segmented)
+        } footer: {
+            if presenter.creationMode == .empty {
+                Text("Create the deck first, then add flashcards one by one from the deck detail screen.")
+            }
         }
     }
     
@@ -224,22 +231,21 @@ struct CreateDeckView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(DeckColor.allCases, id: \.self) { deckColor in
-                        colorOption(deckColor)
-                    }
+            HStack(spacing: 0) {
+                ForEach(DeckColor.pickerColors, id: \.self) { deckColor in
+                    colorOption(deckColor)
+                        .frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 4)
             }
+            .padding(.vertical, 4)
         }
     }
-    
+
     private func colorOption(_ deckColor: DeckColor) -> some View {
         let isSelected = presenter.selectedColor == deckColor
         return Circle()
             .fill(deckColor.color)
-            .frame(width: 36, height: 36)
+            .frame(width: 30, height: 30)
             .overlay {
                 if isSelected {
                     Circle()
@@ -308,8 +314,17 @@ struct CreateDeckView: View {
             Task {
                 if let data = try? await newItem.loadTransferable(type: Data.self) {
                     presenter.onImageDataLoaded(data)
+                    return
                 }
+                // Loading failed — photo is likely iCloud-only and not cached on device.
+                selectedPhotoItem = nil
+                showImageLoadError = true
             }
+        }
+        .alert("Couldn't Load Photo", isPresented: $showImageLoadError) {
+            Button("OK") { }
+        } message: {
+            Text("This photo couldn't be loaded. If it's stored in iCloud, open the Photos app and download it to your device first, then try again.")
         }
     }
 
@@ -444,6 +459,8 @@ struct CreateDeckView: View {
         case .generate:
             if case .available = model.availability {
                 generateButton
+            } else {
+                createEmptyButton
             }
         case .empty:
             createEmptyButton

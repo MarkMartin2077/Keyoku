@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PDFKit
 
 /// Deck detail presenter that manages a single deck's flashcards, metadata, and AI generation.
 ///
@@ -29,7 +28,7 @@ class DeckDetailPresenter {
     }
 
     let interactor: DeckDetailInteractor
-    private let router: DeckDetailRouter
+    let router: DeckDetailRouter
     let deckId: String
 
     private let _initialDeckName: String
@@ -68,6 +67,21 @@ class DeckDetailPresenter {
             return "\(learnedCount) learned \u{00B7} \(stillStudyingCount) to study"
         }
         return "Study all \(flashcards.count) cards"
+    }
+
+    var dueCount: Int {
+        flashcards.filter { card in
+            guard let dueDate = card.dueDate else { return false }
+            return dueDate <= Date()
+        }.count
+    }
+
+    var hasSRSData: Bool {
+        flashcards.contains { $0.dueDate != nil }
+    }
+
+    var hasDueReview: Bool {
+        hasSRSData && dueCount > 0
     }
 
     // MARK: - Edit Card State
@@ -175,6 +189,26 @@ class DeckDetailPresenter {
         router.showPracticeView(deck: deck)
     }
 
+    func onReviewDuePressed() {
+        guard let deck = deck else { return }
+        interactor.trackEvent(event: Event.onReviewDuePressed(dueCount: dueCount))
+
+        let stamped = DeckModel(
+            deckId: deck.deckId,
+            name: deck.name,
+            color: deck.color,
+            imageUrl: deck.imageUrl,
+            sourceText: deck.sourceText,
+            createdAt: deck.createdAt,
+            flashcards: deck.flashcards,
+            clickCount: deck.clickCount,
+            lastStudiedAt: Date()
+        )
+        try? interactor.updateDeck(stamped)
+
+        router.showReviewDueView(deck: deck)
+    }
+
     func onResetLearnedStatus() {
         interactor.trackEvent(event: Event.onResetLearnedStatus)
         guard let currentDeck = deck else { return }
@@ -264,7 +298,7 @@ class DeckDetailPresenter {
 
         let updatedFlashcards = currentDeck.flashcards.map { card in
             if card.flashcardId == flashcardId {
-                return FlashcardModel(flashcardId: flashcardId, question: trimmedQuestion, answer: trimmedAnswer, deckId: currentDeck.deckId, isLearned: card.isLearned)
+                return FlashcardModel(flashcardId: flashcardId, question: trimmedQuestion, answer: trimmedAnswer, deckId: currentDeck.deckId, isLearned: card.isLearned, stillLearningCount: card.stillLearningCount)
             }
             return card
         }
@@ -379,334 +413,4 @@ class DeckDetailPresenter {
         interactor.trackEvent(event: Event.onEditDeckCancelled)
         showEditDeckSheet = false
     }
-
-    // MARK: - Generation Actions
-
-    func onGenerateSheetOpened() {
-        interactor.trackEvent(event: Event.onGenerateSheetOpened)
-        resetGenerationState()
-        sourceText = ""
-        sourceInputMode = .text
-        pdfFileName = nil
-        pdfPageCount = nil
-        pdfError = nil
-        cardCount = 10
-    }
-
-    func onSourceInputModeChanged(_ mode: SourceInputMode) {
-        interactor.trackEvent(event: Event.onSourceInputModeChanged(mode: mode.rawValue))
-        sourceInputMode = mode
-        pdfError = nil
-
-        if mode == .text {
-            pdfFileName = nil
-            pdfPageCount = nil
-            sourceText = ""
-        }
-    }
-
-    func onPDFFileSelected(result: Result<URL, Error>) {
-        pdfError = nil
-
-        switch result {
-        case .success(let url):
-            let fileName = url.lastPathComponent
-            interactor.trackEvent(event: Event.onPDFFileSelected(fileName: fileName))
-            isExtractingPDF = true
-
-            do {
-                let text = try extractText(from: url)
-                sourceText = text
-                pdfFileName = fileName
-                isExtractingPDF = false
-                interactor.trackEvent(event: Event.onPDFExtractSuccess(fileName: fileName, pageCount: pdfPageCount ?? 0, textLength: text.count))
-            } catch {
-                isExtractingPDF = false
-                pdfError = error.localizedDescription
-                interactor.trackEvent(event: Event.onPDFExtractFail(error: error))
-            }
-
-        case .failure(let error):
-            pdfError = error.localizedDescription
-            interactor.trackEvent(event: Event.onPDFPickerFail(error: error))
-        }
-    }
-
-    func onClearPDF() {
-        interactor.trackEvent(event: Event.onPDFCleared)
-        sourceText = ""
-        pdfFileName = nil
-        pdfPageCount = nil
-        pdfError = nil
-    }
-
-    func onCardCountChanged(_ count: Int) {
-        interactor.trackEvent(event: Event.onCardCountChanged(count: count))
-        cardCount = count
-    }
-
-    func clampCardCountIfNeeded() {
-        if cardCount > maxCardCount {
-            cardCount = maxCardCount
-        }
-    }
-
-    func onGenerateCardsPressed() {
-        interactor.trackEvent(event: Event.onGenerateCardsPressed(sourceTextLength: sourceText.count, cardCount: cardCount, sourceInputMode: sourceInputMode.rawValue))
-
-        guard canGenerate else { return }
-
-        resetGenerationState()
-        isGeneratingCards = true
-        generationStartTime = Date()
-
-        Task {
-            do {
-                try await performAddGeneration()
-                handleGenerationSuccess()
-            } catch {
-                interactor.trackEvent(event: Event.onGenerateCardsFail(error: error))
-                isGeneratingCards = false
-                router.showSimpleAlert(title: String(localized: "Generation Failed"), subtitle: error.localizedDescription)
-            }
-        }
-    }
-
-    func onGenerateCardsSuccessDismissed() {
-        interactor.trackEvent(event: Event.onGenerateCardsSuccessDismissed)
-        isGenerationComplete = false
-    }
-
-    // MARK: - Generation Helpers
-
-    private func resetGenerationState() {
-        isGeneratingCards = false
-        isGenerationComplete = false
-        generationStartTime = nil
-        flashcardProgress = 0
-        flashcardTotal = 0
-        flashcardStatusText = nil
-        flashcardSkippedBatches = 0
-        flashcardItemsGenerated = 0
-        streamedFlashcards = []
-        generatedFlashcardCount = 0
-    }
-
-    private func handleGenerationSuccess() {
-        isGeneratingCards = false
-        isGenerationComplete = true
-        interactor.playHaptic(option: .achievementUnlocked())
-    }
-
-    private func performAddGeneration() async throws {
-        try await generateFlashcards()
-        let newCards = streamedFlashcards
-
-        guard !newCards.isEmpty else {
-            throw AppError(String(localized: "No flashcards could be generated from this text. Try pasting actual study material like notes, a textbook excerpt, or an article."))
-        }
-
-        generatedFlashcardCount = newCards.count
-        interactor.trackEvent(event: Event.onGenerateCardsSuccess(count: newCards.count))
-
-        guard let currentDeck = deck else { return }
-
-        let flashcardsWithDeckId = newCards.map { card in
-            FlashcardModel(flashcardId: card.flashcardId, question: card.question, answer: card.answer, deckId: currentDeck.deckId)
-        }
-
-        let updatedSourceText = currentDeck.sourceText.isEmpty ? sourceText : currentDeck.sourceText
-
-        let updatedDeck = DeckModel(
-            deckId: currentDeck.deckId,
-            name: currentDeck.name,
-            color: currentDeck.color,
-            imageUrl: currentDeck.imageUrl,
-            sourceText: updatedSourceText,
-            createdAt: currentDeck.createdAt,
-            flashcards: currentDeck.flashcards + flashcardsWithDeckId,
-            clickCount: currentDeck.clickCount,
-            lastStudiedAt: currentDeck.lastStudiedAt
-        )
-
-        try interactor.updateDeck(updatedDeck)
-    }
-
-    // MARK: - PDF Extraction
-
-    private func extractText(from url: URL) throws -> String {
-        let didAccess = url.startAccessingSecurityScopedResource()
-        defer {
-            if didAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        guard let document = PDFDocument(url: url) else {
-            throw AppError("Could not read the PDF. The file may be damaged or password-protected.")
-        }
-
-        guard document.pageCount > 0 else {
-            throw AppError("The PDF has no pages.")
-        }
-
-        pdfPageCount = document.pageCount
-
-        var pages: [String] = []
-        for index in 0..<document.pageCount {
-            if let page = document.page(at: index), let text = page.string, !text.isEmpty {
-                pages.append(text)
-            }
-        }
-
-        let fullText = pages.joined(separator: "\n\n")
-
-        guard !fullText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw AppError("No readable text found in the PDF. It may contain only images or scanned content.")
-        }
-
-        return fullText
-    }
-}
-
-// MARK: - Events
-
-extension DeckDetailPresenter {
-
-    enum Event: LoggableEvent {
-        // Lifecycle
-        case onAppear(delegate: DeckDetailDelegate)
-        case onDisappear(delegate: DeckDetailDelegate)
-        // Practice
-        case onPracticePressed
-        case onResetLearnedStatus
-        case onResetLearnedStatusSuccess(cardCount: Int)
-        case onResetLearnedStatusFail(error: Error)
-        // Manual card management
-        case onAddCardPressed
-        case onAddCardEmptyFields
-        case onAddCardSuccess
-        case onAddCardFail(error: Error)
-        case onDeleteCardPressed(flashcard: FlashcardModel)
-        case onDeleteCardSuccess(flashcardId: String)
-        case onDeleteCardFail(error: Error)
-        // Edit card
-        case onEditCardPressed(flashcard: FlashcardModel)
-        case onEditCardSaved(flashcardId: String)
-        case onEditCardSaveFail(error: Error)
-        case onEditCardCancelled
-        // Edit deck
-        case onEditDeckPressed
-        case onEditDeckSaved
-        case onEditDeckSaveFail(error: Error)
-        case onEditDeckCancelled
-        case onEditDeckColorChanged(color: String)
-        case onEditDeckImageSelected
-        case onEditDeckImageRemoved
-        // Generation
-        case onGenerateSheetOpened
-        case onSourceInputModeChanged(mode: String)
-        case onPDFFileSelected(fileName: String)
-        case onPDFExtractSuccess(fileName: String, pageCount: Int, textLength: Int)
-        case onPDFExtractFail(error: Error)
-        case onPDFPickerFail(error: Error)
-        case onPDFCleared
-        case onCardCountChanged(count: Int)
-        case onGenerateCardsPressed(sourceTextLength: Int, cardCount: Int, sourceInputMode: String)
-        case onGenerateCardsBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
-        case onGenerateCardsSuccess(count: Int)
-        case onGenerateCardsFail(error: Error)
-        case onGenerateCardsSuccessDismissed
-
-        var eventName: String {
-            switch self {
-            case .onAppear:                     return "DeckDetailView_Appear"
-            case .onDisappear:                  return "DeckDetailView_Disappear"
-            case .onPracticePressed:            return "DeckDetailView_Practice_Pressed"
-            case .onResetLearnedStatus:         return "DeckDetailView_ResetLearned_Pressed"
-            case .onResetLearnedStatusSuccess:  return "DeckDetailView_ResetLearned_Success"
-            case .onResetLearnedStatusFail:     return "DeckDetailView_ResetLearned_Fail"
-            case .onAddCardPressed:             return "DeckDetailView_AddCard_Pressed"
-            case .onAddCardEmptyFields:         return "DeckDetailView_AddCard_EmptyFields"
-            case .onAddCardSuccess:             return "DeckDetailView_AddCard_Success"
-            case .onAddCardFail:                return "DeckDetailView_AddCard_Fail"
-            case .onDeleteCardPressed:          return "DeckDetailView_DeleteCard_Pressed"
-            case .onDeleteCardSuccess:          return "DeckDetailView_DeleteCard_Success"
-            case .onDeleteCardFail:             return "DeckDetailView_DeleteCard_Fail"
-            case .onEditCardPressed:             return "DeckDetailView_EditCard_Pressed"
-            case .onEditCardSaved:               return "DeckDetailView_EditCard_Saved"
-            case .onEditCardSaveFail:            return "DeckDetailView_EditCard_SaveFail"
-            case .onEditCardCancelled:           return "DeckDetailView_EditCard_Cancelled"
-            case .onEditDeckPressed:             return "DeckDetailView_EditDeck_Pressed"
-            case .onEditDeckSaved:               return "DeckDetailView_EditDeck_Saved"
-            case .onEditDeckSaveFail:            return "DeckDetailView_EditDeck_SaveFail"
-            case .onEditDeckCancelled:           return "DeckDetailView_EditDeck_Cancelled"
-            case .onEditDeckColorChanged:        return "DeckDetailView_EditDeck_ColorChanged"
-            case .onEditDeckImageSelected:       return "DeckDetailView_EditDeck_ImageSelected"
-            case .onEditDeckImageRemoved:        return "DeckDetailView_EditDeck_ImageRemoved"
-            case .onGenerateSheetOpened:        return "DeckDetailView_GenerateSheet_Opened"
-            case .onSourceInputModeChanged:     return "DeckDetailView_SourceInputMode_Changed"
-            case .onPDFFileSelected:            return "DeckDetailView_PDF_Selected"
-            case .onPDFExtractSuccess:          return "DeckDetailView_PDF_Extract_Success"
-            case .onPDFExtractFail:             return "DeckDetailView_PDF_Extract_Fail"
-            case .onPDFPickerFail:              return "DeckDetailView_PDF_Picker_Fail"
-            case .onPDFCleared:                 return "DeckDetailView_PDF_Cleared"
-            case .onCardCountChanged:           return "DeckDetailView_CardCount_Changed"
-            case .onGenerateCardsPressed:       return "DeckDetailView_GenerateCards_Pressed"
-            case .onGenerateCardsBatchStart:    return "DeckDetailView_GenerateCards_Batch_Start"
-            case .onGenerateCardsSuccess:       return "DeckDetailView_GenerateCards_Success"
-            case .onGenerateCardsFail:          return "DeckDetailView_GenerateCards_Fail"
-            case .onGenerateCardsSuccessDismissed: return "DeckDetailView_GenerateCards_SuccessDismissed"
-            }
-        }
-
-        var parameters: [String: Any]? {
-            switch self {
-            case .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
-                return delegate.eventParameters
-            case .onDeleteCardPressed(flashcard: let flashcard):
-                return flashcard.eventParameters
-            case .onDeleteCardSuccess(flashcardId: let id):
-                return ["flashcard_id": id]
-            case .onEditCardPressed(flashcard: let flashcard):
-                return flashcard.eventParameters
-            case .onEditCardSaved(flashcardId: let id):
-                return ["flashcard_id": id]
-            case .onEditDeckColorChanged(color: let color):
-                return ["color": color]
-            case .onResetLearnedStatusSuccess(cardCount: let count):
-                return ["card_count": count]
-            case .onAddCardFail(error: let error), .onDeleteCardFail(error: let error), .onEditCardSaveFail(error: let error),
-                 .onEditDeckSaveFail(error: let error), .onPDFExtractFail(error: let error), .onPDFPickerFail(error: let error),
-                 .onGenerateCardsFail(error: let error), .onResetLearnedStatusFail(error: let error):
-                return error.eventParameters
-            case .onSourceInputModeChanged(mode: let mode):
-                return ["source_input_mode": mode]
-            case .onPDFFileSelected(fileName: let name):
-                return ["file_name": name]
-            case .onPDFExtractSuccess(fileName: let name, pageCount: let pages, textLength: let length):
-                return ["file_name": name, "page_count": pages, "text_length": length]
-            case .onCardCountChanged(count: let count):
-                return ["card_count": count]
-            case .onGenerateCardsPressed(sourceTextLength: let length, cardCount: let count, sourceInputMode: let mode):
-                return ["source_text_length": length, "card_count": count, "source_input_mode": mode]
-            case .onGenerateCardsBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
-                return ["batch_number": batch, "total_batches": total, "batch_card_count": cards]
-            case .onGenerateCardsSuccess(count: let count):
-                return ["card_count": count]
-            default:
-                return nil
-            }
-        }
-
-        var type: LogType {
-            switch self {
-            case .onAddCardFail, .onDeleteCardFail, .onEditCardSaveFail, .onEditDeckSaveFail, .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail, .onResetLearnedStatusFail:
-                return .severe
-            default:
-                return .analytic
-            }
-        }
-    }
-
 }

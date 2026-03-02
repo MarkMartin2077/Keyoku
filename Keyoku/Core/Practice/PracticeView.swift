@@ -9,10 +9,24 @@ import SwiftUI
 import SwiftfulUI
 
 struct PracticeDelegate {
-    let deck: DeckModel
+    let deck: DeckModel?
+    let crossDeckCards: [FlashcardModel]?
+    let crossDeckSource: [DeckModel]?
+
+    init(deck: DeckModel) {
+        self.deck = deck
+        self.crossDeckCards = nil
+        self.crossDeckSource = nil
+    }
+
+    init(crossDeckCards: [FlashcardModel], crossDeckSource: [DeckModel]) {
+        self.deck = nil
+        self.crossDeckCards = crossDeckCards
+        self.crossDeckSource = crossDeckSource
+    }
 
     var eventParameters: [String: Any]? {
-        deck.eventParameters
+        deck?.eventParameters
     }
 }
 
@@ -65,12 +79,21 @@ struct PracticeView: View {
 
     // MARK: - Empty State
 
+    @ViewBuilder
     private var emptyStateView: some View {
-        ContentUnavailableView(
-            "No Cards",
-            systemImage: "rectangle.on.rectangle.slash",
-            description: Text("This deck doesn't have any flashcards yet.")
-        )
+        if presenter.isReviewMode {
+            ContentUnavailableView(
+                "No Cards Due",
+                systemImage: "checkmark.circle",
+                description: Text("All cards are up to date. Check back later for your next review.")
+            )
+        } else {
+            ContentUnavailableView(
+                "No Cards",
+                systemImage: "rectangle.on.rectangle.slash",
+                description: Text("This deck doesn't have any flashcards yet.")
+            )
+        }
     }
 
     // MARK: - Card Content
@@ -164,7 +187,7 @@ struct PracticeView: View {
                 )
                 .offset(x: presenter.currentSwipeOffset)
                 .rotationEffect(.degrees(Double(presenter.currentSwipeOffset) / 20))
-                .gesture(
+                .highPriorityGesture(
                     DragGesture()
                         .onChanged { value in
                             presenter.onSwipeChanged(offset: value.translation.width)
@@ -197,28 +220,32 @@ struct PracticeView: View {
                             }
                         }
                 )
-                .overlay(alignment: .leading) {
-                    swipeIndicator(
-                        systemName: "arrow.trianglehead.2.clockwise.rotate.90",
-                        color: .orange,
-                        isVisible: presenter.currentSwipeOffset < -50
-                    )
-                    .padding(.leading, 24)
-                }
-                .overlay(alignment: .trailing) {
-                    swipeIndicator(
+                .overlay(alignment: .topLeading) {
+                    swipeStamp(
                         systemName: "checkmark",
                         color: .green,
-                        isVisible: presenter.currentSwipeOffset > 50
+                        rotation: -12,
+                        dragOffset: max(0, presenter.currentSwipeOffset)
                     )
-                    .padding(.trailing, 24)
+                    .padding([.leading, .top], 20)
+                }
+                .overlay(alignment: .topTrailing) {
+                    swipeStamp(
+                        systemName: "arrow.trianglehead.2.clockwise.rotate.90",
+                        color: .orange,
+                        rotation: 12,
+                        dragOffset: abs(min(0, presenter.currentSwipeOffset))
+                    )
+                    .padding([.trailing, .top], 20)
                 }
             }
         }
     }
 
-    private func swipeIndicator(systemName: String, color: Color, isVisible: Bool) -> some View {
-        Image(systemName: systemName)
+    private func swipeStamp(systemName: String, color: Color, rotation: Double, dragOffset: CGFloat) -> some View {
+        let progress = min(1.0, dragOffset / 55.0)
+
+        return Image(systemName: systemName)
             .font(.system(size: 30, weight: .bold))
             .foregroundStyle(color)
             .padding(16)
@@ -226,9 +253,9 @@ struct PracticeView: View {
                 Circle()
                     .fill(color.opacity(0.15))
             }
-            .scaleEffect(isVisible ? 1.0 : 0.5)
-            .opacity(isVisible ? 1.0 : 0.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isVisible)
+            .rotationEffect(.degrees(rotation))
+            .opacity(progress)
+            .scaleEffect(0.5 + 0.5 * progress)
     }
 
     // MARK: - Swipe Hint
@@ -350,15 +377,37 @@ struct PracticeView: View {
 
 extension CoreBuilder {
 
-    func practiceView(router: AnyRouter, delegate: PracticeDelegate) -> some View {
-        PracticeView(
-            presenter: PracticePresenter(
+    func practiceView(router: AnyRouter, delegate: PracticeDelegate, dueOnly: Bool = false) -> some View {
+        let coreRouter = CoreRouter(router: router, builder: self)
+        let presenter: PracticePresenter
+        if let deck = delegate.deck {
+            presenter = PracticePresenter(
                 interactor: interactor,
-                router: CoreRouter(router: router, builder: self),
-                deck: delegate.deck
-            ),
-            delegate: delegate
-        )
+                router: coreRouter,
+                deck: deck,
+                dueOnly: dueOnly
+            )
+        } else if let cards = delegate.crossDeckCards, let decks = delegate.crossDeckSource {
+            presenter = PracticePresenter(
+                interactor: interactor,
+                router: coreRouter,
+                crossDeckCards: cards,
+                decks: decks
+            )
+        } else {
+            // Fallback: empty presenter with no cards
+            presenter = PracticePresenter(
+                interactor: interactor,
+                router: coreRouter,
+                crossDeckCards: [],
+                decks: []
+            )
+        }
+        return PracticeView(presenter: presenter, delegate: delegate)
+    }
+
+    func crossDeckPracticeView(router: AnyRouter, delegate: PracticeDelegate) -> some View {
+        practiceView(router: router, delegate: delegate)
     }
 
 }
@@ -369,6 +418,13 @@ extension CoreRouter {
         let delegate = PracticeDelegate(deck: deck)
         router.showScreen(.push) { router in
             builder.practiceView(router: router, delegate: delegate)
+        }
+    }
+
+    func showReviewDueView(deck: DeckModel) {
+        let delegate = PracticeDelegate(deck: deck)
+        router.showScreen(.push) { router in
+            builder.practiceView(router: router, delegate: delegate, dueOnly: true)
         }
     }
 

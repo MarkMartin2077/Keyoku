@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct FlashcardView: View {
-    
+
     let question: String
     let answer: String
     var accentColor: Color = .blue
-    
+
     @State private var showingAnswer = false
     @State private var rotation: Double = 0
-    
+
     var body: some View {
         cardContent
             .rotation3DEffect(
@@ -36,7 +36,7 @@ struct FlashcardView: View {
                 rotation = 0
             }
     }
-    
+
     private var cardContent: some View {
         ZStack {
             // Card background
@@ -54,7 +54,7 @@ struct FlashcardView: View {
                             lineWidth: 2
                         )
                 }
-            
+
             // Card content
             VStack(spacing: 16) {
                 // Label pill
@@ -70,9 +70,9 @@ struct FlashcardView: View {
                     )
                     .scaleEffect(x: showingAnswer ? -1 : 1, y: 1)
                     .accessibilityHidden(true)
-                
+
                 Spacer()
-                
+
                 // Main text
                 if showingAnswer {
                     ScrollView(.vertical, showsIndicators: false) {
@@ -90,9 +90,9 @@ struct FlashcardView: View {
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.7)
                 }
-                
+
                 Spacer()
-                
+
                 // Tap hint
                 HStack(spacing: 4) {
                     Image(systemName: "hand.tap")

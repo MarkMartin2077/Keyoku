@@ -42,20 +42,51 @@ class HomePresenter {
         }
     }
 
-    var studiedDecks: [DeckModel] {
+    // Computes due count per deck once, sorts by that count — O(N·M + N·logN).
+    var dueDecks: [DeckModel] {
         decks
-            .filter { deck in
-                deck.lastStudiedAt != nil && deck.flashcards.contains(where: { !$0.isLearned })
+            .compactMap { deck -> (DeckModel, Int)? in
+                let count = deck.flashcards.filter { $0.isLearned && $0.isDue }.count
+                return count > 0 ? (deck, count) : nil
             }
-            .sorted { lhs, rhs in
-                let lDate = lhs.lastStudiedAt ?? .distantPast
-                let rDate = rhs.lastStudiedAt ?? .distantPast
-                return lDate > rDate
-            }
+            .sorted { $0.1 > $1.1 }
+            .map(\.0)
     }
 
-    var hasStudiedDecks: Bool {
-        !studiedDecks.isEmpty
+    // Short-circuits on first match — does not trigger dueDecks recomputation.
+    var hasDueDecks: Bool {
+        decks.contains { $0.flashcards.contains { $0.isLearned && $0.isDue } }
+    }
+
+    // Single O(N·M) pass — does not call dueDecks.
+    var totalDueCardCount: Int {
+        decks.flatMap(\.flashcards).filter { $0.isLearned && $0.isDue }.count
+    }
+
+    // Called in onStillLearningPressed to pass sorted cards to the practice session.
+    var stillLearningCards: [FlashcardModel] {
+        decks.flatMap(\.flashcards)
+            .filter { !$0.isLearned }
+            .sorted { $0.stillLearningCount > $1.stillLearningCount }
+    }
+
+    // Short-circuits on first match — does not trigger stillLearningCards recomputation.
+    var hasStillLearningCards: Bool {
+        decks.contains { $0.flashcards.contains { !$0.isLearned } }
+    }
+
+    // Single O(N·M) pass — does not call stillLearningCards.
+    var stillLearningTotalCount: Int {
+        decks.reduce(0) { $0 + $1.flashcards.filter { !$0.isLearned }.count }
+    }
+
+    // Single O(N·M) pass without sort — does not call stillLearningCards.
+    var stillLearningDeckCount: Int {
+        Set(decks.flatMap(\.flashcards).filter { !$0.isLearned }.compactMap(\.deckId)).count
+    }
+
+    var useCompactPracticeLayout: Bool {
+        interactor.homePracticeLayout == .compact
     }
 
     var sortedDecks: [DeckModel] {
@@ -70,8 +101,12 @@ class HomePresenter {
         interactor.isPremium
     }
 
+    var freeTierDeckLimit: Int {
+        interactor.freeTierDeckLimit
+    }
+
     var canCreateDeck: Bool {
-        isPremium || decks.count < Constants.freeTierDeckLimit
+        isPremium || decks.count < freeTierDeckLimit
     }
 
     init(interactor: HomeInteractor, router: HomeRouter) {
@@ -155,47 +190,58 @@ class HomePresenter {
     }
 
     private func showCreateDeckWithPaywallCheck() {
-        let hadCreatedFirstDeck = interactor.currentUser?.didCreateFirstDeck == true
-        let wasPremium = interactor.isPremium
         let deckCountBefore = interactor.decks.count
 
         router.showCreateContentView(onDismiss: { [weak self] in
             guard let self else { return }
 
             let newDeckCount = interactor.decks.count
-            if newDeckCount > deckCountBefore, newDeckCount >= 3 {
+            let newDeckCreated = newDeckCount > deckCountBefore
+
+            if newDeckCreated, newDeckCount >= 3 {
                 AppStoreRatingsHelper.requestReviewIfNeeded()
             }
-
-            guard !hadCreatedFirstDeck,
-                  !wasPremium,
-                  newDeckCount > deckCountBefore else { return }
-
-            interactor.trackEvent(event: Event.firstDeckPaywallShown)
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(0.6))
-                self?.showFirstDeckPremiumPrompt()
-            }
         })
-    }
-
-    private func showFirstDeckPremiumPrompt() {
-        router.showFirstDeckPremiumPromptModal(
-            onSeeOfferPressed: { [weak self] in
-                self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.firstDeckPaywallAccepted)
-                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_deck_created"))
-            },
-            onDismissPressed: { [weak self] in
-                self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.firstDeckPaywallDismissed)
-            }
-        )
     }
 
     func onViewAllDecksPressed() {
         interactor.trackEvent(event: Event.onViewAllDecksPressed)
         router.showDecksView(delegate: DecksDelegate())
+    }
+
+    func onReviewDueInfoPressed() {
+        interactor.trackEvent(event: Event.onReviewDueInfoPressed)
+        router.showSimpleAlert(
+            title: "Review Due",
+            subtitle: "These are cards you've already learned, now scheduled for re-testing. Reviewing at the right time — called spaced repetition — is the most effective way to move knowledge into long-term memory. The better you know a card, the less often it comes back."
+        )
+    }
+
+    func onStillLearningInfoPressed() {
+        interactor.trackEvent(event: Event.onStillLearningInfoPressed)
+        router.showSimpleAlert(
+            title: "Still Learning",
+            subtitle: "These are cards you haven't fully learned yet. Each time you swipe left on a card during practice, it gets added here so you can keep working on it. The ones you've struggled with most appear first."
+        )
+    }
+
+    func onDueForReviewDeckPressed(deck: DeckModel) {
+        interactor.trackEvent(event: Event.onDueForReviewDeckPressed(deck: deck))
+        router.showDeckDetailView(deck: deck)
+    }
+
+    func onStillLearningPressed() {
+        interactor.trackEvent(event: Event.onStillLearningPressed)
+        router.showCrossDeckPracticeView(cards: stillLearningCards, decks: decks)
+    }
+
+    func onReviewDuePressed() {
+        interactor.trackEvent(event: Event.onReviewDuePressed)
+        let cards = dueDecks
+            .flatMap(\.flashcards)
+            .filter { $0.isLearned && $0.isDue }
+            .sorted { ($0.dueDate ?? .distantPast) < ($1.dueDate ?? .distantPast) }
+        router.showCrossDeckPracticeView(cards: cards, decks: dueDecks)
     }
 
     func handleDeepLink(url: URL) {
@@ -263,7 +309,10 @@ class HomePresenter {
     }
     
     func schedulePushNotifications() {
-        interactor.schedulePushNotificationsForTheNextWeek()
+        interactor.schedulePushNotificationsForTheNextWeek(
+            dueCount: totalDueCardCount,
+            stillLearningCount: stillLearningTotalCount
+        )
     }
     
     func onPushNotificationButtonPressed() {
@@ -377,9 +426,11 @@ extension HomePresenter {
         case quickActionOpen(actionType: String)
         case quickActionFail
         case onCreateDeckLimitHit
-        case firstDeckPaywallShown
-        case firstDeckPaywallAccepted
-        case firstDeckPaywallDismissed
+        case onDueForReviewDeckPressed(deck: DeckModel)
+        case onStillLearningPressed
+        case onReviewDuePressed
+        case onReviewDueInfoPressed
+        case onStillLearningInfoPressed
 
         var eventName: String {
             switch self {
@@ -404,10 +455,12 @@ extension HomePresenter {
             case .spotlightOpenFail:        return "HomeView_Spotlight_Open_Fail"
             case .quickActionOpen:          return "HomeView_QuickAction_Open"
             case .quickActionFail:          return "HomeView_QuickAction_Fail"
-            case .onCreateDeckLimitHit:     return "HomeView_DeckLimit_Hit"
-            case .firstDeckPaywallShown:     return "HomeView_FirstDeck_Paywall_Shown"
-            case .firstDeckPaywallAccepted:  return "HomeView_FirstDeck_Paywall_Accepted"
-            case .firstDeckPaywallDismissed: return "HomeView_FirstDeck_Paywall_Dismissed"
+            case .onCreateDeckLimitHit:             return "HomeView_DeckLimit_Hit"
+            case .onDueForReviewDeckPressed:         return "HomeView_DueForReview_Deck_Pressed"
+            case .onStillLearningPressed:            return "HomeView_StillLearning_Pressed"
+            case .onReviewDuePressed:                return "HomeView_ReviewDue_Pressed"
+            case .onReviewDueInfoPressed:            return "HomeView_ReviewDue_Info_Pressed"
+            case .onStillLearningInfoPressed:        return "HomeView_StillLearning_Info_Pressed"
             }
         }
 
@@ -425,6 +478,8 @@ extension HomePresenter {
                 return ["spotlight_type": type, "spotlight_id": id]
             case .quickActionOpen(actionType: let actionType):
                 return ["action_type": actionType]
+            case .onDueForReviewDeckPressed(deck: let deck):
+                return deck.eventParameters
             default:
                 return nil
             }

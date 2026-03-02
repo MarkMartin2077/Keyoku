@@ -22,8 +22,11 @@ class PracticePresenter {
     let deckId: String
     let deckName: String
     let deckColor: DeckColor
+    let isReviewMode: Bool
     private(set) var flashcards: [FlashcardModel]
     private var hasRecordedCompletion: Bool = false
+    private var isCrossDeckMode: Bool = false
+    private var crossDeckSourceIds: Set<String> = []
 
     // Swipe state
     private(set) var selectedIndex: Int = 0
@@ -60,13 +63,36 @@ class PracticePresenter {
         selectedIndex > 0
     }
 
-    init(interactor: PracticeInteractor, router: PracticeRouter, deck: DeckModel) {
+    init(interactor: PracticeInteractor, router: PracticeRouter, deck: DeckModel, dueOnly: Bool = false) {
         self.interactor = interactor
         self.router = router
         self.deckId = deck.deckId
         self.deckName = deck.name
         self.deckColor = deck.color
-        self.flashcards = deck.flashcards
+        self.isReviewMode = dueOnly
+        let cards = dueOnly ? deck.flashcards.filter { $0.isDue } : deck.flashcards
+        self.flashcards = cards.sorted { lhs, rhs in
+            switch (lhs.isDue, rhs.isDue) {
+            case (true, false): return true
+            case (false, true): return false
+            default:
+                let lDate = lhs.dueDate ?? .distantPast
+                let rDate = rhs.dueDate ?? .distantPast
+                return lDate < rDate
+            }
+        }
+    }
+
+    init(interactor: PracticeInteractor, router: PracticeRouter, crossDeckCards: [FlashcardModel], decks: [DeckModel]) {
+        self.interactor = interactor
+        self.router = router
+        self.deckId = ""
+        self.deckName = "Still Learning"
+        self.deckColor = .blue
+        self.isReviewMode = false
+        self.isCrossDeckMode = true
+        self.crossDeckSourceIds = Set(decks.map { $0.deckId })
+        self.flashcards = crossDeckCards.sorted { $0.stillLearningCount > $1.stillLearningCount }
     }
 
     func onViewAppear(delegate: PracticeDelegate) {
@@ -114,10 +140,7 @@ class PracticePresenter {
             ))
             interactor.playHaptic(option: .lessonComplete())
             recordStreakEvent()
-
-            if learnedCount == flashcards.count, !interactor.isPremium {
-                showDeckCompletedPremiumPrompt()
-            }
+            showFirstPracticeUpsellIfNeeded()
         }
     }
 
@@ -167,9 +190,17 @@ class PracticePresenter {
         interactor.trackEvent(event: Event.onPracticeAgainPressed)
         interactor.playHaptic(option: .medium)
 
-        // Refresh flashcards from interactor to get latest state
-        if let deck = interactor.getDeck(id: deckId) {
-            flashcards = deck.flashcards
+        if isCrossDeckMode {
+            // Reload still-learning cards from all source decks with updated counts
+            let updatedCards = crossDeckSourceIds
+                .compactMap { interactor.getDeck(id: $0) }
+                .flatMap { $0.flashcards }
+                .filter { !$0.isLearned }
+                .sorted { $0.stillLearningCount > $1.stillLearningCount }
+            flashcards = updatedCards
+        } else if let deck = interactor.getDeck(id: deckId) {
+            let cards = isReviewMode ? deck.flashcards.filter { $0.isDue } : deck.flashcards
+            flashcards = cards
         }
 
         withAnimation(.easeInOut(duration: 0.3)) {
@@ -182,16 +213,24 @@ class PracticePresenter {
 
     // MARK: - Premium Prompt
 
-    private func showDeckCompletedPremiumPrompt() {
-        router.showDeckCompletedPremiumPromptModal(
+    private func showFirstPracticeUpsellIfNeeded() {
+        let alreadySeen = interactor.currentUser?.didCompleteFirstPractice == true
+        guard !interactor.isPremium, !alreadySeen else { return }
+
+        Task {
+            try? await interactor.markFirstPracticeComplete()
+        }
+
+        interactor.trackEvent(event: Event.firstPracticeUpsellShown)
+        router.showFirstDeckPremiumPromptModal(
             onSeeOfferPressed: { [weak self] in
                 self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.deckCompletedPaywallAccepted)
-                self?.router.showPaywallView(delegate: PaywallDelegate(source: "deck_completed"))
+                self?.interactor.trackEvent(event: Event.firstPracticeUpsellAccepted)
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_practice_complete"))
             },
             onDismissPressed: { [weak self] in
                 self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.deckCompletedPaywallDismissed)
+                self?.interactor.trackEvent(event: Event.firstPracticeUpsellDismissed)
             }
         )
     }
@@ -199,16 +238,34 @@ class PracticePresenter {
     // MARK: - Private
 
     private func persistLearnedStatus(flashcardId: String, isLearned: Bool) {
-        guard let deck = interactor.getDeck(id: deckId) else { return }
+        // Resolve which deck contains this card
+        let resolvedDeckId: String
+        if isCrossDeckMode {
+            guard let card = flashcards.first(where: { $0.flashcardId == flashcardId }),
+                  let cardDeckId = card.deckId else { return }
+            resolvedDeckId = cardDeckId
+        } else {
+            resolvedDeckId = deckId
+        }
+
+        guard let deck = interactor.getDeck(id: resolvedDeckId) else { return }
 
         let updatedFlashcards = deck.flashcards.map { card in
             if card.flashcardId == flashcardId {
+                let rating: SRSRating = isLearned ? .good : .again
+                let srs = SRSCalculator.calculate(card: card, rating: rating)
+                let updatedStillLearningCount = isLearned ? card.stillLearningCount : card.stillLearningCount + 1
                 return FlashcardModel(
                     flashcardId: card.flashcardId,
                     question: card.question,
                     answer: card.answer,
                     deckId: card.deckId,
-                    isLearned: isLearned
+                    isLearned: isLearned,
+                    repetitions: srs.repetitions,
+                    interval: srs.interval,
+                    easeFactor: srs.easeFactor,
+                    dueDate: srs.dueDate,
+                    stillLearningCount: updatedStillLearningCount
                 )
             }
             return card
@@ -276,8 +333,9 @@ extension PracticePresenter {
         case onStreakEventFailed(error: Error)
         case onStreakCelebrationDismissed
         case onPersistLearnedFail(error: Error)
-        case deckCompletedPaywallAccepted
-        case deckCompletedPaywallDismissed
+        case firstPracticeUpsellShown
+        case firstPracticeUpsellAccepted
+        case firstPracticeUpsellDismissed
 
         var eventName: String {
             switch self {
@@ -293,8 +351,9 @@ extension PracticePresenter {
             case .onStreakEventFailed:          return "PracticeView_Streak_Failed"
             case .onStreakCelebrationDismissed: return "PracticeView_Streak_Celebration_Dismissed"
             case .onPersistLearnedFail:         return "PracticeView_Persist_Learned_Fail"
-            case .deckCompletedPaywallAccepted:  return "PracticeView_DeckCompleted_Paywall_Accepted"
-            case .deckCompletedPaywallDismissed: return "PracticeView_DeckCompleted_Paywall_Dismissed"
+            case .firstPracticeUpsellShown:     return "PracticeView_FirstPractice_Upsell_Shown"
+            case .firstPracticeUpsellAccepted:  return "PracticeView_FirstPractice_Upsell_Accepted"
+            case .firstPracticeUpsellDismissed: return "PracticeView_FirstPractice_Upsell_Dismissed"
             }
         }
 

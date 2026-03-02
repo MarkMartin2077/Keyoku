@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FoundationModels
+import PDFKit
 
 // MARK: - Text Splitting
 
@@ -130,6 +131,7 @@ extension DeckDetailPresenter {
         flashcardTotal = chunks.count
         flashcardProgress = 0
         flashcardSkippedBatches = 0
+        var lastBatchError: Error?
 
         for chunk in chunks {
             flashcardProgress += 1
@@ -151,10 +153,16 @@ extension DeckDetailPresenter {
             do {
                 try await streamFlashcardBatch(text: chunk, count: batchCards)
             } catch {
+                lastBatchError = error
                 flashcardSkippedBatches += 1
                 flashcardStatusText = "Skipped"
                 continue
             }
+        }
+
+        // If every batch was skipped due to errors, surface the actual error.
+        if streamedFlashcards.isEmpty, let error = lastBatchError {
+            throw error
         }
     }
 
@@ -220,9 +228,10 @@ extension DeckDetailPresenter {
     private func applyQualityFilter(from startIndex: Int) {
         let qualityCards = streamedFlashcards.suffix(from: startIndex).filter { card in
             let answer = card.answer.trimmingCharacters(in: .whitespacesAndNewlines)
-            let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
-            guard answer.count >= Self.minAnswerLength && endsCleanly else { return false }
+            guard answer.count >= Self.minAnswerLength else { return false }
 
+            // Reject hallucinated or prompt-leaked cards. Good flashcard questions ask about
+            // a concept directly — they never meta-reference "the text" or "source text".
             let lowercasedQuestion = card.question.lowercased()
             let leakPhrases = ["source text", "in the text", "the text"]
             if leakPhrases.contains(where: { lowercasedQuestion.contains($0) }) { return false }
@@ -231,5 +240,194 @@ extension DeckDetailPresenter {
         }
         streamedFlashcards = Array(streamedFlashcards.prefix(startIndex)) + Array(qualityCards)
         flashcardItemsGenerated = streamedFlashcards.count
+    }
+}
+
+// MARK: - Generation Actions
+
+extension DeckDetailPresenter {
+
+    func onGenerateSheetOpened() {
+        interactor.trackEvent(event: Event.onGenerateSheetOpened)
+        resetGenerationState()
+        sourceText = ""
+        sourceInputMode = .text
+        pdfFileName = nil
+        pdfPageCount = nil
+        pdfError = nil
+        cardCount = 10
+    }
+
+    func onSourceInputModeChanged(_ mode: SourceInputMode) {
+        interactor.trackEvent(event: Event.onSourceInputModeChanged(mode: mode.rawValue))
+        sourceInputMode = mode
+        pdfError = nil
+
+        if mode == .text {
+            pdfFileName = nil
+            pdfPageCount = nil
+            sourceText = ""
+        }
+    }
+
+    func onPDFFileSelected(result: Result<URL, Error>) {
+        pdfError = nil
+
+        switch result {
+        case .success(let url):
+            let fileName = url.lastPathComponent
+            interactor.trackEvent(event: Event.onPDFFileSelected(fileName: fileName))
+            isExtractingPDF = true
+
+            do {
+                let text = try extractText(from: url)
+                sourceText = text
+                pdfFileName = fileName
+                isExtractingPDF = false
+                interactor.trackEvent(event: Event.onPDFExtractSuccess(fileName: fileName, pageCount: pdfPageCount ?? 0, textLength: text.count))
+            } catch {
+                isExtractingPDF = false
+                pdfError = error.localizedDescription
+                interactor.trackEvent(event: Event.onPDFExtractFail(error: error))
+            }
+
+        case .failure(let error):
+            pdfError = error.localizedDescription
+            interactor.trackEvent(event: Event.onPDFPickerFail(error: error))
+        }
+    }
+
+    func onClearPDF() {
+        interactor.trackEvent(event: Event.onPDFCleared)
+        sourceText = ""
+        pdfFileName = nil
+        pdfPageCount = nil
+        pdfError = nil
+    }
+
+    func onCardCountChanged(_ count: Int) {
+        interactor.trackEvent(event: Event.onCardCountChanged(count: count))
+        cardCount = count
+    }
+
+    func clampCardCountIfNeeded() {
+        if cardCount > maxCardCount {
+            cardCount = maxCardCount
+        }
+    }
+
+    func onGenerateCardsPressed() {
+        interactor.trackEvent(event: Event.onGenerateCardsPressed(sourceTextLength: sourceText.count, cardCount: cardCount, sourceInputMode: sourceInputMode.rawValue))
+
+        guard canGenerate else { return }
+
+        resetGenerationState()
+        isGeneratingCards = true
+        generationStartTime = Date()
+
+        Task {
+            do {
+                try await performAddGeneration()
+                handleGenerationSuccess()
+            } catch {
+                interactor.trackEvent(event: Event.onGenerateCardsFail(error: error))
+                isGeneratingCards = false
+                router.showSimpleAlert(title: String(localized: "Generation Failed"), subtitle: error.localizedDescription)
+            }
+        }
+    }
+
+    func onGenerateCardsSuccessDismissed() {
+        interactor.trackEvent(event: Event.onGenerateCardsSuccessDismissed)
+        isGenerationComplete = false
+    }
+
+    // MARK: - Private Helpers
+
+    private func resetGenerationState() {
+        isGeneratingCards = false
+        isGenerationComplete = false
+        generationStartTime = nil
+        flashcardProgress = 0
+        flashcardTotal = 0
+        flashcardStatusText = nil
+        flashcardSkippedBatches = 0
+        flashcardItemsGenerated = 0
+        streamedFlashcards = []
+        generatedFlashcardCount = 0
+    }
+
+    private func handleGenerationSuccess() {
+        isGeneratingCards = false
+        isGenerationComplete = true
+        interactor.playHaptic(option: .achievementUnlocked())
+    }
+
+    private func performAddGeneration() async throws {
+        try await generateFlashcards()
+        let newCards = streamedFlashcards
+
+        guard !newCards.isEmpty else {
+            throw AppError(String(localized: "No flashcards could be generated from this text. Try pasting actual study material like notes, a textbook excerpt, or an article."))
+        }
+
+        generatedFlashcardCount = newCards.count
+        interactor.trackEvent(event: Event.onGenerateCardsSuccess(count: newCards.count))
+
+        guard let currentDeck = deck else { return }
+
+        let flashcardsWithDeckId = newCards.map { card in
+            FlashcardModel(flashcardId: card.flashcardId, question: card.question, answer: card.answer, deckId: currentDeck.deckId)
+        }
+
+        let updatedSourceText = currentDeck.sourceText.isEmpty ? sourceText : currentDeck.sourceText
+
+        let updatedDeck = DeckModel(
+            deckId: currentDeck.deckId,
+            name: currentDeck.name,
+            color: currentDeck.color,
+            imageUrl: currentDeck.imageUrl,
+            sourceText: updatedSourceText,
+            createdAt: currentDeck.createdAt,
+            flashcards: currentDeck.flashcards + flashcardsWithDeckId,
+            clickCount: currentDeck.clickCount,
+            lastStudiedAt: currentDeck.lastStudiedAt
+        )
+
+        try interactor.updateDeck(updatedDeck)
+    }
+
+    private func extractText(from url: URL) throws -> String {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard let document = PDFDocument(url: url) else {
+            throw AppError("Could not read the PDF. The file may be damaged or password-protected.")
+        }
+
+        guard document.pageCount > 0 else {
+            throw AppError("The PDF has no pages.")
+        }
+
+        pdfPageCount = document.pageCount
+
+        var pages: [String] = []
+        for index in 0..<document.pageCount {
+            if let page = document.page(at: index), let text = page.string, !text.isEmpty {
+                pages.append(text)
+            }
+        }
+
+        let fullText = pages.joined(separator: "\n\n")
+
+        guard !fullText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw AppError("No readable text found in the PDF. It may contain only images or scanned content.")
+        }
+
+        return fullText
     }
 }

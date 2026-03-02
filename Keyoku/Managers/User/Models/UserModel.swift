@@ -34,6 +34,7 @@ struct UserModel: StringIdentifiable, Codable {
     let fcmToken: String?
     private(set) var didCompleteOnboarding: Bool?
     private(set) var didCreateFirstDeck: Bool?
+    private(set) var didCompleteFirstPractice: Bool?
     private(set) var isPremium: Bool?
     private(set) var activeSubscription: String?
 
@@ -56,6 +57,7 @@ struct UserModel: StringIdentifiable, Codable {
         fcmToken: String? = nil,
         didCompleteOnboarding: Bool? = nil,
         didCreateFirstDeck: Bool? = nil,
+        didCompleteFirstPractice: Bool? = nil,
         isPremium: Bool? = nil,
         activeSubscription: String? = nil
     ) {
@@ -77,6 +79,7 @@ struct UserModel: StringIdentifiable, Codable {
         self.fcmToken = fcmToken
         self.didCompleteOnboarding = didCompleteOnboarding
         self.didCreateFirstDeck = didCreateFirstDeck
+        self.didCompleteFirstPractice = didCompleteFirstPractice
         self.isPremium = isPremium
         self.activeSubscription = activeSubscription
     }
@@ -117,6 +120,7 @@ struct UserModel: StringIdentifiable, Codable {
         case fcmToken = "fcm_token"
         case didCompleteOnboarding = "did_complete_onboarding"
         case didCreateFirstDeck = "did_create_first_deck"
+        case didCompleteFirstPractice = "did_complete_first_practice"
         case isPremium = "is_premium"
         case activeSubscription = "active_subscription"
     }
@@ -143,6 +147,7 @@ struct UserModel: StringIdentifiable, Codable {
             "user_has_\(CodingKeys.fcmToken.rawValue)": (fcmToken?.count ?? 0) > 0,
             "user_\(CodingKeys.didCompleteOnboarding.rawValue)": didCompleteOnboarding,
             "user_\(CodingKeys.didCreateFirstDeck.rawValue)": didCreateFirstDeck,
+            "user_\(CodingKeys.didCompleteFirstPractice.rawValue)": didCompleteFirstPractice,
             "user_\(CodingKeys.isPremium.rawValue)": isPremium,
             "user_\(CodingKeys.activeSubscription.rawValue)": activeSubscription
         ]
@@ -223,6 +228,10 @@ struct UserModel: StringIdentifiable, Codable {
 
     mutating func markDidCreateFirstDeck() {
         didCreateFirstDeck = true
+    }
+
+    mutating func markDidCompleteFirstPractice() {
+        didCompleteFirstPractice = true
     }
 
     mutating func updateSubscriptionStatus(isPremium: Bool, activeSubscription: String?) {

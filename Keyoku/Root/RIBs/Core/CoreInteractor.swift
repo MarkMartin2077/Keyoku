@@ -101,6 +101,10 @@ struct CoreInteractor: GlobalInteractor {
     func saveFirstDeckCreated() async throws {
         try await userManager.saveFirstDeckCreatedForCurrentUser()
     }
+
+    func markFirstPracticeComplete() async throws {
+        try await userManager.saveFirstPracticeCompleteForCurrentUser()
+    }
     
     func saveUserName(name: String) async throws {
         try await userManager.saveUserName(name: name)
@@ -149,25 +153,53 @@ struct CoreInteractor: GlobalInteractor {
     }
 
     // MARK: PushManager
-    
+
     func requestPushAuthorization() async throws -> Bool {
         try await pushManager.requestAuthorization()
     }
-    
+
     func canRequestPushAuthorization() async -> Bool {
         await pushManager.canRequestAuthorization()
     }
-    
-    func schedulePushNotificationsForTheNextWeek() {
-        pushManager.schedulePushNotificationsForTheNextWeek()
+
+    func schedulePushNotificationsForTheNextWeek(dueCount: Int, stillLearningCount: Int) {
+        pushManager.schedulePushNotificationsForTheNextWeek(dueCount: dueCount, stillLearningCount: stillLearningCount)
+    }
+
+    var isReminderEnabled: Bool {
+        pushManager.isReminderEnabled
+    }
+
+    var reminderHour: Int {
+        pushManager.reminderHour
+    }
+
+    var reminderMinute: Int {
+        pushManager.reminderMinute
+    }
+
+    func setReminderEnabled(_ enabled: Bool) async throws {
+        try await pushManager.setReminderEnabled(enabled)
+    }
+
+    func setReminderTime(hour: Int, minute: Int) {
+        pushManager.setReminderTime(hour: hour, minute: minute)
     }
     
     // MARK: ABTestManager
-    
+
     var activeTests: ActiveABTests {
         abTestManager.activeTests
     }
-        
+
+    var freeTierDeckLimit: Int {
+        3
+    }
+
+    var homePracticeLayout: HomePracticeLayoutOption {
+        abTestManager.activeTests.homePracticeLayout
+    }
+
     func override(updateTests: ActiveABTests) throws {
         try abTestManager.override(updateTests: updateTests)
     }

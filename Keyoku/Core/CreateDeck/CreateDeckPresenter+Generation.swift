@@ -159,6 +159,7 @@ extension CreateDeckPresenter {
         flashcardTotal = chunks.count
         flashcardProgress = 0
         flashcardSkippedBatches = 0
+        var lastBatchError: Error?
 
         for chunk in chunks {
             flashcardProgress += 1
@@ -180,12 +181,18 @@ extension CreateDeckPresenter {
             do {
                 try await streamFlashcardBatch(text: chunk, count: batchCards)
             } catch {
+                lastBatchError = error
                 flashcardSkippedBatches += 1
                 flashcardStatusText = "Skipped"
                 continue
             }
 
             updateTimeEstimate()
+        }
+
+        // If every batch was skipped due to errors, surface the actual error.
+        if streamedFlashcards.isEmpty, let error = lastBatchError {
+            throw error
         }
     }
 
@@ -252,13 +259,10 @@ extension CreateDeckPresenter {
     private func applyQualityFilter(from startIndex: Int) {
         let qualityCards = streamedFlashcards.suffix(from: startIndex).filter { card in
             let answer = card.answer.trimmingCharacters(in: .whitespacesAndNewlines)
-            let endsCleanly = answer.last == "." || answer.last == "!" || answer.last == "?" || answer.last == ")" || answer.last == "\""
-            guard answer.count >= Self.minAnswerLength && endsCleanly else { return false }
+            guard answer.count >= Self.minAnswerLength else { return false }
 
             // Reject hallucinated or prompt-leaked cards. Good flashcard questions ask about
             // a concept directly — they never meta-reference "the text" or "source text".
-            // Any question containing these phrases is the model pretending the source
-            // contains information it doesn't.
             let lowercasedQuestion = card.question.lowercased()
             let leakPhrases = ["source text", "in the text", "the text"]
             if leakPhrases.contains(where: { lowercasedQuestion.contains($0) }) { return false }

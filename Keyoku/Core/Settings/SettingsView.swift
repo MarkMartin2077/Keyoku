@@ -13,8 +13,7 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            generalSection
-            applicationSection
+            legalSection
         }
         .lineLimit(1)
         .minimumScaleFactor(0.4)
@@ -27,26 +26,10 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - General
+    // MARK: - Legal
 
-    private var generalSection: some View {
+    private var legalSection: some View {
         Section {
-            settingsRow(icon: "bell.badge", title: "Notifications") {
-                presenter.onNotificationsPressed()
-            }
-        } header: {
-            Text("General")
-        }
-    }
-
-    // MARK: - Application
-
-    private var applicationSection: some View {
-        Section {
-            settingsRow(icon: "star", title: "Rate us on the App Store") {
-                presenter.onRatingsButtonPressed()
-            }
-
             settingsRow(icon: "hand.raised", title: "Privacy Policy") {
                 presenter.onPrivacyPolicyPressed()
             }
@@ -69,8 +52,6 @@ struct SettingsView: View {
             }
             .rowFormatting()
             .removeListRowFormatting()
-        } header: {
-            Text("Application")
         }
     }
 

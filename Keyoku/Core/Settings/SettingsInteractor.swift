@@ -6,8 +6,6 @@
 //
 
 @MainActor
-protocol SettingsInteractor: GlobalInteractor {
-
-}
+protocol SettingsInteractor: GlobalInteractor { }
 
 extension CoreInteractor: SettingsInteractor { }

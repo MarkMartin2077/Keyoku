@@ -62,6 +62,12 @@ struct FirebaseUserService: RemoteUserService {
         ])
     }
 
+    func markFirstPracticeCompleted(userId: String) async throws {
+        try await collection.document(userId).updateData([
+            UserModel.CodingKeys.didCompleteFirstPractice.rawValue: true
+        ])
+    }
+
     func saveSubscriptionStatus(userId: String, isPremium: Bool, activeSubscription: String?) async throws {
         var dict: [String: Any] = [
             UserModel.CodingKeys.isPremium.rawValue: isPremium

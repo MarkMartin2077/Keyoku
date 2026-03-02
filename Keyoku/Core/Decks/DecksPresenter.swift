@@ -31,7 +31,7 @@ class DecksPresenter {
     }
 
     var canCreateDeck: Bool {
-        interactor.isPremium || decks.count < Constants.freeTierDeckLimit
+        interactor.isPremium || decks.count < interactor.freeTierDeckLimit
     }
 
     init(interactor: DecksInteractor, router: DecksRouter) {
@@ -98,10 +98,12 @@ class DecksPresenter {
     }
     
     func onDeleteDecks(at indexSet: IndexSet) {
-        for index in indexSet {
-            let deck = filteredDecks[index]
-            interactor.trackEvent(event: Event.onDeleteDeckPressed(deck: deck))
-            
+        guard let index = indexSet.first, filteredDecks.indices.contains(index) else { return }
+        let deck = filteredDecks[index]
+        interactor.trackEvent(event: Event.onDeleteDeckPressed(deck: deck))
+
+        router.showDeleteDeckAlert(deckName: deck.name) { [weak self] in
+            guard let self else { return }
             do {
                 try interactor.deleteDeck(id: deck.deckId)
                 interactor.trackEvent(event: Event.onDeleteDeckSuccess(deckId: deck.deckId))

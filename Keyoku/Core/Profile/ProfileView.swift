@@ -19,7 +19,9 @@ struct ProfileView: View {
         List {
             profileHeaderSection
             studyStatsSection
+            preferencesSection
             accountSection
+            dangerSection
         }
         .navigationTitle("Profile")
         .toolbar {
@@ -146,6 +148,58 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Preferences
+
+    private var preferencesSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                Image(systemName: "bell.badge")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24)
+
+                Text("Study Reminders")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Toggle("", isOn: Binding(
+                    get: { presenter.isReminderEnabled },
+                    set: { presenter.onReminderToggled(isOn: $0) }
+                ))
+                .labelsHidden()
+            }
+
+            if presenter.isReminderEnabled {
+                HStack(spacing: 12) {
+                    Image(systemName: "clock")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+
+                    Text("Reminder Time")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    DatePicker("", selection: Binding(
+                        get: { presenter.reminderDate },
+                        set: { presenter.onReminderTimeChanged(date: $0) }
+                    ), displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                }
+            }
+
+            HStack(spacing: 12) {
+                Image(systemName: "star")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24)
+
+                Text("Rate Keyoku")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .anyButton(.highlight) {
+                presenter.onRatingsButtonPressed()
+            }
+        } header: {
+            Text("Preferences")
+        }
+    }
+
     // MARK: - Account
 
     private var accountSection: some View {
@@ -162,12 +216,18 @@ struct ProfileView: View {
                     presenter.onSignOutPressed()
                 }
             }
+        } header: {
+            Text("Account")
+        }
+    }
 
+    // MARK: - Danger Zone
+
+    private var dangerSection: some View {
+        Section {
             accountRow(icon: "trash", title: "Delete account", tint: .red) {
                 presenter.onDeleteAccountPressed()
             }
-        } header: {
-            Text("Account")
         }
     }
 

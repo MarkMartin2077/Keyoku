@@ -30,11 +30,11 @@ struct HomeView: View {
         let name = presenter.userName.map { ", \($0)" } ?? ""
         switch hour {
         case 5..<12:
-            return "☀️ Good morning\(name)"
+            return "Good morning\(name)"
         case 12..<17:
-            return "🌤️ Good afternoon\(name)"
+            return "Good afternoon\(name)"
         default:
-            return "🌙 Good evening\(name)"
+            return "Good evening\(name)"
         }
     }
 
@@ -44,7 +44,34 @@ struct HomeView: View {
                 heroSection
                 recentDecksSection
                 if !presenter.decks.isEmpty {
-                    continueStudyingSection
+                    if presenter.useCompactPracticeLayout {
+                        if presenter.hasDueDecks || presenter.hasStillLearningCards {
+                            HomePracticeCompactSectionView(
+                                dueCount: presenter.totalDueCardCount,
+                                hasDue: presenter.hasDueDecks,
+                                stillLearningCount: presenter.stillLearningTotalCount,
+                                hasStillLearning: presenter.hasStillLearningCards,
+                                onDueTapped: { presenter.onReviewDuePressed() },
+                                onStillLearningTapped: { presenter.onStillLearningPressed() }
+                            )
+                        }
+                    } else {
+                        if presenter.hasDueDecks {
+                            HomeReviewDueSectionView(
+                                decks: presenter.dueDecks,
+                                onDeckPressed: { presenter.onDueForReviewDeckPressed(deck: $0) },
+                                onInfoPressed: { presenter.onReviewDueInfoPressed() }
+                            )
+                        }
+                        if presenter.hasStillLearningCards {
+                            HomeStillLearningSectionView(
+                                cardCount: presenter.stillLearningTotalCount,
+                                deckCount: presenter.stillLearningDeckCount,
+                                onPressed: { presenter.onStillLearningPressed() },
+                                onInfoPressed: { presenter.onStillLearningInfoPressed() }
+                            )
+                        }
+                    }
                 }
             }
             .padding()
@@ -52,7 +79,7 @@ struct HomeView: View {
         .safeAreaInset(edge: .bottom) {
             floatingCreateButton
         }
-        .navigationTitle("Home")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -60,7 +87,7 @@ struct HomeView: View {
                     devSettingsButton
                 }
             }
-            
+
             ToolbarItem(placement: .topBarTrailing) {
                 streakIndicator
             }
@@ -106,15 +133,6 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 12) {
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill")
-                        .foregroundStyle(presenter.currentStreak > 0 ? .orange : .gray)
-                    Text("\(presenter.currentStreak) day streak")
-                }
-
-                Text("·")
-                    .foregroundStyle(.tertiary)
-
                 Text("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks")")
 
                 Text("·")
@@ -154,7 +172,6 @@ struct HomeView: View {
                     HStack(spacing: 12) {
                         ForEach(presenter.recentDecks) { deck in
                             deckCard(deck: deck)
-                                .card3DScroll()
                         }
                     }
                     .scrollTargetLayout()
@@ -164,118 +181,15 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Continue Studying Section
-
-    private var continueStudyingSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Continue Studying")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if presenter.hasStudiedDecks {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                    ForEach(presenter.studiedDecks) { deck in
-                        studyCard(deck: deck)
-                    }
-                }
-            } else {
-                emptyStudyCard
-            }
-        }
-    }
-
-    private func studyCard(deck: DeckModel) -> some View {
-        let learnedCount = deck.flashcards.filter { $0.isLearned }.count
-        let totalCount = deck.flashcards.count
-        let progress = totalCount > 0 ? Double(learnedCount) / Double(totalCount) : 0
-
-        return HStack(spacing: 0) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(deck.color.color)
-                .frame(width: 4)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(deck.name)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text("\(learnedCount) / \(totalCount) learned")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.secondary.opacity(0.2))
-                            .frame(height: 4)
-
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(.green)
-                            .frame(width: geo.size.width * progress, height: 4)
-                    }
-                }
-                .frame(height: 4)
-            }
-            .padding(12)
-        }
-        .background {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
-                }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .anyButton(.press) {
-            presenter.onDeckPressed(deck: deck)
-        }
-    }
-
-    private var emptyStudyCard: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "book.closed")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
-
-            Text("No decks studied yet")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            Text("Practice a deck to track your progress")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
-                }
-        }
-    }
-
     private var emptyDecksCard: some View {
         VStack(spacing: 12) {
             Image(systemName: "rectangle.stack")
                 .font(.system(size: 36))
                 .foregroundStyle(.secondary)
 
-            Text("No decks yet")
+            Text("Your first deck is one tap away")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-
-            Text("Create a deck to start studying")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -291,7 +205,12 @@ struct HomeView: View {
     }
 
     private func deckCard(deck: DeckModel) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let dueCount = deck.flashcards.filter { card in
+            guard let dueDate = card.dueDate else { return false }
+            return dueDate <= Date()
+        }.count
+
+        return VStack(alignment: .leading, spacing: 8) {
             Text(deck.name)
                 .font(.headline)
                 .foregroundStyle(.white)
@@ -300,22 +219,28 @@ struct HomeView: View {
 
             Spacer()
 
-            Text("\(deck.flashcards.count) card\(deck.flashcards.count == 1 ? "" : "s")")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.8))
+            HStack(spacing: 6) {
+                Text("\(deck.flashcards.count) card\(deck.flashcards.count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+
+                if dueCount > 0 {
+                    Text("\(dueCount) due")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(.white.opacity(0.2), in: Capsule())
+                }
+            }
         }
         .padding()
         .frame(width: deckCardWidth, height: deckCardHeight, alignment: .topLeading)
         .background {
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [deck.color.color, deck.color.color.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(deck.color.color)
 
                 if let imageUrl = deck.displayImageUrlString {
                     ImageLoaderView(urlString: imageUrl)
@@ -340,10 +265,10 @@ struct HomeView: View {
     private var floatingCreateButton: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "sparkles")
+                Image(systemName: "rectangle.stack.badge.plus")
                     .font(.headline)
 
-                Text("Create New")
+                Text("New Deck")
                     .font(.headline)
             }
             .foregroundStyle(.white)
@@ -351,17 +276,11 @@ struct HomeView: View {
             .padding(.vertical, 14)
             .background {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [.accent, .accent.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .fill(Color.accentColor)
             }
 
-            if !presenter.isPremium {
-                Text("\(presenter.decks.count) of \(Constants.freeTierDeckLimit) free decks")
+            if !presenter.isPremium && !presenter.canCreateDeck {
+                Text("Free deck limit reached — upgrade to continue")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -392,7 +311,7 @@ struct HomeView: View {
                 presenter.onDevSettingsPressed()
             }
     }
-    
+
     // MARK: - Streak Indicator
 
     private var streakIndicator: some View {
@@ -408,6 +327,7 @@ struct HomeView: View {
     }
 
     // MARK: - Push Notifications
+
     private var pushNotificationButton: some View {
         Image(systemName: "bell.fill")
             .font(.headline)
@@ -451,6 +371,13 @@ extension CoreRouter {
     func showHomeView(delegate: HomeDelegate) {
         router.showScreen(.push) { router in
             builder.homeView(router: router, delegate: delegate)
+        }
+    }
+
+    func showCrossDeckPracticeView(cards: [FlashcardModel], decks: [DeckModel]) {
+        let delegate = PracticeDelegate(crossDeckCards: cards, crossDeckSource: decks)
+        router.showScreen(.sheet) { router in
+            builder.crossDeckPracticeView(router: router, delegate: delegate)
         }
     }
 
