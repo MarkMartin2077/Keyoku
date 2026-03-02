@@ -199,76 +199,81 @@ struct OnboardingCompletedView: View {
         }
     }
 
-    // MARK: - Page 2: Organize Decks
+    // MARK: - Page 2: Smart Reviews
 
     private var page2: some View {
         OnboardingPageView(
             illustration: AnyView(page2Illustration),
-            title: String(localized: "Organize Your Knowledge"),
-            subtitle: String(localized: "Create colorful decks of flashcards. Keep your subjects tidy and find what you need at a glance.")
+            title: String(localized: "Reviews That Actually Stick"),
+            subtitle: String(localized: "Keyoku schedules each card for review at the perfect moment — just before you'd forget it. The more you practice, the smarter it gets.")
         )
     }
 
     private var page2Illustration: some View {
         ZStack {
-            deckMiniCard(color: .green, rotation: -10, offset: CGSize(width: -60, height: 16))
-            deckMiniCard(color: .orange, rotation: 8, offset: CGSize(width: 56, height: 12))
-            deckMiniCard(color: .purple, rotation: -3, offset: CGSize(width: -16, height: -20))
+            // Far card — long interval
+            srsCard(label: "21 days", color: .green, rotation: -12, offset: CGSize(width: -64, height: 28))
 
-            // Center primary deck
-            RoundedRectangle(cornerRadius: 18)
-                .fill(
+            // Middle card — medium interval
+            srsCard(label: "6 days", color: .blue, rotation: 10, offset: CGSize(width: 60, height: 24))
+
+            // Front card — due today
+            srsCard(label: "Due today", color: .orange, rotation: -2, offset: CGSize(width: 0, height: -10))
+
+            // Clock badge
+            Image(systemName: "clock.badge.checkmark")
+                .font(.system(size: 22))
+                .foregroundStyle(
                     LinearGradient(
-                        colors: [.accentColor, .indigo],
+                        colors: [.accentColor, .purple],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 150, height: 105)
-                .overlay(alignment: .topLeading) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Image(systemName: "rectangle.stack.fill")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.7))
-
-                        Text("Biology")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-
-                        Text("24 cards")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                    .padding(14)
-                }
-                .shadow(color: Color.accentColor.opacity(0.3), radius: 16, y: 8)
-                .offset(x: 8, y: -4)
+                .offset(x: 54, y: -70)
         }
     }
 
-    private func deckMiniCard(color: Color, rotation: Double, offset: CGSize) -> some View {
+    /// Renders a single mini flashcard for the spaced-repetition illustration on page 2.
+    ///
+    /// Each card shows placeholder content lines and a colored review-interval badge
+    /// (e.g. "Due today", "6 days", "21 days") to illustrate that different cards are
+    /// scheduled for review at different times.
+    private func srsCard(label: String, color: Color, rotation: Double, offset: CGSize) -> some View {
         RoundedRectangle(cornerRadius: 14)
-            .fill(
-                LinearGradient(
-                    colors: [color, color.opacity(0.7)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: 120, height: 85)
-            .overlay(alignment: .topLeading) {
-                VStack(alignment: .leading, spacing: 4) {
+            .fill(color.opacity(0.1))
+            .frame(width: 130, height: 90)
+            .overlay {
+                VStack(spacing: 6) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(.white.opacity(0.4))
-                        .frame(width: 50, height: 4)
+                        .fill(color.opacity(0.3))
+                        .frame(width: 80, height: 4)
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(.white.opacity(0.25))
-                        .frame(width: 30, height: 4)
+                        .fill(color.opacity(0.2))
+                        .frame(width: 60, height: 4)
                 }
-                .padding(12)
             }
-            .shadow(color: color.opacity(0.2), radius: 10, y: 4)
+            .overlay(alignment: .bottomTrailing) {
+                Text(label)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background {
+                        Capsule()
+                            .fill(color.opacity(0.15))
+                            .overlay {
+                                Capsule()
+                                    .strokeBorder(color.opacity(0.3), lineWidth: 1)
+                            }
+                    }
+                    .padding(10)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(color.opacity(0.2), lineWidth: 1)
+            }
+            .shadow(color: color.opacity(0.15), radius: 10, y: 4)
             .rotationEffect(.degrees(rotation))
             .offset(offset)
     }
@@ -279,7 +284,7 @@ struct OnboardingCompletedView: View {
         OnboardingPageView(
             illustration: AnyView(page3Illustration),
             title: String(localized: "Study Your Way"),
-            subtitle: String(localized: "Flip through flashcards to practice and reinforce what you've learned. Study at your own pace.")
+            subtitle: String(localized: "Swipe right when you know it, left when you need more practice. Keyoku tracks your progress card by card.")
         )
     }
 

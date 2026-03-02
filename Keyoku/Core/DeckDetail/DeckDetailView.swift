@@ -240,7 +240,17 @@ struct DeckDetailView: View {
                 presenter.onDeleteFlashcards(at: indexSet)
             }
         } header: {
-            Text("\(presenter.flashcards.count) Card\(presenter.flashcards.count == 1 ? "" : "s")")
+            if presenter.dueCount > 0 {
+                HStack(spacing: 4) {
+                    Text("\(presenter.dueCount) Due")
+                        .foregroundStyle(.orange)
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    Text("\(presenter.flashcards.count) Cards")
+                }
+            } else {
+                Text("\(presenter.flashcards.count) Card\(presenter.flashcards.count == 1 ? "" : "s")")
+            }
         }
     }
 
@@ -255,11 +265,15 @@ struct DeckDetailView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if flashcard.isLearned {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.body)
-                    .accessibilityHidden(true)
+            HStack(spacing: 6) {
+                cardStatusBadge(for: flashcard)
+
+                if flashcard.isLearned {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.body)
+                        .accessibilityHidden(true)
+                }
             }
         }
         .padding(.vertical, 4)
@@ -268,8 +282,53 @@ struct DeckDetailView: View {
             presenter.onEditCardPressed(flashcard: flashcard)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Question: \(flashcard.question), Answer: \(flashcard.answer)\(flashcard.isLearned ? ", learned" : "")")
+        .accessibilityLabel(cardAccessibilityLabel(for: flashcard))
         .accessibilityHint("Tap to edit this card")
+    }
+
+    /// Returns an SRS status indicator for a flashcard row.
+    ///
+    /// - Due (`dueDate <= now`): orange `clock.badge.exclamationmark.fill` icon.
+    /// - Scheduled (`dueDate > now`): muted `Xd` countdown in calendar days.
+    /// - New (`dueDate == nil`): empty — no indicator shown.
+    @ViewBuilder
+    private func cardStatusBadge(for flashcard: FlashcardModel) -> some View {
+        if let dueDate = flashcard.dueDate {
+            if dueDate <= Date() {
+                Image(systemName: "clock.badge.exclamationmark.fill")
+                    .foregroundStyle(.orange)
+                    .font(.subheadline)
+                    .accessibilityHidden(true)
+            } else {
+                let todayStart = Calendar.current.startOfDay(for: .now)
+                let dueStart = Calendar.current.startOfDay(for: dueDate)
+                let days = max(1, Calendar.current.dateComponents([.day], from: todayStart, to: dueStart).day ?? 1)
+                Text("\(days)d")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    /// Builds an accessibility label for a flashcard row including question, answer,
+    /// learned status, and SRS scheduling state so VoiceOver users get the same
+    /// information as sighted users.
+    private func cardAccessibilityLabel(for flashcard: FlashcardModel) -> String {
+        var label = "Question: \(flashcard.question), Answer: \(flashcard.answer)"
+        if flashcard.isLearned { label += ", learned" }
+        if let dueDate = flashcard.dueDate {
+            if dueDate <= Date() {
+                label += ", review due"
+            } else {
+                let todayStart = Calendar.current.startOfDay(for: .now)
+                let dueStart = Calendar.current.startOfDay(for: dueDate)
+                let days = max(1, Calendar.current.dateComponents([.day], from: todayStart, to: dueStart).day ?? 1)
+                label += ", review in \(days) day\(days == 1 ? "" : "s")"
+            }
+        }
+        return label
     }
 
     // MARK: - Add Menu

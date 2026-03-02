@@ -12,6 +12,10 @@ import SwiftUI
 /// Provides full CRUD for flashcards (add, edit, delete), deck editing (name, color, image),
 /// practice session launching, learned-status reset, and on-device AI card generation from
 /// pasted text or uploaded PDFs. Generation streams cards in batches with quality filtering.
+///
+/// The `flashcards` property is sorted by SRS urgency: overdue cards appear first (oldest
+/// due date first), followed by scheduled cards (ascending by due date), with unreviewed
+/// new cards last.
 @Observable
 @MainActor
 class DeckDetailPresenter {
@@ -46,8 +50,26 @@ class DeckDetailPresenter {
         interactor.getDeck(id: deckId)
     }
 
+    /// Flashcards sorted by SRS urgency for display in the deck detail list.
+    ///
+    /// Sort order:
+    /// 1. **Due** (`dueDate <= now`) — oldest due date first so the most overdue card leads.
+    /// 2. **Scheduled** (`dueDate > now`) — ascending by due date.
+    /// 3. **New** (`dueDate == nil`) — never reviewed; sorted last as they have no urgency.
     var flashcards: [FlashcardModel] {
-        deck?.flashcards ?? []
+        let cards = deck?.flashcards ?? []
+        let now = Date()
+        return cards.sorted { lhs, rhs in
+            let lhsDue = lhs.dueDate.map { $0 <= now } ?? false
+            let rhsDue = rhs.dueDate.map { $0 <= now } ?? false
+            if lhsDue != rhsDue { return lhsDue }
+            switch (lhs.dueDate, rhs.dueDate) {
+            case (nil, nil):                        return false
+            case (nil, _):                          return false  // new cards sort last
+            case (_, nil):                          return true
+            case let (lhsDate?, rhsDate?):          return lhsDate < rhsDate
+            }
+        }
     }
 
     var deckImageUrlString: String? {
