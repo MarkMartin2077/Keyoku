@@ -13,6 +13,9 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            if presenter.showNotificationsRow {
+                notificationsSection
+            }
             legalSection
         }
         .lineLimit(1)
@@ -23,6 +26,16 @@ struct SettingsView: View {
         }
         .onDisappear {
             presenter.onViewDisappear()
+        }
+    }
+
+    // MARK: - Notifications
+
+    private var notificationsSection: some View {
+        Section {
+            settingsRow(icon: "bell", title: "Enable Notifications") {
+                presenter.onNotificationsPressed()
+            }
         }
     }
 

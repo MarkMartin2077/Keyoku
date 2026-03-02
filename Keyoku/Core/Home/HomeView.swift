@@ -94,11 +94,6 @@ struct HomeView: View {
                 .accessibilityIdentifier("CreateNewButton")
             }
 
-            ToolbarItem(placement: .topBarTrailing) {
-                if presenter.showNotificationButton {
-                    pushNotificationButton
-                }
-            }
         }
         .onFirstAppear {
             presenter.onFirstAppear(delegate: delegate)
@@ -305,19 +300,6 @@ struct HomeView: View {
         .accessibilityLabel("\(presenter.currentStreak) day streak")
     }
 
-    // MARK: - Push Notifications
-
-    private var pushNotificationButton: some View {
-        Image(systemName: "bell.fill")
-            .font(.headline)
-            .padding(4)
-            .tappableBackground()
-            .foregroundStyle(.accent)
-            .accessibilityLabel("Notifications")
-            .anyButton {
-                presenter.onPushNotificationButtonPressed()
-            }
-    }
 }
 
 #Preview {
