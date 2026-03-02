@@ -15,6 +15,7 @@ extension DeckDetailPresenter {
         case onDisappear(delegate: DeckDetailDelegate)
         // Practice
         case onPracticePressed
+        case onSessionStarted(limit: Int?, totalCards: Int)
         case onReviewDuePressed(dueCount: Int)
         case onResetLearnedStatus
         case onResetLearnedStatusSuccess(cardCount: Int)
@@ -60,6 +61,7 @@ extension DeckDetailPresenter {
             case .onAppear:                     return "DeckDetailView_Appear"
             case .onDisappear:                  return "DeckDetailView_Disappear"
             case .onPracticePressed:            return "DeckDetailView_Practice_Pressed"
+            case .onSessionStarted:             return "DeckDetailView_Session_Started"
             case .onReviewDuePressed:           return "DeckDetailView_ReviewDue_Pressed"
             case .onResetLearnedStatus:         return "DeckDetailView_ResetLearned_Pressed"
             case .onResetLearnedStatusSuccess:  return "DeckDetailView_ResetLearned_Success"
@@ -102,6 +104,8 @@ extension DeckDetailPresenter {
             switch self {
             case .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
                 return delegate.eventParameters
+            case .onSessionStarted(limit: let limit, totalCards: let total):
+                return ["card_limit": limit as Any, "total_cards": total]
             case .onReviewDuePressed(dueCount: let count):
                 return ["due_count": count]
             case .onDeleteCardPressed(flashcard: let flashcard):

@@ -56,6 +56,12 @@ extension CoreBuilder {
                     }
                     .any()
                 }),
+                TabBarScreen(title: String(localized: "Insights"), systemImage: "chart.bar.fill", screen: {
+                    RouterView { router in
+                        statsView(router: router)
+                    }
+                    .any()
+                }),
                 TabBarScreen(title: String(localized: "Profile"), systemImage: "person.fill", screen: {
                     RouterView { router in
                         profileView(router: router, delegate: ProfileDelegate())

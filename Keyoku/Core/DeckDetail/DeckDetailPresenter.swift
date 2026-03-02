@@ -84,6 +84,18 @@ class DeckDetailPresenter {
         hasSRSData && dueCount > 0
     }
 
+    // MARK: - Session Setup State
+
+    var showSessionSetup: Bool = false
+
+    /// Discrete card count options shown in the session setup dialog.
+    /// Capped at deck size and always includes a "all cards" option.
+    var sessionCardOptions: [Int] {
+        let total = flashcards.count
+        let candidates = [5, 10, 20]
+        return candidates.filter { $0 < total } + [total]
+    }
+
     // MARK: - Edit Card State
 
     var editingFlashcard: FlashcardModel?
@@ -170,8 +182,19 @@ class DeckDetailPresenter {
     // MARK: - Practice
 
     func onPracticePressed() {
-        guard let deck = deck else { return }
         interactor.trackEvent(event: Event.onPracticePressed)
+        if flashcards.count <= 5 {
+            // Small decks skip the dialog — just start immediately
+            onStartSessionPressed(limit: nil)
+        } else {
+            showSessionSetup = true
+        }
+    }
+
+    func onStartSessionPressed(limit: Int?) {
+        guard let deck = deck else { return }
+        showSessionSetup = false
+        interactor.trackEvent(event: Event.onSessionStarted(limit: limit, totalCards: flashcards.count))
 
         let stamped = DeckModel(
             deckId: deck.deckId,
@@ -186,7 +209,7 @@ class DeckDetailPresenter {
         )
         try? interactor.updateDeck(stamped)
 
-        router.showPracticeView(deck: deck)
+        router.showPracticeView(deck: deck, cardLimit: limit)
     }
 
     func onReviewDuePressed() {
@@ -219,7 +242,12 @@ class DeckDetailPresenter {
                 question: card.question,
                 answer: card.answer,
                 deckId: card.deckId,
-                isLearned: false
+                isLearned: false,
+                repetitions: card.repetitions,
+                interval: card.interval,
+                easeFactor: card.easeFactor,
+                dueDate: card.dueDate,
+                stillLearningCount: card.stillLearningCount
             )
         }
 
@@ -298,7 +326,18 @@ class DeckDetailPresenter {
 
         let updatedFlashcards = currentDeck.flashcards.map { card in
             if card.flashcardId == flashcardId {
-                return FlashcardModel(flashcardId: flashcardId, question: trimmedQuestion, answer: trimmedAnswer, deckId: currentDeck.deckId, isLearned: card.isLearned, stillLearningCount: card.stillLearningCount)
+                return FlashcardModel(
+                    flashcardId: flashcardId,
+                    question: trimmedQuestion,
+                    answer: trimmedAnswer,
+                    deckId: currentDeck.deckId,
+                    isLearned: card.isLearned,
+                    repetitions: card.repetitions,
+                    interval: card.interval,
+                    easeFactor: card.easeFactor,
+                    dueDate: card.dueDate,
+                    stillLearningCount: card.stillLearningCount
+                )
             }
             return card
         }

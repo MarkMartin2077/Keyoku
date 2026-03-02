@@ -24,6 +24,7 @@ struct DeckDetailView: View {
 
     @State private var showAddCardSheet: Bool = false
     @State private var showGenerateSheet: Bool = false
+    @State private var showSessionSetup: Bool = false
     @State private var newQuestion: String = ""
     @State private var newAnswer: String = ""
 
@@ -72,6 +73,21 @@ struct DeckDetailView: View {
         .onChange(of: showGenerateSheet) { _, isPresented in
             if isPresented {
                 presenter.onGenerateSheetOpened()
+            }
+        }
+        .confirmationDialog(
+            "How many cards?",
+            isPresented: $presenter.showSessionSetup,
+            titleVisibility: .visible
+        ) {
+            ForEach(presenter.sessionCardOptions, id: \.self) { count in
+                let isAll = count == presenter.flashcards.count
+                Button(isAll ? "All \(count) Cards" : "\(count) Cards") {
+                    presenter.onStartSessionPressed(limit: isAll ? nil : count)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                presenter.showSessionSetup = false
             }
         }
         .onAppear {

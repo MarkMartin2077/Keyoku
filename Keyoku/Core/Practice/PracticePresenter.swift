@@ -63,7 +63,7 @@ class PracticePresenter {
         selectedIndex > 0
     }
 
-    init(interactor: PracticeInteractor, router: PracticeRouter, deck: DeckModel, dueOnly: Bool = false) {
+    init(interactor: PracticeInteractor, router: PracticeRouter, deck: DeckModel, dueOnly: Bool = false, cardLimit: Int? = nil) {
         self.interactor = interactor
         self.router = router
         self.deckId = deck.deckId
@@ -71,7 +71,7 @@ class PracticePresenter {
         self.deckColor = deck.color
         self.isReviewMode = dueOnly
         let cards = dueOnly ? deck.flashcards.filter { $0.isDue } : deck.flashcards
-        self.flashcards = cards.sorted { lhs, rhs in
+        let sorted = cards.sorted { lhs, rhs in
             switch (lhs.isDue, rhs.isDue) {
             case (true, false): return true
             case (false, true): return false
@@ -81,6 +81,7 @@ class PracticePresenter {
                 return lDate < rDate
             }
         }
+        self.flashcards = cardLimit.map { Array(sorted.prefix($0)) } ?? sorted
     }
 
     init(interactor: PracticeInteractor, router: PracticeRouter, crossDeckCards: [FlashcardModel], decks: [DeckModel]) {

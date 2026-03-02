@@ -377,7 +377,7 @@ struct PracticeView: View {
 
 extension CoreBuilder {
 
-    func practiceView(router: AnyRouter, delegate: PracticeDelegate, dueOnly: Bool = false) -> some View {
+    func practiceView(router: AnyRouter, delegate: PracticeDelegate, dueOnly: Bool = false, cardLimit: Int? = nil) -> some View {
         let coreRouter = CoreRouter(router: router, builder: self)
         let presenter: PracticePresenter
         if let deck = delegate.deck {
@@ -385,7 +385,8 @@ extension CoreBuilder {
                 interactor: interactor,
                 router: coreRouter,
                 deck: deck,
-                dueOnly: dueOnly
+                dueOnly: dueOnly,
+                cardLimit: cardLimit
             )
         } else if let cards = delegate.crossDeckCards, let decks = delegate.crossDeckSource {
             presenter = PracticePresenter(
@@ -414,10 +415,10 @@ extension CoreBuilder {
 
 extension CoreRouter {
 
-    func showPracticeView(deck: DeckModel) {
+    func showPracticeView(deck: DeckModel, cardLimit: Int? = nil) {
         let delegate = PracticeDelegate(deck: deck)
         router.showScreen(.push) { router in
-            builder.practiceView(router: router, delegate: delegate)
+            builder.practiceView(router: router, delegate: delegate, cardLimit: cardLimit)
         }
     }
 

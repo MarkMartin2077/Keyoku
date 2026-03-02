@@ -9,7 +9,7 @@ import SwiftUI
 
 @MainActor
 protocol DeckDetailRouter: GlobalRouter {
-    func showPracticeView(deck: DeckModel)
+    func showPracticeView(deck: DeckModel, cardLimit: Int?)
     func showReviewDueView(deck: DeckModel)
 }
 
