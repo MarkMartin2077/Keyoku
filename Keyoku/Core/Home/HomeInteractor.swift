@@ -28,6 +28,10 @@ protocol HomeInteractor: GlobalInteractor {
 
     // A/B Tests
     var homePracticeLayout: HomePracticeLayoutOption { get }
+
+    // Rating prompt
+    var pendingRatingPrompt: Bool { get }
+    func clearPendingRatingPrompt()
 }
 
 extension CoreInteractor: HomeInteractor { }

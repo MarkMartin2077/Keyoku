@@ -105,6 +105,27 @@ struct CoreInteractor: GlobalInteractor {
     func markFirstPracticeComplete() async throws {
         try await userManager.saveFirstPracticeCompleteForCurrentUser()
     }
+
+    var completedSessionCount: Int {
+        UserDefaults.standard.integer(forKey: "practice_completed_session_count")
+    }
+
+    func incrementSessionCount() {
+        let current = UserDefaults.standard.integer(forKey: "practice_completed_session_count")
+        UserDefaults.standard.set(current + 1, forKey: "practice_completed_session_count")
+    }
+
+    var pendingRatingPrompt: Bool {
+        UserDefaults.standard.bool(forKey: "pending_rating_prompt")
+    }
+
+    func setPendingRatingPrompt() {
+        UserDefaults.standard.set(true, forKey: "pending_rating_prompt")
+    }
+
+    func clearPendingRatingPrompt() {
+        UserDefaults.standard.removeObject(forKey: "pending_rating_prompt")
+    }
     
     func saveUserName(name: String) async throws {
         try await userManager.saveUserName(name: name)

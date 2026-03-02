@@ -17,6 +17,9 @@ protocol PracticeInteractor: GlobalInteractor {
     func getDeck(id: String) -> DeckModel?
     func updateDeck(_ deck: DeckModel) throws
     func markFirstPracticeComplete() async throws
+    var completedSessionCount: Int { get }
+    func incrementSessionCount()
+    func setPendingRatingPrompt()
     func schedulePushNotificationsForTheNextWeek(dueCount: Int, stillLearningCount: Int)
 }
 

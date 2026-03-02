@@ -163,8 +163,9 @@ class PracticePresenter {
             interactor.playHaptic(option: .lessonComplete())
             recordStreakEvent()
             interactor.incrementSessionCount()
-            if interactor.completedSessionCount == 10 {
-                AppStoreRatingsHelper.requestReviewIfNeeded()
+            let count = interactor.completedSessionCount
+            if count == 3 || count == 7 {
+                interactor.setPendingRatingPrompt()
             }
             showSessionMilestoneUpsellIfNeeded()
         }

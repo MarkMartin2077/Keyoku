@@ -129,6 +129,11 @@ class HomePresenter {
 
     func onViewAppear(delegate: HomeDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
+
+        if interactor.pendingRatingPrompt {
+            interactor.clearPendingRatingPrompt()
+            AppStoreRatingsHelper.requestReviewIfNeeded()
+        }
     }
 
     private func checkPendingQuickAction() {
