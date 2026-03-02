@@ -25,16 +25,16 @@ struct HomeView: View {
         #endif
     }
 
-    private var greeting: String {
+    private var greeting: String? {
+        guard let name = presenter.userName else { return nil }
         let hour = Calendar.current.component(.hour, from: Date())
-        let name = presenter.userName.map { ", \($0)" } ?? ""
         switch hour {
         case 5..<12:
-            return "Good morning\(name)"
+            return "Good morning, \(name)"
         case 12..<17:
-            return "Good afternoon\(name)"
+            return "Good afternoon, \(name)"
         default:
-            return "Good evening\(name)"
+            return "Good evening, \(name)"
         }
     }
 
@@ -91,14 +91,16 @@ struct HomeView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 0) {
-            Text(greeting)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.top, 8)
+            if let greeting {
+                Text(greeting)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+            }
 
             Spacer()
 
@@ -190,12 +192,14 @@ struct HomeView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(greeting)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let greeting {
+                Text(greeting)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             HStack(spacing: 12) {
                 Text("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks")")
