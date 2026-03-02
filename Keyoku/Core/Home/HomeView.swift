@@ -76,9 +76,6 @@ struct HomeView: View {
             }
             .padding()
         }
-        .safeAreaInset(edge: .bottom) {
-            floatingCreateButton
-        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -89,7 +86,13 @@ struct HomeView: View {
             }
 
             ToolbarItem(placement: .topBarTrailing) {
-                streakIndicator
+                Button {
+                    presenter.onCreatePressed()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Create new deck")
+                .accessibilityIdentifier("CreateNewButton")
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -125,12 +128,16 @@ struct HomeView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(greeting)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(alignment: .top) {
+                Text(greeting)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                streakIndicator
+            }
 
             HStack(spacing: 12) {
                 Text("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks")")
@@ -202,6 +209,11 @@ struct HomeView: View {
                         .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
                 }
         }
+        .accessibilityLabel("Create your first deck")
+        .accessibilityHint("Tap to create a new deck")
+        .anyButton(.press) {
+            presenter.onCreatePressed()
+        }
     }
 
     private func deckCard(deck: DeckModel) -> some View {
@@ -258,41 +270,6 @@ struct HomeView: View {
         .anyButton(.press) {
             presenter.onDeckPressed(deck: deck)
         }
-    }
-
-    // MARK: - Floating Create Button
-
-    private var floatingCreateButton: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "rectangle.stack.badge.plus")
-                    .font(.headline)
-
-                Text("New Deck")
-                    .font(.headline)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.accentColor)
-            }
-
-            if !presenter.isPremium && !presenter.canCreateDeck {
-                Text("Free deck limit reached — upgrade to continue")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-        .background(.bar)
-        .accessibilityHint("Create a new deck")
-        .anyButton(.press) {
-            presenter.onCreatePressed()
-        }
-        .accessibilityIdentifier("CreateNewButton")
     }
 
     // MARK: - Dev Settings
