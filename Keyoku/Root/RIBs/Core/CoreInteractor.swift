@@ -193,7 +193,7 @@ struct CoreInteractor: GlobalInteractor {
     }
 
     var freeTierDeckLimit: Int {
-        3
+        5
     }
 
     var homePracticeLayout: HomePracticeLayoutOption {
