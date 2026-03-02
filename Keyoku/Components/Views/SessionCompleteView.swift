@@ -52,8 +52,6 @@ struct SessionCompleteView: View {
         ZStack {
             if isPerfectSession {
                 ConfettiView()
-            } else {
-                RippleView(color: deckColor)
             }
 
             VStack(spacing: 0) {

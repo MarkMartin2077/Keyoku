@@ -162,7 +162,11 @@ class PracticePresenter {
             ))
             interactor.playHaptic(option: .lessonComplete())
             recordStreakEvent()
-            showFirstPracticeUpsellIfNeeded()
+            interactor.incrementSessionCount()
+            if interactor.completedSessionCount == 10 {
+                AppStoreRatingsHelper.requestReviewIfNeeded()
+            }
+            showSessionMilestoneUpsellIfNeeded()
         }
     }
 
@@ -241,24 +245,19 @@ class PracticePresenter {
 
     // MARK: - Premium Prompt
 
-    private func showFirstPracticeUpsellIfNeeded() {
-        let alreadySeen = interactor.currentUser?.didCompleteFirstPractice == true
-        guard !interactor.isPremium, !alreadySeen else { return }
+    private func showSessionMilestoneUpsellIfNeeded() {
+        guard !interactor.isPremium, interactor.completedSessionCount == 5 else { return }
 
-        Task {
-            try? await interactor.markFirstPracticeComplete()
-        }
-
-        interactor.trackEvent(event: Event.firstPracticeUpsellShown)
+        interactor.trackEvent(event: Event.sessionMilestoneUpsellShown)
         router.showFirstDeckPremiumPromptModal(
             onSeeOfferPressed: { [weak self] in
                 self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.firstPracticeUpsellAccepted)
-                self?.router.showPaywallView(delegate: PaywallDelegate(source: "first_practice_complete"))
+                self?.interactor.trackEvent(event: Event.sessionMilestoneUpsellAccepted)
+                self?.router.showPaywallView(delegate: PaywallDelegate(source: "fifth_session_complete"))
             },
             onDismissPressed: { [weak self] in
                 self?.router.dismissModal()
-                self?.interactor.trackEvent(event: Event.firstPracticeUpsellDismissed)
+                self?.interactor.trackEvent(event: Event.sessionMilestoneUpsellDismissed)
             }
         )
     }
@@ -333,11 +332,6 @@ class PracticePresenter {
                 let updatedStreak = interactor.currentStreakData.currentStreak ?? 0
                 if updatedStreak > previousStreak {
                     newStreakCount = updatedStreak
-                    showStreakCelebration = true
-
-                    if updatedStreak == 3 || updatedStreak == 7 {
-                        AppStoreRatingsHelper.requestReviewIfNeeded()
-                    }
                 }
 
                 // Reschedule the next week of reminders with session-aware copy.
@@ -365,9 +359,9 @@ extension PracticePresenter {
         case onStreakEventFailed(error: Error)
         case onStreakCelebrationDismissed
         case onPersistLearnedFail(error: Error)
-        case firstPracticeUpsellShown
-        case firstPracticeUpsellAccepted
-        case firstPracticeUpsellDismissed
+        case sessionMilestoneUpsellShown
+        case sessionMilestoneUpsellAccepted
+        case sessionMilestoneUpsellDismissed
 
         var eventName: String {
             switch self {
@@ -384,9 +378,9 @@ extension PracticePresenter {
             case .onStreakEventFailed:          return "PracticeView_Streak_Failed"
             case .onStreakCelebrationDismissed: return "PracticeView_Streak_Celebration_Dismissed"
             case .onPersistLearnedFail:         return "PracticeView_Persist_Learned_Fail"
-            case .firstPracticeUpsellShown:     return "PracticeView_FirstPractice_Upsell_Shown"
-            case .firstPracticeUpsellAccepted:  return "PracticeView_FirstPractice_Upsell_Accepted"
-            case .firstPracticeUpsellDismissed: return "PracticeView_FirstPractice_Upsell_Dismissed"
+            case .sessionMilestoneUpsellShown:     return "PracticeView_SessionMilestone_Upsell_Shown"
+            case .sessionMilestoneUpsellAccepted:  return "PracticeView_SessionMilestone_Upsell_Accepted"
+            case .sessionMilestoneUpsellDismissed: return "PracticeView_SessionMilestone_Upsell_Dismissed"
             }
         }
 
