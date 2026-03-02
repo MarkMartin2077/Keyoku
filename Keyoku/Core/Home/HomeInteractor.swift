@@ -32,6 +32,7 @@ protocol HomeInteractor: GlobalInteractor {
     // Rating prompt
     var pendingRatingPrompt: Bool { get }
     func clearPendingRatingPrompt()
+    func recordRatingPromptShown()
 }
 
 extension CoreInteractor: HomeInteractor { }

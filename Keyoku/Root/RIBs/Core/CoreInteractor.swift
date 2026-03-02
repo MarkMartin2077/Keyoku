@@ -126,6 +126,26 @@ struct CoreInteractor: GlobalInteractor {
     func clearPendingRatingPrompt() {
         UserDefaults.standard.removeObject(forKey: "pending_rating_prompt")
     }
+
+    func recordRatingPromptShown() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "rating_prompt_last_date")
+        UserDefaults.standard.set(0, forKey: "rating_sessions_since_prompt")
+    }
+
+    var lastRatingPromptDate: Date? {
+        let interval = UserDefaults.standard.double(forKey: "rating_prompt_last_date")
+        guard interval > 0 else { return nil }
+        return Date(timeIntervalSince1970: interval)
+    }
+
+    var sessionsSinceLastRatingPrompt: Int {
+        UserDefaults.standard.integer(forKey: "rating_sessions_since_prompt")
+    }
+
+    func incrementSessionsSinceLastRatingPrompt() {
+        let current = UserDefaults.standard.integer(forKey: "rating_sessions_since_prompt")
+        UserDefaults.standard.set(current + 1, forKey: "rating_sessions_since_prompt")
+    }
     
     func saveUserName(name: String) async throws {
         try await userManager.saveUserName(name: name)

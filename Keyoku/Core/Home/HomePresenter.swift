@@ -132,6 +132,7 @@ class HomePresenter {
 
         if interactor.pendingRatingPrompt {
             interactor.clearPendingRatingPrompt()
+            interactor.recordRatingPromptShown()
             AppStoreRatingsHelper.requestReviewIfNeeded()
         }
     }

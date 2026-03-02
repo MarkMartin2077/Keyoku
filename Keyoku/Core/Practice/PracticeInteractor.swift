@@ -20,6 +20,9 @@ protocol PracticeInteractor: GlobalInteractor {
     var completedSessionCount: Int { get }
     func incrementSessionCount()
     func setPendingRatingPrompt()
+    var lastRatingPromptDate: Date? { get }
+    var sessionsSinceLastRatingPrompt: Int { get }
+    func incrementSessionsSinceLastRatingPrompt()
     func schedulePushNotificationsForTheNextWeek(dueCount: Int, stillLearningCount: Int)
 }
 

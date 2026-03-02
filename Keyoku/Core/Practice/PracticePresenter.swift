@@ -163,10 +163,8 @@ class PracticePresenter {
             interactor.playHaptic(option: .lessonComplete())
             recordStreakEvent()
             interactor.incrementSessionCount()
-            let count = interactor.completedSessionCount
-            if count == 3 || count == 7 {
-                interactor.setPendingRatingPrompt()
-            }
+            interactor.incrementSessionsSinceLastRatingPrompt()
+            checkAndSetRatingPrompt()
             showSessionMilestoneUpsellIfNeeded()
         }
     }
@@ -242,6 +240,24 @@ class PracticePresenter {
             currentSwipeOffset = 0
             hasRecordedCompletion = false
         }
+    }
+
+    // MARK: - Rating Prompt
+
+    private func checkAndSetRatingPrompt() {
+        let count = interactor.completedSessionCount
+
+        // Early milestones — catch engaged users before they churn
+        if count == 3 || count == 7 {
+            interactor.setPendingRatingPrompt()
+            return
+        }
+
+        // Ongoing — 60+ days since last prompt AND 5+ sessions in that period
+        guard let lastDate = interactor.lastRatingPromptDate else { return }
+        let days = Calendar.current.dateComponents([.day], from: lastDate, to: Date()).day ?? 0
+        guard days >= 60, interactor.sessionsSinceLastRatingPrompt >= 5 else { return }
+        interactor.setPendingRatingPrompt()
     }
 
     // MARK: - Premium Prompt
