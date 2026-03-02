@@ -9,16 +9,20 @@ import SwiftUI
 
 /// Deck list presenter that provides searchable, full-list access to all user decks.
 ///
-/// Supports text-based filtering, deck creation with free-tier limit enforcement,
-/// swipe-to-delete, and a first-deck premium prompt after initial deck creation.
+/// Supports text-based filtering, deck sorting with persistence, deck creation with
+/// free-tier limit enforcement, swipe-to-delete, and a first-deck premium prompt
+/// after initial deck creation.
 @Observable
 @MainActor
 class DecksPresenter {
-    
+
     private let interactor: DecksInteractor
     private let router: DecksRouter
 
     var searchText = ""
+
+    @UserDefaultEnum(key: "deck_sort_option", startingValue: .recentlyStudied)
+    var sortOption: DeckSortOption
 
     var decks: [DeckModel] {
         interactor.decks
@@ -26,8 +30,8 @@ class DecksPresenter {
 
     var filteredDecks: [DeckModel] {
         let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !query.isEmpty else { return decks }
-        return decks.filter { $0.name.lowercased().localizedStandardContains(query) }
+        let filtered = query.isEmpty ? decks : decks.filter { $0.name.lowercased().localizedStandardContains(query) }
+        return filtered.sorted(by: sortOption)
     }
 
     var canCreateDeck: Bool {
@@ -38,7 +42,7 @@ class DecksPresenter {
         self.interactor = interactor
         self.router = router
     }
-    
+
     func onFirstAppear(delegate: DecksDelegate) {
         interactor.loadDecks()
     }
@@ -46,11 +50,16 @@ class DecksPresenter {
     func onViewAppear(delegate: DecksDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
     }
-    
+
     func onViewDisappear(delegate: DecksDelegate) {
         interactor.trackEvent(event: Event.onDisappear(delegate: delegate))
     }
-    
+
+    func onSortOptionSelected(_ option: DeckSortOption) {
+        sortOption = option
+        interactor.trackEvent(event: Event.sortOptionSelected(option: option))
+    }
+
     func onAddDeckPressed() {
         interactor.trackEvent(event: Event.onAddDeckPressed)
 
@@ -77,7 +86,7 @@ class DecksPresenter {
             }
         })
     }
-    
+
     private func showFirstDeckPremiumPrompt() {
         router.showFirstDeckPremiumPromptModal(
             onSeeOfferPressed: { [weak self] in
@@ -96,7 +105,7 @@ class DecksPresenter {
         interactor.trackEvent(event: Event.onDeckPressed(deck: deck))
         router.showDeckDetailView(deck: deck)
     }
-    
+
     func onDeleteDecks(at indexSet: IndexSet) {
         guard let index = indexSet.first, filteredDecks.indices.contains(index) else { return }
         let deck = filteredDecks[index]
@@ -116,7 +125,7 @@ class DecksPresenter {
 }
 
 extension DecksPresenter {
-    
+
     enum Event: LoggableEvent {
         case onAppear(delegate: DecksDelegate)
         case onDisappear(delegate: DecksDelegate)
@@ -129,6 +138,7 @@ extension DecksPresenter {
         case firstDeckPaywallShown
         case firstDeckPaywallAccepted
         case firstDeckPaywallDismissed
+        case sortOptionSelected(option: DeckSortOption)
 
         var eventName: String {
             switch self {
@@ -143,9 +153,10 @@ extension DecksPresenter {
             case .firstDeckPaywallShown:     return "DecksView_FirstDeck_Paywall_Shown"
             case .firstDeckPaywallAccepted:  return "DecksView_FirstDeck_Paywall_Accepted"
             case .firstDeckPaywallDismissed: return "DecksView_FirstDeck_Paywall_Dismissed"
+            case .sortOptionSelected:       return "DecksView_SortOption_Selected"
             }
         }
-        
+
         var parameters: [String: Any]? {
             switch self {
             case .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
@@ -156,11 +167,13 @@ extension DecksPresenter {
                 return ["deck_id": deckId]
             case .onDeleteDeckFail(error: let error):
                 return error.eventParameters
+            case .sortOptionSelected(option: let option):
+                return ["sort_option": option.rawValue]
             default:
                 return nil
             }
         }
-        
+
         var type: LogType {
             switch self {
             case .onDeleteDeckFail:
@@ -171,4 +184,36 @@ extension DecksPresenter {
         }
     }
 
+}
+
+private extension Array where Element == DeckModel {
+    func sorted(by option: DeckSortOption) -> [DeckModel] {
+        switch option {
+        case .recentlyStudied:
+            return sorted { lhs, rhs in
+                switch (lhs.lastStudiedAt, rhs.lastStudiedAt) {
+                case (nil, nil):       return lhs.createdAt > rhs.createdAt
+                case (nil, _):         return false
+                case (_, nil):         return true
+                case (let l?, let r?): return l > r
+                }
+            }
+        case .alphabetical:
+            return sorted { $0.name.lowercased() < $1.name.lowercased() }
+        case .mostDue:
+            return sorted { lhs, rhs in
+                let lhsDue = lhs.flashcards.filter { $0.isLearned && $0.isDue }.count
+                let rhsDue = rhs.flashcards.filter { $0.isLearned && $0.isDue }.count
+                if lhsDue != rhsDue { return lhsDue > rhsDue }
+                return lhs.name.lowercased() < rhs.name.lowercased()
+            }
+        case .mostCards:
+            return sorted { lhs, rhs in
+                if lhs.flashcards.count != rhs.flashcards.count {
+                    return lhs.flashcards.count > rhs.flashcards.count
+                }
+                return lhs.name.lowercased() < rhs.name.lowercased()
+            }
+        }
+    }
 }
