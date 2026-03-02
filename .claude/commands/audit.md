@@ -1,3 +1,8 @@
+---
+name: audit
+description: Scan the codebase for technical debt: force unwraps, missing analytics, TODOs, violations
+---
+
 Run a codebase audit on Keyoku to surface accumulated technical debt and quality gaps. Scan the entire Keyoku/ source directory.
 
 ## Checks to Run

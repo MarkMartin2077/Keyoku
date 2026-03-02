@@ -1,3 +1,8 @@
+---
+name: decide
+description: Evaluate a technical or product decision using iOS and PM reviewers in parallel
+---
+
 Help make a technical or product decision for Keyoku. The decision to evaluate is:
 
 $ARGUMENTS

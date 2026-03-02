@@ -1,3 +1,8 @@
+---
+name: appstore
+description: Generate App Store What's New copy from recent git commits
+---
+
 Generate App Store release notes for Keyoku based on recent changes.
 
 ## Step 1 — Gather Changes

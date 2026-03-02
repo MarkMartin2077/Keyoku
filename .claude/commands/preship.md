@@ -1,3 +1,8 @@
+---
+name: preship
+description: Run the full pre-ship gate before a TestFlight or App Store submission
+---
+
 You are running a pre-ship checklist for a TestFlight or App Store build of Keyoku. This is the final gate before the build goes out. Be thorough and honest — a missed issue here means a bad user experience in production.
 
 ## Step 1 — Parallel Expert Review

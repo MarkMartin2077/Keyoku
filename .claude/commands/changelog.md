@@ -1,3 +1,8 @@
+---
+name: changelog
+description: Generate user-facing release notes from git commits — usage: /changelog [tag or range]
+---
+
 Generate a user-facing changelog for Keyoku from recent git commits.
 
 $ARGUMENTS can optionally specify a version tag or commit range (e.g. "v1.2.0" or "v1.1.0..v1.2.0"). If not provided, use all commits since the last git tag.

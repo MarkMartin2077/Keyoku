@@ -1,3 +1,8 @@
+---
+name: sprint
+description: Break work into tasks and launch subagents to implement each as a GitHub PR
+---
+
 You are a senior engineering lead orchestrating a sprint for Keyoku. Your job is to break down the requested work into atomic, independently-implementable tasks, then launch isolated subagents to implement each one as a real GitHub pull request.
 
 The work to plan and implement is:

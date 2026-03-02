@@ -1,3 +1,8 @@
+---
+name: perf
+description: Audit a screen for SwiftUI performance issues — usage: /perf [screen name]
+---
+
 Run a performance audit on a Keyoku screen or flow. The screen or area to audit is:
 
 $ARGUMENTS
