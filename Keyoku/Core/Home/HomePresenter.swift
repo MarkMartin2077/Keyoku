@@ -13,8 +13,6 @@ class HomePresenter {
     private let interactor: HomeInteractor
     private let router: HomeRouter
 
-    private(set) var showNotificationButton: Bool = false
-    
     // MARK: - User Data
 
     var userName: String? {
@@ -118,11 +116,6 @@ class HomePresenter {
 
     func onFirstAppear(delegate: HomeDelegate) {
         interactor.loadDecks()
-
-        Task {
-            await checkShowPushNotificationButton()
-        }
-
         schedulePushNotifications()
         checkPendingQuickAction()
     }
@@ -321,42 +314,6 @@ class HomePresenter {
         )
     }
     
-    func onPushNotificationButtonPressed() {
-        func onEnablePushNotificationsPressed() {
-            router.dismissModal()
-            
-            Task {
-                let isAuthorized = try await interactor.requestPushAuthorization()
-                interactor.trackEvent(event: Event.pushNotifsEnable(isAuthorized: isAuthorized))
-                await checkShowPushNotificationButton()
-
-                if isAuthorized {
-                    schedulePushNotifications()
-                }
-            }
-        }
-        
-        func onCancelPushNotificationsPressed() {
-            router.dismissModal()
-            interactor.trackEvent(event: Event.pushNotifsCancel)
-        }
-        
-        interactor.trackEvent(event: Event.pushNotifsStart)
-        router.showPushNotificationModal(
-                onEnablePressed: {
-                    onEnablePushNotificationsPressed()
-                },
-                onCancelPressed: {
-                    onCancelPushNotificationsPressed()
-                }
-            )
-    }
-
-    func checkShowPushNotificationButton() async {
-        let canRequest = await interactor.canRequestPushAuthorization()
-        showNotificationButton = canRequest
-    }
-
     func onDevSettingsPressed() {
         #if MOCK || DEV
         interactor.trackEvent(event: Event.onDevSettings)
@@ -424,9 +381,6 @@ extension HomePresenter {
         case pushNotifAction(notificationId: String)
         case onDevSettings
         case onDevSettingsFail
-        case pushNotifsStart
-        case pushNotifsEnable(isAuthorized: Bool)
-        case pushNotifsCancel
         case spotlightOpen(type: String, id: String)
         case spotlightOpenFail
         case quickActionOpen(actionType: String)
@@ -454,9 +408,6 @@ extension HomePresenter {
             case .pushNotifAction:          return "HomeView_PushNotif_Action"
             case .onDevSettings:            return "HomeView_DevSettings"
             case .onDevSettingsFail:        return "HomeView_DevSettings_Fail"
-            case .pushNotifsStart:          return "HomeView_PushNotifs_Start"
-            case .pushNotifsEnable:         return "HomeView_PushNotifs_Enable"
-            case .pushNotifsCancel:         return "HomeView_PushNotifs_Cancel"
             case .spotlightOpen:            return "HomeView_Spotlight_Open"
             case .spotlightOpenFail:        return "HomeView_Spotlight_Open_Fail"
             case .quickActionOpen:          return "HomeView_QuickAction_Open"
@@ -476,8 +427,6 @@ extension HomePresenter {
                 return delegate.eventParameters
             case .onDeckPressed(deck: let deck):
                 return deck.eventParameters
-            case .pushNotifsEnable(isAuthorized: let isAuthorized):
-                return ["is_authorized": isAuthorized]
             case .pushNotifAction(notificationId: let notificationId):
                 return ["notification_id": notificationId]
             case .spotlightOpen(type: let type, id: let id):

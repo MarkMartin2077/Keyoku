@@ -25,56 +25,26 @@ struct HomeView: View {
         #endif
     }
 
-    private var greeting: String {
+    private var greeting: String? {
+        guard let name = presenter.userName else { return nil }
         let hour = Calendar.current.component(.hour, from: Date())
-        let name = presenter.userName.map { ", \($0)" } ?? ""
         switch hour {
         case 5..<12:
-            return "Good morning\(name)"
+            return "Good morning, \(name)"
         case 12..<17:
-            return "Good afternoon\(name)"
+            return "Good afternoon, \(name)"
         default:
-            return "Good evening\(name)"
+            return "Good evening, \(name)"
         }
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                heroSection
-                recentDecksSection
-                if !presenter.decks.isEmpty {
-                    if presenter.useCompactPracticeLayout {
-                        if presenter.hasDueDecks || presenter.hasStillLearningCards {
-                            HomePracticeCompactSectionView(
-                                dueCount: presenter.totalDueCardCount,
-                                hasDue: presenter.hasDueDecks,
-                                stillLearningCount: presenter.stillLearningTotalCount,
-                                hasStillLearning: presenter.hasStillLearningCards,
-                                onDueTapped: { presenter.onReviewDuePressed() },
-                                onStillLearningTapped: { presenter.onStillLearningPressed() }
-                            )
-                        }
-                    } else {
-                        if presenter.hasDueDecks {
-                            HomeReviewDueSectionView(
-                                decks: presenter.dueDecks,
-                                onDeckPressed: { presenter.onDueForReviewDeckPressed(deck: $0) },
-                                onInfoPressed: { presenter.onReviewDueInfoPressed() }
-                            )
-                        }
-                        if presenter.hasStillLearningCards {
-                            HomeStillLearningSectionView(
-                                cardCount: presenter.stillLearningTotalCount,
-                                deckCount: presenter.stillLearningDeckCount,
-                                onPressed: { presenter.onStillLearningPressed() },
-                                onInfoPressed: { presenter.onStillLearningInfoPressed() }
-                            )
-                        }
-                    }
-                }
+        Group {
+            if presenter.decks.isEmpty {
+                emptyStateView
+            } else {
+                populatedScrollView
             }
-            .padding()
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -92,12 +62,6 @@ struct HomeView: View {
                 .buttonStyle(.glassProminent)
                 .accessibilityLabel("Create new deck")
                 .accessibilityIdentifier("CreateNewButton")
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                if presenter.showNotificationButton {
-                    pushNotificationButton
-                }
             }
         }
         .onFirstAppear {
@@ -123,16 +87,119 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        VStack(spacing: 0) {
+            if let greeting {
+                Text(greeting)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+            }
+
+            Spacer()
+
+            VStack(spacing: 24) {
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.12))
+                        .frame(width: 96, height: 96)
+
+                    Image(systemName: "rectangle.stack.badge.plus")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.accent)
+                }
+
+                VStack(spacing: 8) {
+                    Text("Create your first deck")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+
+                    Text("Paste any text and Keyoku will generate flashcards for you instantly.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+
+                Button {
+                    presenter.onCreatePressed()
+                } label: {
+                    Text("Create Deck")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .padding(.horizontal, 40)
+                .accessibilityIdentifier("CreateNewButton")
+            }
+            .padding(.horizontal)
+
+            Spacer()
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Populated View
+
+    private var populatedScrollView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                heroSection
+                recentDecksSection
+                if presenter.useCompactPracticeLayout {
+                    if presenter.hasDueDecks || presenter.hasStillLearningCards {
+                        HomePracticeCompactSectionView(
+                            dueCount: presenter.totalDueCardCount,
+                            hasDue: presenter.hasDueDecks,
+                            stillLearningCount: presenter.stillLearningTotalCount,
+                            hasStillLearning: presenter.hasStillLearningCards,
+                            onDueTapped: { presenter.onReviewDuePressed() },
+                            onStillLearningTapped: { presenter.onStillLearningPressed() }
+                        )
+                    }
+                } else {
+                    if presenter.hasDueDecks {
+                        HomeReviewDueSectionView(
+                            decks: presenter.dueDecks,
+                            onDeckPressed: { presenter.onDueForReviewDeckPressed(deck: $0) },
+                            onInfoPressed: { presenter.onReviewDueInfoPressed() }
+                        )
+                    }
+                    if presenter.hasStillLearningCards {
+                        HomeStillLearningSectionView(
+                            cardCount: presenter.stillLearningTotalCount,
+                            deckCount: presenter.stillLearningDeckCount,
+                            onPressed: { presenter.onStillLearningPressed() },
+                            onInfoPressed: { presenter.onStillLearningInfoPressed() }
+                        )
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+
     // MARK: - Hero Section
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(greeting)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let greeting {
+                Text(greeting)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             HStack(spacing: 12) {
                 Text("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks")")
@@ -174,47 +241,15 @@ struct HomeView: View {
                     }
             }
 
-            if presenter.recentDecks.isEmpty {
-                emptyDecksCard
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(presenter.recentDecks) { deck in
-                            deckCard(deck: deck)
-                        }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(presenter.recentDecks) { deck in
+                        deckCard(deck: deck)
                     }
-                    .scrollTargetLayout()
                 }
-                .scrollTargetBehavior(.viewAligned)
+                .scrollTargetLayout()
             }
-        }
-    }
-
-    private var emptyDecksCard: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "rectangle.stack")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
-
-            Text("Your first deck is one tap away")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
-                }
-        }
-        .accessibilityLabel("Create your first deck")
-        .accessibilityHint("Tap to create a new deck")
-        .anyButton(.press) {
-            presenter.onCreatePressed()
+            .scrollTargetBehavior(.viewAligned)
         }
     }
 
@@ -305,19 +340,6 @@ struct HomeView: View {
         .accessibilityLabel("\(presenter.currentStreak) day streak")
     }
 
-    // MARK: - Push Notifications
-
-    private var pushNotificationButton: some View {
-        Image(systemName: "bell.fill")
-            .font(.headline)
-            .padding(4)
-            .tappableBackground()
-            .foregroundStyle(.accent)
-            .accessibilityLabel("Notifications")
-            .anyButton {
-                presenter.onPushNotificationButtonPressed()
-            }
-    }
 }
 
 #Preview {

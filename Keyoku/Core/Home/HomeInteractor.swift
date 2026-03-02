@@ -9,9 +9,6 @@ protocol HomeInteractor: GlobalInteractor {
     func updateDeck(_ deck: DeckModel) throws
 
     func schedulePushNotificationsForTheNextWeek(dueCount: Int, stillLearningCount: Int)
-    func requestPushAuthorization() async throws -> Bool
-
-    func canRequestPushAuthorization() async -> Bool
 
     // Spotlight
     func parseSpotlightIdentifier(_ identifier: String) -> (type: String, id: String)?

@@ -6,6 +6,9 @@
 //
 
 @MainActor
-protocol SettingsInteractor: GlobalInteractor { }
+protocol SettingsInteractor: GlobalInteractor {
+    func canRequestPushAuthorization() async -> Bool
+    func requestPushAuthorization() async throws -> Bool
+}
 
 extension CoreInteractor: SettingsInteractor { }
