@@ -21,8 +21,17 @@ class DecksPresenter {
 
     var searchText = ""
 
-    @UserDefaultEnum(key: "deck_sort_option", startingValue: .recentlyStudied)
-    var sortOption: DeckSortOption
+    var sortOption: DeckSortOption = {
+        if let saved = UserDefaults.standard.string(forKey: "deck_sort_option"),
+           let option = DeckSortOption(rawValue: saved) {
+            return option
+        }
+        return .recentlyStudied
+    }() {
+        didSet {
+            UserDefaults.standard.set(sortOption.rawValue, forKey: "deck_sort_option")
+        }
+    }
 
     var decks: [DeckModel] {
         interactor.decks
@@ -195,7 +204,7 @@ private extension Array where Element == DeckModel {
                 case (nil, nil):       return lhs.createdAt > rhs.createdAt
                 case (nil, _):         return false
                 case (_, nil):         return true
-                case (let l?, let r?): return l > r
+                case (let lhsDate?, let rhsDate?): return lhsDate > rhsDate
                 }
             }
         case .alphabetical:

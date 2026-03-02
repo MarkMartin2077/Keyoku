@@ -67,6 +67,25 @@ struct DecksView: View {
         .navigationTitle("Decks")
         .searchable(text: $presenter.searchText, prompt: "Search decks")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    ForEach(DeckSortOption.allCases, id: \.self) { option in
+                        Button {
+                            presenter.onSortOptionSelected(option)
+                        } label: {
+                            if presenter.sortOption == option {
+                                Label(option.title, systemImage: "checkmark")
+                            } else {
+                                Text(option.title)
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: presenter.sortOption == .recentlyStudied
+                          ? "line.3.horizontal.decrease.circle"
+                          : "line.3.horizontal.decrease.circle.fill")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 addButton
             }
