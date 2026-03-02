@@ -318,6 +318,15 @@ struct PracticeView: View {
                 }
             }
 
+            if let label = presenter.nextReviewLabel {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                    Text("Next review · \(label)")
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+
             Spacer()
 
             Text("Practice Again")
@@ -333,6 +342,14 @@ struct PracticeView: View {
                 .anyButton(.press) {
                     presenter.onPracticeAgainPressed()
                 }
+
+            Text("Done")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+                .anyButton(.press) {
+                    presenter.onDonePressed()
+                }
+                .accessibilityIdentifier("DoneButton")
 
             Spacer()
                 .frame(height: 24)

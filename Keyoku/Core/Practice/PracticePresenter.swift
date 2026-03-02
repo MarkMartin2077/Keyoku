@@ -63,6 +63,27 @@ class PracticePresenter {
         selectedIndex > 0
     }
 
+    /// Human-readable label for the next scheduled review date, derived from the
+    /// earliest future `dueDate` across all cards in the deck after this session.
+    ///
+    /// Returns `nil` in cross-deck mode, when no deck is found, or when no cards
+    /// have a future due date (e.g., a brand-new deck with no prior SRS data).
+    var nextReviewLabel: String? {
+        guard !deckId.isEmpty, let deck = interactor.getDeck(id: deckId) else { return nil }
+        let now = Date()
+        guard let nextDate = deck.flashcards.compactMap(\.dueDate).filter({ $0 > now }).min() else { return nil }
+        let fromDay = Calendar.current.startOfDay(for: now)
+        let nextDay = Calendar.current.startOfDay(for: nextDate)
+        let days = Calendar.current.dateComponents([.day], from: fromDay, to: nextDay).day ?? 0
+        if days <= 0 { return "Today" }
+        if days == 1 { return "Tomorrow" }
+        return "In \(days) days"
+    }
+
+    var isReminderEnabled: Bool {
+        interactor.isReminderEnabled
+    }
+
     init(interactor: PracticeInteractor, router: PracticeRouter, deck: DeckModel, dueOnly: Bool = false, cardLimit: Int? = nil) {
         self.interactor = interactor
         self.router = router
@@ -185,6 +206,12 @@ class PracticePresenter {
             currentSwipeOffset = 0
             hasRecordedCompletion = false
         }
+    }
+
+    func onDonePressed() {
+        interactor.trackEvent(event: Event.onDonePressed)
+        interactor.playHaptic(option: .light)
+        router.dismissScreen()
     }
 
     func onPracticeAgainPressed() {
@@ -312,6 +339,9 @@ class PracticePresenter {
                         AppStoreRatingsHelper.requestReviewIfNeeded()
                     }
                 }
+
+                // Reschedule the next week of reminders with session-aware copy.
+                interactor.schedulePushNotificationsForTheNextWeek(dueCount: 0, stillLearningCount: stillLearningCount)
             } catch {
                 interactor.trackEvent(event: Event.onStreakEventFailed(error: error))
             }
@@ -328,6 +358,7 @@ extension PracticePresenter {
         case onCardSwipedStillLearning(flashcardId: String)
         case onUndoPressed(flashcardId: String)
         case onShufflePressed
+        case onDonePressed
         case onPracticeAgainPressed
         case onPracticeSessionComplete(deckName: String, learnedCount: Int, stillLearningCount: Int, totalCards: Int)
         case onStreakEventRecorded(deckName: String)
@@ -346,6 +377,7 @@ extension PracticePresenter {
             case .onCardSwipedStillLearning:    return "PracticeView_Card_Swiped_StillLearning"
             case .onUndoPressed:                return "PracticeView_Undo_Pressed"
             case .onShufflePressed:             return "PracticeView_Shuffle_Pressed"
+            case .onDonePressed:                return "PracticeView_Done_Pressed"
             case .onPracticeAgainPressed:       return "PracticeView_PracticeAgain_Pressed"
             case .onPracticeSessionComplete:    return "PracticeView_Session_Complete"
             case .onStreakEventRecorded:        return "PracticeView_Streak_Recorded"
