@@ -21,13 +21,9 @@ class DecksPresenter {
 
     var searchText = ""
 
-    var sortOption: DeckSortOption = {
-        guard let raw = UserDefaults.standard.string(forKey: "deck_sort_option"),
-              let option = DeckSortOption(rawValue: raw) else {
-            return .recentlyStudied
-        }
-        return option
-    }() {
+    var sortOption: DeckSortOption = DeckSortOption(
+        rawValue: UserDefaults.standard.string(forKey: "deck_sort_option") ?? ""
+    ) ?? .recentlyStudied {
         didSet { UserDefaults.standard.set(sortOption.rawValue, forKey: "deck_sort_option") }
     }
 
