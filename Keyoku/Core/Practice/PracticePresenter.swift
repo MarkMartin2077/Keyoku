@@ -24,6 +24,7 @@ class PracticePresenter {
     let deckColor: DeckColor
     let isReviewMode: Bool
     private(set) var flashcards: [FlashcardModel]
+    private var cardLimit: Int?
     private var hasRecordedCompletion: Bool = false
     private var isCrossDeckMode: Bool = false
     private var crossDeckSourceIds: Set<String> = []
@@ -103,6 +104,7 @@ class PracticePresenter {
             }
         }
         self.flashcards = cardLimit.map { Array(sorted.prefix($0)) } ?? sorted
+        self.cardLimit = cardLimit
     }
 
     init(interactor: PracticeInteractor, router: PracticeRouter, crossDeckCards: [FlashcardModel], decks: [DeckModel]) {
@@ -232,7 +234,7 @@ class PracticePresenter {
             flashcards = updatedCards
         } else if let deck = interactor.getDeck(id: deckId) {
             let cards = isReviewMode ? deck.flashcards.filter { $0.isDue } : deck.flashcards
-            flashcards = cards
+            flashcards = cardLimit.map { Array(cards.prefix($0)) } ?? cards
         }
 
         withAnimation(.easeInOut(duration: 0.3)) {

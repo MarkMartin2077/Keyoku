@@ -219,7 +219,9 @@ extension CreateDeckPresenter {
         - If you cannot provide a full answer for a card, omit that card entirely. \
         - Finish writing each card's answer completely before starting the next card. \
         - Quality over quantity: it is better to produce fewer complete cards \
-        than many incomplete ones.
+        than many incomplete ones. \
+        - NEVER reference "the text", "the source text", "in the text", or "as described in the text" in any question or answer. \
+        Questions must be fully self-contained — ask about the concept directly, not about what the text says.
 
         Source text:
         \(text)
@@ -250,7 +252,6 @@ extension CreateDeckPresenter {
             }
 
             streamedFlashcards = Array(streamedFlashcards.prefix(countBeforeBatch)) + stableCards
-            flashcardItemsGenerated = streamedFlashcards.count
         }
 
         applyQualityFilter(from: countBeforeBatch)
