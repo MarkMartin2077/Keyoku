@@ -50,7 +50,11 @@ struct SessionCompleteView: View {
 
     var body: some View {
         ZStack {
-            ConfettiView()
+            if isPerfectSession {
+                ConfettiView()
+            } else {
+                RippleView(color: deckColor)
+            }
 
             VStack(spacing: 0) {
                 Spacer()
@@ -245,6 +249,37 @@ struct SessionCompleteView: View {
 
             try? await Task.sleep(for: .milliseconds(150))
             showButtons = true
+        }
+    }
+}
+
+// MARK: - Ripple View
+
+private struct RippleView: View {
+
+    let color: Color
+
+    @State private var animate = false
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .stroke(color.opacity(0.2), lineWidth: 1.5)
+                    .scaleEffect(animate ? 3.5 : 0.3)
+                    .opacity(animate ? 0 : 1)
+                    .animation(
+                        .easeOut(duration: 2.8)
+                            .delay(Double(index) * 0.8)
+                            .repeatForever(autoreverses: false),
+                        value: animate
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
+        .onAppear {
+            animate = true
         }
     }
 }
