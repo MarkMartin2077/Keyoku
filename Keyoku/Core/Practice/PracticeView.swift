@@ -35,12 +35,22 @@ struct PracticeView: View {
     @State var presenter: PracticePresenter
     let delegate: PracticeDelegate
 
+    @State private var isSwipeAnimating: Bool = false
+
     var body: some View {
         VStack(spacing: 0) {
             if presenter.flashcards.isEmpty {
                 emptyStateView
             } else if presenter.isSessionComplete {
-                sessionCompleteView
+                SessionCompleteView(
+                    learnedCount: presenter.learnedCount,
+                    stillLearningCount: presenter.stillLearningCount,
+                    newStreakCount: presenter.newStreakCount,
+                    nextReviewLabel: presenter.nextReviewLabel,
+                    deckColor: presenter.deckColor.color,
+                    onPracticeAgainPressed: { presenter.onPracticeAgainPressed() },
+                    onDonePressed: { presenter.onDonePressed() }
+                )
             } else {
                 cardContentView
             }
@@ -48,6 +58,16 @@ struct PracticeView: View {
         .navigationTitle(presenter.deckName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if !presenter.isSessionComplete {
+                    Button {
+                        presenter.onDonePressed()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("End session")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 12) {
                     if !presenter.isSessionComplete {
@@ -57,18 +77,6 @@ struct PracticeView: View {
                 }
             }
         }
-        .overlay {
-            if presenter.showStreakCelebration {
-                StreakCelebrationView(
-                    streakCount: presenter.newStreakCount,
-                    onDismiss: {
-                        presenter.onStreakCelebrationDismissed()
-                    }
-                )
-                .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut, value: presenter.showStreakCelebration)
         .onAppear {
             presenter.onViewAppear(delegate: delegate)
         }
@@ -190,27 +198,33 @@ struct PracticeView: View {
                 .highPriorityGesture(
                     DragGesture()
                         .onChanged { value in
+                            guard !isSwipeAnimating else { return }
                             presenter.onSwipeChanged(offset: value.translation.width)
                         }
                         .onEnded { value in
+                            guard !isSwipeAnimating else { return }
                             let threshold: CGFloat = 100
                             if value.translation.width > threshold {
                                 // Swipe right — learned
+                                isSwipeAnimating = true
                                 withAnimation(.easeOut(duration: 0.3)) {
                                     presenter.onSwipeChanged(offset: 500)
                                 }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     presenter.onCardSwiped(isLearned: true)
                                     presenter.onSwipeChanged(offset: 0)
+                                    isSwipeAnimating = false
                                 }
                             } else if value.translation.width < -threshold {
                                 // Swipe left — still learning
+                                isSwipeAnimating = true
                                 withAnimation(.easeOut(duration: 0.3)) {
                                     presenter.onSwipeChanged(offset: -500)
                                 }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     presenter.onCardSwiped(isLearned: false)
                                     presenter.onSwipeChanged(offset: 0)
+                                    isSwipeAnimating = false
                                 }
                             } else {
                                 // Snap back
@@ -276,84 +290,6 @@ struct PracticeView: View {
         }
         .font(.caption)
         .fontWeight(.medium)
-    }
-
-    // MARK: - Session Complete
-
-    private var sessionCompleteView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.green)
-
-            Text("Session Complete!")
-                .font(.title)
-                .fontWeight(.bold)
-
-            HStack(spacing: 32) {
-                VStack(spacing: 4) {
-                    Text("\(presenter.learnedCount)")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.green)
-                    Text("Learned")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Rectangle()
-                    .fill(.secondary.opacity(0.3))
-                    .frame(width: 1, height: 40)
-
-                VStack(spacing: 4) {
-                    Text("\(presenter.stillLearningCount)")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.orange)
-                    Text("Still Learning")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if let label = presenter.nextReviewLabel {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar")
-                    Text("Next review · \(label)")
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Text("Practice Again")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .foregroundStyle(.white)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(presenter.deckColor.color)
-                )
-                .padding(.horizontal, 24)
-                .anyButton(.press) {
-                    presenter.onPracticeAgainPressed()
-                }
-
-            Text("Done")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-                .anyButton(.press) {
-                    presenter.onDonePressed()
-                }
-                .accessibilityIdentifier("DoneButton")
-
-            Spacer()
-                .frame(height: 24)
-        }
     }
 
     // MARK: - Toolbar
@@ -434,14 +370,14 @@ extension CoreRouter {
 
     func showPracticeView(deck: DeckModel, cardLimit: Int? = nil) {
         let delegate = PracticeDelegate(deck: deck)
-        router.showScreen(.push) { router in
+        router.showScreen(.fullScreenCover) { router in
             builder.practiceView(router: router, delegate: delegate, cardLimit: cardLimit)
         }
     }
 
     func showReviewDueView(deck: DeckModel) {
         let delegate = PracticeDelegate(deck: deck)
-        router.showScreen(.push) { router in
+        router.showScreen(.fullScreenCover) { router in
             builder.practiceView(router: router, delegate: delegate, dueOnly: true)
         }
     }
