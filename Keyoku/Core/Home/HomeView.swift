@@ -86,11 +86,10 @@ struct HomeView: View {
             }
 
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
+                Button("New Deck", systemImage: "plus") {
                     presenter.onCreatePressed()
-                } label: {
-                    Image(systemName: "plus")
                 }
+                .buttonStyle(.glassProminent)
                 .accessibilityLabel("Create new deck")
                 .accessibilityIdentifier("CreateNewButton")
             }
@@ -128,16 +127,12 @@ struct HomeView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                Text(greeting)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                streakIndicator
-            }
+            Text(greeting)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 12) {
                 Text("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks")")
@@ -146,6 +141,13 @@ struct HomeView: View {
                     .foregroundStyle(.tertiary)
 
                 Text("\(presenter.totalCardCount) \(presenter.totalCardCount == 1 ? "card" : "cards")")
+
+                if presenter.currentStreak > 0 {
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+
+                    streakIndicator
+                }
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
