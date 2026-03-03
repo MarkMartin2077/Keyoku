@@ -362,7 +362,8 @@ class PracticePresenter {
     private func recordStreakEvent() {
         let previousStreak = interactor.currentStreakData.currentStreak ?? 0
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 let metadata: [String: GamificationDictionaryValue] = [
                     "deck_name": .string(deckName),

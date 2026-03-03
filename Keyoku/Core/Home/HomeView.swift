@@ -25,19 +25,6 @@ struct HomeView: View {
         #endif
     }
 
-    private var greeting: String? {
-        guard let name = presenter.userName else { return nil }
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 5..<12:
-            return "Good morning, \(name)"
-        case 12..<17:
-            return "Good afternoon, \(name)"
-        default:
-            return "Good evening, \(name)"
-        }
-    }
-
     var body: some View {
         Group {
             if presenter.decks.isEmpty {
@@ -91,7 +78,7 @@ struct HomeView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 0) {
-            if let greeting {
+            if let greeting = presenter.greeting {
                 Text(greeting)
                     .font(.largeTitle)
                     .fontWeight(.bold)
@@ -153,7 +140,9 @@ struct HomeView: View {
     private var populatedScrollView: some View {
         ScrollView {
             VStack(spacing: 20) {
-                heroSection
+                if presenter.greeting != nil {
+                    heroSection
+                }
                 recentDecksSection
                 if presenter.useCompactPracticeLayout {
                     if presenter.hasDueDecks || presenter.hasStillLearningCards {
@@ -190,34 +179,15 @@ struct HomeView: View {
 
     // MARK: - Hero Section
 
+    @ViewBuilder
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let greeting {
-                Text(greeting)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            HStack(spacing: 12) {
-                Text("\(presenter.decks.count) \(presenter.decks.count == 1 ? "deck" : "decks")")
-
-                Text("·")
-                    .foregroundStyle(.tertiary)
-
-                Text("\(presenter.totalCardCount) \(presenter.totalCardCount == 1 ? "card" : "cards")")
-
-                if presenter.currentStreak > 0 {
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-
-                    streakIndicator
-                }
-            }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
+        if let greeting = presenter.greeting {
+            Text(greeting)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -324,20 +294,6 @@ struct HomeView: View {
             .anyButton(.press) {
                 presenter.onDevSettingsPressed()
             }
-    }
-
-    // MARK: - Streak Indicator
-
-    private var streakIndicator: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "flame.fill")
-                .foregroundStyle(presenter.currentStreak > 0 ? .orange : .gray)
-            Text("\(presenter.currentStreak)")
-                .fontWeight(.semibold)
-                .contentTransition(.numericText())
-        }
-        .font(.subheadline)
-        .accessibilityLabel("\(presenter.currentStreak) day streak")
     }
 
 }

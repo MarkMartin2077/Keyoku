@@ -10,6 +10,7 @@ import SwiftUI
 @MainActor
 protocol PracticeRouter: GlobalRouter {
     func showPaywallView(delegate: PaywallDelegate)
+    func showFirstDeckPremiumPromptModal(onSeeOfferPressed: @escaping () -> Void, onDismissPressed: @escaping () -> Void)
 }
 
 extension CoreRouter: PracticeRouter { }

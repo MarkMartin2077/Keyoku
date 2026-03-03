@@ -13,6 +13,7 @@ protocol DecksRouter: GlobalRouter {
     func showCreateContentView(onDismiss: (() -> Void)?)
     func showPaywallView(delegate: PaywallDelegate)
     func showDeleteDeckAlert(deckName: String, onConfirm: @escaping @MainActor @Sendable () -> Void)
+    func showFirstDeckPremiumPromptModal(onSeeOfferPressed: @escaping () -> Void, onDismissPressed: @escaping () -> Void)
 }
 
 extension CoreRouter: DecksRouter {

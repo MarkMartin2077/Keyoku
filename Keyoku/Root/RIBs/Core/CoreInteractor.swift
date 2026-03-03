@@ -175,6 +175,14 @@ struct CoreInteractor: GlobalInteractor {
         UserDefaults.standard.set(current + 1, forKey: "sessions_since_last_paywall")
     }
 
+    var deckSortOption: DeckSortOption {
+        DeckSortOption(rawValue: UserDefaults.standard.string(forKey: "deck_sort_option") ?? "") ?? .recentlyStudied
+    }
+
+    func saveDeckSortOption(_ option: DeckSortOption) {
+        UserDefaults.standard.set(option.rawValue, forKey: "deck_sort_option")
+    }
+
     func saveUserName(name: String) async throws {
         try await userManager.saveUserName(name: name)
     }

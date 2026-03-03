@@ -20,12 +20,7 @@ class DecksPresenter {
     private let router: DecksRouter
 
     var searchText = ""
-
-    var sortOption: DeckSortOption = DeckSortOption(
-        rawValue: UserDefaults.standard.string(forKey: "deck_sort_option") ?? ""
-    ) ?? .recentlyStudied {
-        didSet { UserDefaults.standard.set(sortOption.rawValue, forKey: "deck_sort_option") }
-    }
+    var sortOption: DeckSortOption
 
     var decks: [DeckModel] {
         interactor.decks
@@ -44,10 +39,12 @@ class DecksPresenter {
     init(interactor: DecksInteractor, router: DecksRouter) {
         self.interactor = interactor
         self.router = router
+        self.sortOption = interactor.deckSortOption
     }
 
     func onFirstAppear(delegate: DecksDelegate) {
         interactor.loadDecks()
+        interactor.trackEvent(event: Event.onFirstAppear(delegate: delegate))
     }
 
     func onViewAppear(delegate: DecksDelegate) {
@@ -60,6 +57,7 @@ class DecksPresenter {
 
     func onSortOptionSelected(_ option: DeckSortOption) {
         sortOption = option
+        interactor.saveDeckSortOption(option)
         interactor.trackEvent(event: Event.sortOptionSelected(option: option))
     }
 
@@ -82,7 +80,6 @@ class DecksPresenter {
                   !wasPremium,
                   interactor.decks.count > deckCountBefore else { return }
 
-            interactor.trackEvent(event: Event.firstDeckPaywallShown)
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(0.6))
                 self?.showFirstDeckPremiumPrompt()
@@ -91,6 +88,8 @@ class DecksPresenter {
     }
 
     private func showFirstDeckPremiumPrompt() {
+        interactor.trackEvent(event: Event.firstDeckPaywallShown)
+        interactor.recordPaywallShown()
         router.showFirstDeckPremiumPromptModal(
             onSeeOfferPressed: { [weak self] in
                 self?.router.dismissModal()
@@ -130,6 +129,7 @@ class DecksPresenter {
 extension DecksPresenter {
 
     enum Event: LoggableEvent {
+        case onFirstAppear(delegate: DecksDelegate)
         case onAppear(delegate: DecksDelegate)
         case onDisappear(delegate: DecksDelegate)
         case onAddDeckPressed
@@ -145,6 +145,7 @@ extension DecksPresenter {
 
         var eventName: String {
             switch self {
+            case .onFirstAppear:            return "DecksView_FirstAppear"
             case .onAppear:                 return "DecksView_Appear"
             case .onDisappear:              return "DecksView_Disappear"
             case .onAddDeckPressed:         return "DecksView_AddDeck_Pressed"
@@ -162,7 +163,7 @@ extension DecksPresenter {
 
         var parameters: [String: Any]? {
             switch self {
-            case .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
+            case .onFirstAppear(delegate: let delegate), .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
                 return delegate.eventParameters
             case .onDeckPressed(deck: let deck), .onDeleteDeckPressed(deck: let deck):
                 return deck.eventParameters

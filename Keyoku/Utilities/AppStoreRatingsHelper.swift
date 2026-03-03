@@ -3,13 +3,6 @@ import UIKit
 
 enum AppStoreRatingsHelper {
 
-    private static let hasRequestedReviewKey = "hasRequestedAppStoreReview"
-
-    static var hasRequestedReview: Bool {
-        get { UserDefaults.standard.bool(forKey: hasRequestedReviewKey) }
-        set { UserDefaults.standard.set(newValue, forKey: hasRequestedReviewKey) }
-    }
-
     @MainActor
     static func requestRatingsReview() {
         guard let windowScene = UIApplication.shared.connectedScenes
@@ -18,12 +11,5 @@ enum AppStoreRatingsHelper {
         else { return }
 
         AppStore.requestReview(in: windowScene)
-    }
-
-    @MainActor
-    static func requestReviewIfNeeded() {
-        guard !hasRequestedReview else { return }
-        hasRequestedReview = true
-        requestRatingsReview()
     }
 }

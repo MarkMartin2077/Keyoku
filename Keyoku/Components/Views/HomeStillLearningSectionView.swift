@@ -26,6 +26,7 @@ struct HomeStillLearningSectionView: View {
                     .anyButton {
                         onInfoPressed?()
                     }
+                    .accessibilityLabel("About Still Learning")
             }
 
             if let cardCount, let deckCount {

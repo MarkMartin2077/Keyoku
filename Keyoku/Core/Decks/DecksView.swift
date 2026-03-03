@@ -14,42 +14,6 @@ struct DecksDelegate {
     }
 }
 
-struct DeckItem: View {
-    var deck: DeckModel
-    @Environment(\.horizontalSizeClass) private var sizeClass
-
-    private var itemSize: CGFloat { sizeClass == .regular ? 260 : 200 }
-
-    var body: some View {
-        VStack(spacing: 20) {
-            if let imageUrl = deck.displayImageUrlString {
-                ImageLoaderView(urlString: imageUrl)
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: itemSize, height: itemSize)
-                    .clipped()
-            } else {
-                Image(systemName: "rectangle.on.rectangle")
-                    .font(.system(size: 64))
-            }
-            Text(deck.name)
-                .font(.title)
-            if !deck.flashcards.isEmpty {
-                Text("Cards: \(deck.flashcards.count)")
-                    .font(.subheadline)
-                    .padding(.bottom, 16)
-            } else {
-                ContentUnavailableView("No cards yet. Add some!", systemImage: "plus")
-            }
-
-        }
-        .foregroundStyle(.white)
-        .frame(width: itemSize, height: itemSize)
-        .background(deck.color.color.gradient)
-        .clipShape(.rect(cornerRadius: 32))
-        .shadow(color: deck.color.color.opacity(0.5), radius: 30, y: 15)
-    }
-}
-
 struct DecksView: View {
     
     @State var presenter: DecksPresenter
@@ -84,6 +48,8 @@ struct DecksView: View {
                     Image(systemName: presenter.sortOption == .recentlyStudied
                           ? "line.3.horizontal.decrease.circle"
                           : "line.3.horizontal.decrease.circle.fill")
+                        .frame(width: 44, height: 44)
+                        .accessibilityLabel("Sort decks, \(presenter.sortOption.title)")
                 }
             }
             ToolbarItem(placement: .primaryAction) {

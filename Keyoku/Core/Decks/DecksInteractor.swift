@@ -16,6 +16,9 @@ protocol DecksInteractor: GlobalInteractor {
     var isPremium: Bool { get }
     var freeTierDeckLimit: Int { get }
     var currentUser: UserModel? { get }
+    var deckSortOption: DeckSortOption { get }
+    func saveDeckSortOption(_ option: DeckSortOption)
+    func recordPaywallShown()
 }
 
 extension CoreInteractor: DecksInteractor { }

@@ -25,6 +25,7 @@ struct HomeReviewDueSectionView: View {
                     .anyButton {
                         onInfoPressed?()
                     }
+                    .accessibilityLabel("About Review Due")
             }
 
             if !decks.isEmpty {

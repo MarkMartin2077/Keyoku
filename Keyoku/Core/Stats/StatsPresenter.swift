@@ -75,6 +75,18 @@ class StatsPresenter {
         interactor.currentStreakData.currentStreak ?? 0
     }
 
+    var longestStreak: Int {
+        interactor.currentStreakData.longestStreak ?? 0
+    }
+
+    var todayStudied: Bool {
+        interactor.currentStreakData.isGoalMet
+    }
+
+    var studiedDaysThisWeek: [Date] {
+        interactor.currentStreakData.getCalendarDaysWithEventsThisWeek()
+    }
+
     // MARK: - 7-Day Due Forecast
 
     /// Count of cards due on each of the next 7 days.

@@ -15,6 +15,7 @@ struct StatsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                streakCard
                 summaryGrid
                 dueThisWeekCard
                 deckBreakdownCard
@@ -30,17 +31,21 @@ struct StatsView: View {
         }
     }
 
+    // MARK: - Streak Card
+
+    private var streakCard: some View {
+        StreakCardView(
+            currentStreak: presenter.currentStreak,
+            longestStreak: presenter.longestStreak,
+            todayCompleted: presenter.todayStudied,
+            studiedDaysThisWeek: presenter.studiedDaysThisWeek
+        )
+    }
+
     // MARK: - Summary Grid
 
     private var summaryGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            statCard(
-                title: "Streak",
-                value: "\(presenter.currentStreak)",
-                unit: presenter.currentStreak == 1 ? "day" : "days",
-                icon: "flame.fill",
-                color: .orange
-            )
             statCard(
                 title: "Learned",
                 value: "\(presenter.learnedCards)",
@@ -63,6 +68,7 @@ struct StatsView: View {
                     icon: "chart.line.uptrend.xyaxis",
                     color: .purple
                 )
+                .gridCellColumns(2)
             } else {
                 statCard(
                     title: "Retention",
@@ -71,6 +77,7 @@ struct StatsView: View {
                     icon: "chart.line.uptrend.xyaxis",
                     color: .purple
                 )
+                .gridCellColumns(2)
             }
         }
     }
@@ -257,7 +264,7 @@ extension CoreBuilder {
     let container = DevPreview.shared.container()
     let builder = CoreBuilder(interactor: CoreInteractor(container: container))
 
-    return RouterView { router in
+    RouterView { router in
         builder.statsView(router: router)
     }
 }

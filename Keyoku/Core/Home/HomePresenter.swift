@@ -16,13 +16,17 @@ class HomePresenter {
     // MARK: - User Data
 
     var userName: String? {
-        interactor.currentUser?.firstNameCalculated
+        interactor.currentUser?.commonNameCalculated
     }
 
-    // MARK: - Streak Data
-
-    var currentStreak: Int {
-        interactor.currentStreakData.currentStreak ?? 0
+    var greeting: String? {
+        guard let name = userName else { return nil }
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:  return "Good morning, \(name)"
+        case 12..<17: return "Good afternoon, \(name)"
+        default:      return "Good evening, \(name)"
+        }
     }
 
     // MARK: - Dashboard Data
@@ -91,10 +95,6 @@ class HomePresenter {
         decks.sorted { $0.createdAt > $1.createdAt }
     }
 
-    var totalCardCount: Int {
-        decks.reduce(0) { $0 + $1.flashcards.count }
-    }
-
     var isPremium: Bool {
         interactor.isPremium
     }
@@ -116,6 +116,7 @@ class HomePresenter {
 
     func onFirstAppear(delegate: HomeDelegate) {
         interactor.loadDecks()
+        interactor.trackEvent(event: Event.onFirstAppear(delegate: delegate))
         schedulePushNotifications()
         checkPendingQuickAction()
     }
@@ -126,7 +127,8 @@ class HomePresenter {
         if interactor.pendingRatingPrompt {
             interactor.clearPendingRatingPrompt()
             interactor.recordRatingPromptShown()
-            AppStoreRatingsHelper.requestReviewIfNeeded()
+            interactor.trackEvent(event: Event.ratingPromptShown)
+            AppStoreRatingsHelper.requestRatingsReview()
         }
     }
 
@@ -198,7 +200,7 @@ class HomePresenter {
             let newDeckCreated = newDeckCount > deckCountBefore
 
             if newDeckCreated, newDeckCount >= 3 {
-                AppStoreRatingsHelper.requestReviewIfNeeded()
+                AppStoreRatingsHelper.requestRatingsReview()
             }
         })
     }
@@ -367,6 +369,7 @@ class HomePresenter {
 extension HomePresenter {
 
     enum Event: LoggableEvent {
+        case onFirstAppear(delegate: HomeDelegate)
         case onAppear(delegate: HomeDelegate)
         case onDisappear(delegate: HomeDelegate)
         case onDeckPressed(deck: DeckModel)
@@ -391,9 +394,11 @@ extension HomePresenter {
         case onReviewDuePressed
         case onReviewDueInfoPressed
         case onStillLearningInfoPressed
+        case ratingPromptShown
 
         var eventName: String {
             switch self {
+            case .onFirstAppear:            return "HomeView_FirstAppear"
             case .onAppear:                 return "HomeView_Appear"
             case .onDisappear:              return "HomeView_Disappear"
             case .onDeckPressed:            return "HomeView_Deck_Pressed"
@@ -418,12 +423,13 @@ extension HomePresenter {
             case .onReviewDuePressed:                return "HomeView_ReviewDue_Pressed"
             case .onReviewDueInfoPressed:            return "HomeView_ReviewDue_Info_Pressed"
             case .onStillLearningInfoPressed:        return "HomeView_StillLearning_Info_Pressed"
+            case .ratingPromptShown:                 return "HomeView_RatingPrompt_Shown"
             }
         }
 
         var parameters: [String: Any]? {
             switch self {
-            case .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
+            case .onFirstAppear(delegate: let delegate), .onAppear(delegate: let delegate), .onDisappear(delegate: let delegate):
                 return delegate.eventParameters
             case .onDeckPressed(deck: let deck):
                 return deck.eventParameters
