@@ -13,8 +13,8 @@ class AppState {
     
     let startingModuleId: String
     
-    init(startingModuleId: String = UserDefaults.lastModuleId) {
-        self.startingModuleId = startingModuleId
+    init(startingModuleId: String? = nil) {
+        self.startingModuleId = startingModuleId ?? UserDefaults.lastModuleId
     }
     
 }

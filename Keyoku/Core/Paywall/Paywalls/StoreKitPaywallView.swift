@@ -55,6 +55,7 @@ struct StoreKitPaywallView: View {
         .storeButton(.visible, for: .restorePurchases)
         .storeButton(.visible, for: .policies)
         .subscriptionStoreControlStyle(.prominentPicker)
+        .subscriptionStoreButtonLabel(.multiline)
         .subscriptionStorePolicyDestination(url: URL(string: Constants.privacyPolicyUrlString)!, for: .privacyPolicy)
         .subscriptionStorePolicyDestination(url: URL(string: Constants.termsOfServiceUrlString)!, for: .termsOfService)
         .onInAppPurchaseStart(perform: onInAppPurchaseStart)
