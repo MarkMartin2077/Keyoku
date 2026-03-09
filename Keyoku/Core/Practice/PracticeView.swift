@@ -195,14 +195,26 @@ struct PracticeView: View {
                 )
                 .offset(x: presenter.currentSwipeOffset)
                 .rotationEffect(.degrees(Double(presenter.currentSwipeOffset) / 20))
-                .highPriorityGesture(
-                    DragGesture()
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 10)
                         .onChanged { value in
                             guard !isSwipeAnimating else { return }
+                            guard abs(value.translation.width) > abs(value.translation.height) else {
+                                // Vertical-dominant — yield to ScrollView
+                                presenter.onSwipeChanged(offset: 0)
+                                return
+                            }
                             presenter.onSwipeChanged(offset: value.translation.width)
                         }
                         .onEnded { value in
                             guard !isSwipeAnimating else { return }
+                            guard abs(value.translation.width) > abs(value.translation.height) else {
+                                // Vertical-dominant — snap back
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    presenter.onSwipeChanged(offset: 0)
+                                }
+                                return
+                            }
                             let threshold: CGFloat = 100
                             if value.translation.width > threshold {
                                 // Swipe right — learned

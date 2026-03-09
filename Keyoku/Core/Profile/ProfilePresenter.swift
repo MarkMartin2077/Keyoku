@@ -95,11 +95,15 @@ class ProfilePresenter {
             if isOn {
                 let canRequest = await interactor.canRequestPushAuthorization()
                 if canRequest {
-                    _ = try? await interactor.requestPushAuthorization()
+                    let granted = (try? await interactor.requestPushAuthorization()) ?? false
+                    guard granted else {
+                        withAnimation { isReminderEnabled = false }
+                        return
+                    }
                 }
             }
             try? await interactor.setReminderEnabled(isOn)
-            isReminderEnabled = interactor.isReminderEnabled
+            withAnimation { isReminderEnabled = interactor.isReminderEnabled }
         }
     }
 

@@ -23,12 +23,15 @@ struct FlashcardView: View {
                 axis: (x: 0, y: 1, z: 0),
                 perspective: 0.5
             )
-            .onTapGesture {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    rotation += 180
-                    showingAnswer.toggle()
-                }
-            }
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                            rotation += 180
+                            showingAnswer.toggle()
+                        }
+                    }
+            )
             .accessibilityLabel(showingAnswer ? "Answer: \(answer)" : "Question: \(question)")
             .accessibilityHint("Tap to flip to \(showingAnswer ? "question" : "answer")")
             .onChange(of: question) {
@@ -71,27 +74,25 @@ struct FlashcardView: View {
                     .scaleEffect(x: showingAnswer ? -1 : 1, y: 1)
                     .accessibilityHidden(true)
 
-                Spacer()
-
                 // Main text
                 if showingAnswer {
-                    ScrollView(.vertical, showsIndicators: false) {
+                    ScrollView(.vertical) {
                         Text(answer)
                             .font(.title3)
                             .fontWeight(.regular)
                             .multilineTextAlignment(.center)
-                            .scaleEffect(x: -1, y: 1)
                             .frame(maxWidth: .infinity)
                     }
+                    .scaleEffect(x: -1, y: 1)
+                    .frame(maxHeight: .infinity)
                 } else {
                     Text(question)
                         .font(.title3)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.7)
+                        .frame(maxHeight: .infinity, alignment: .center)
                 }
-
-                Spacer()
 
                 // Tap hint
                 HStack(spacing: 4) {

@@ -490,6 +490,7 @@ struct CreateDeckView: View {
                 )
         }
         .anyButton(.press) {
+            isNameFieldFocused = false
             presenter.onGeneratePressed()
         }
         .accessibilityIdentifier("GenerateButton")
