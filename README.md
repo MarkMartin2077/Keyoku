@@ -50,7 +50,7 @@ https://apps.apple.com/us/app/keyoku/id6759081180
 
 | Layer | Technology |
 |---|---|
-| UI | SwiftUI (iOS 17+) |
+| UI | SwiftUI (iOS 26+) |
 | Architecture | VIPER + RIBs |
 | Local Persistence | SwiftData |
 | Backend | Firebase (Auth, Firestore, Analytics) |
