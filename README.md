@@ -2,7 +2,7 @@
 
 **Keyoku** is an iOS flashcard app built for learners who want to study smarter. Create decks, generate cards with AI, and let spaced repetition bring the right cards back at the right time.
 
-https://apps.apple.com/us/app/keyoku/id6759081180
+[Available on the App Store →](https://apps.apple.com/us/app/keyoku/id6759081180)
 
 ---
 
