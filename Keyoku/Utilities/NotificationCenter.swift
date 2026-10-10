@@ -12,7 +12,7 @@ import NotificationCenter
 //
 // 1. Create a custom Notification.Name
 // 2. Trigger notification with .post()
-// 3. Recieve notification with .onNotificationRecieved() (must be connected before notification triggers)
+// 3. Recieve notification with .onNotificationReceived() (must be connected before notification triggers)
 
 extension Notification.Name {
     

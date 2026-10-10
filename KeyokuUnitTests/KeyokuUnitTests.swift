@@ -43,8 +43,9 @@ struct AuthManagerTests {
 
     private func makeAuthManager(
         user: UserAuthInfo? = nil,
-        mockLog: MockLogService = MockLogService()
+        mockLog: MockLogService? = nil
     ) -> (AuthManager, MockLogService) {
+        let mockLog = mockLog ?? MockLogService()
         let logManager = LogManager(services: [mockLog])
         let authManager = AuthManager(service: MockAuthService(user: user), logger: logManager)
         return (authManager, mockLog)

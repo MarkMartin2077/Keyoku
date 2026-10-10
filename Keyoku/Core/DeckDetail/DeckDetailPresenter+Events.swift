@@ -51,10 +51,12 @@ extension DeckDetailPresenter {
         case onPDFCleared
         case onCardCountChanged(count: Int)
         case onGenerateCardsPressed(sourceTextLength: Int, cardCount: Int, sourceInputMode: String)
-        case onGenerateCardsBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
         case onGenerateCardsSuccess(count: Int)
-        case onGenerateCardsFail(error: Error)
+        case onGenerateCardsFail(failure: GenerationFailure)
         case onGenerateCardsSuccessDismissed
+        case onCancelGenerationPressed(cardsSoFar: Int)
+        case onSaveGeneratedCardsFail(error: Error)
+        case onOpenSettingsPressed
 
         var eventName: String {
             switch self {
@@ -93,10 +95,12 @@ extension DeckDetailPresenter {
             case .onPDFCleared:                 return "DeckDetailView_PDF_Cleared"
             case .onCardCountChanged:           return "DeckDetailView_CardCount_Changed"
             case .onGenerateCardsPressed:       return "DeckDetailView_GenerateCards_Pressed"
-            case .onGenerateCardsBatchStart:    return "DeckDetailView_GenerateCards_Batch_Start"
             case .onGenerateCardsSuccess:       return "DeckDetailView_GenerateCards_Success"
             case .onGenerateCardsFail:          return "DeckDetailView_GenerateCards_Fail"
             case .onGenerateCardsSuccessDismissed: return "DeckDetailView_GenerateCards_SuccessDismissed"
+            case .onCancelGenerationPressed:    return "DeckDetailView_CancelGeneration_Pressed"
+            case .onSaveGeneratedCardsFail:     return "DeckDetailView_SaveGeneratedCards_Fail"
+            case .onOpenSettingsPressed:        return "DeckDetailView_OpenSettings_Pressed"
             }
         }
 
@@ -122,7 +126,7 @@ extension DeckDetailPresenter {
                 return ["card_count": count]
             case .onAddCardFail(error: let error), .onDeleteCardFail(error: let error), .onEditCardSaveFail(error: let error),
                  .onEditDeckSaveFail(error: let error), .onPDFExtractFail(error: let error), .onPDFPickerFail(error: let error),
-                 .onGenerateCardsFail(error: let error), .onResetLearnedStatusFail(error: let error):
+                 .onSaveGeneratedCardsFail(error: let error), .onResetLearnedStatusFail(error: let error):
                 return error.eventParameters
             case .onSourceInputModeChanged(mode: let mode):
                 return ["source_input_mode": mode]
@@ -134,8 +138,10 @@ extension DeckDetailPresenter {
                 return ["card_count": count]
             case .onGenerateCardsPressed(sourceTextLength: let length, cardCount: let count, sourceInputMode: let mode):
                 return ["source_text_length": length, "card_count": count, "source_input_mode": mode]
-            case .onGenerateCardsBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
-                return ["batch_number": batch, "total_batches": total, "batch_card_count": cards]
+            case .onGenerateCardsFail(failure: let failure):
+                return ["failure": failure.analyticsName]
+            case .onCancelGenerationPressed(cardsSoFar: let count):
+                return ["cards_so_far": count]
             case .onGenerateCardsSuccess(count: let count):
                 return ["card_count": count]
             default:
@@ -146,7 +152,7 @@ extension DeckDetailPresenter {
         var type: LogType {
             switch self {
             case .onAddCardFail, .onDeleteCardFail, .onEditCardSaveFail, .onEditDeckSaveFail,
-                 .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail, .onResetLearnedStatusFail:
+                 .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail, .onSaveGeneratedCardsFail, .onResetLearnedStatusFail:
                 return .severe
             default:
                 return .analytic

@@ -15,6 +15,10 @@ protocol CreateDeckInteractor: GlobalInteractor {
     func createDeck(name: String, color: DeckColor, imageUrl: String?, sourceText: String, flashcards: [FlashcardModel]) throws
     func saveDeckImage(data: Data) throws -> String
     func saveFirstDeckCreated() async throws
+    var generationAvailability: GenerationAvailability { get }
+    func prewarmGeneration()
+    func generateFlashcards(from text: String, count: Int, avoiding existingQuestions: [String]) -> AsyncThrowingStream<GenerationEvent, Error>
+    func extractPDFText(from url: URL) async throws -> (text: String, pageCount: Int)
 }
 
 extension CoreInteractor: CreateDeckInteractor { }

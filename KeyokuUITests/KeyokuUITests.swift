@@ -237,9 +237,9 @@ final class KeyokuUITests: XCTestCase {
     //   Home → "Create New" → Create Deck sheet → fill → create
     //
     // All launch as signed-in user (mock decks pre-loaded).
-    // AI generation is NOT tested — FoundationModels doesn't
-    // run in mock/test environments. Tests focus on "Start Empty"
-    // mode and general sheet behavior.
+    // AI generation runs against MockFlashcardGenerationService,
+    // which streams canned cards in the Mock configuration, so the
+    // generate → cancel → generate → save flow is covered too.
     //
     // =========================================================
 
@@ -512,5 +512,51 @@ final class KeyokuUITests: XCTestCase {
         // Sheet should dismiss
         let homeTab = app.descendants(matching: .any)["Home"]
         XCTAssertTrue(homeTab.waitForExistence(timeout: 5), "Home should be visible after creation")
+    }
+
+    // -------------------------------------------------------
+    // TEST 13: Generate, cancel, then generate and save
+    // -------------------------------------------------------
+    // The mock generation service streams canned cards. Cancel
+    // returns to the form; generating again completes and saves.
+
+    func testGenerateCancelThenComplete() throws {
+        let app = launchSignedIn()
+        openCreateSheet(app: app)
+
+        let nameField = app.textFields["DeckNameField"]
+        nameField.tap()
+        nameField.typeText("Cell Biology")
+
+        // The editor sits below the fold of the lazily rendered form.
+        let sourceEditor = app.textViews["SourceTextEditor"]
+        for _ in 0..<3 where !sourceEditor.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(sourceEditor.waitForExistence(timeout: 3), "Source text editor should exist")
+        sourceEditor.tap()
+        sourceEditor.typeText(String(
+            repeating: "Mitochondria produce ATP through cellular respiration. Ribosomes build proteins from amino acids. ",
+            count: 4
+        ))
+
+        let generateButton = app.buttons["GenerateButton"]
+        XCTAssertTrue(generateButton.isEnabled, "Generate should enable with a name and enough source text")
+        generateButton.tap()
+
+        let cancelGeneration = app.buttons["CancelGenerationButton"]
+        XCTAssertTrue(cancelGeneration.waitForExistence(timeout: 5), "Generating overlay should show a Cancel button")
+        cancelGeneration.tap()
+
+        XCTAssertTrue(generateButton.waitForExistence(timeout: 5), "Form should return after cancelling")
+        XCTAssertTrue(app.buttons["Cancel"].exists, "Sheet can be dismissed again after cancelling")
+
+        generateButton.tap()
+        let complete = app.staticTexts["Generation Complete"]
+        XCTAssertTrue(complete.waitForExistence(timeout: 30), "Mock generation should complete")
+
+        app.buttons["Done"].tap()
+        let homeTab = app.descendants(matching: .any)["Home"]
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5), "Home should be visible after saving the deck")
     }
 }

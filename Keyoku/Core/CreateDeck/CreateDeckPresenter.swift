@@ -7,12 +7,10 @@
 
 import SwiftUI
 import UIKit
-import PDFKit
-import FoundationModels
 
 /// New deck creation presenter that supports AI-generated and empty deck workflows.
 ///
-/// Users can generate flashcards from pasted text or uploaded PDFs using on-device AI,
+/// Users can generate flashcards from pasted text or uploaded PDFs using Apple Intelligence,
 /// or create an empty deck to add cards manually later. Handles deck naming, color selection,
 /// cover image, and a first-deck celebration flow for new users.
 @Observable
@@ -52,21 +50,8 @@ class CreateDeckPresenter {
     var sourceText: String = ""
     var isGenerating: Bool = false
     var isGenerationComplete: Bool = false
-    var generationStartTime: Date?
-    var estimatedSecondsRemaining: Int?
-
-    // Flashcard progress
-    var flashcardProgress: Int = 0
-    var flashcardTotal: Int = 0
-    var flashcardStatusText: String?
-    var flashcardSkippedBatches: Int = 0
-    var flashcardItemsGenerated: Int = 0
-
-    // Streaming state — items appear here as they're generated
-    var streamedFlashcards: [FlashcardModel] = []
-
-    // Generation results
-    var generatedFlashcardCount: Int = 0
+    private(set) var progress = GenerationProgressState()
+    private var generationTask: Task<Void, Never>?
 
     // First deck celebration
     var showFirstDeckCelebration: Bool = false
@@ -74,14 +59,6 @@ class CreateDeckPresenter {
 
     private var hasCreatedFirstDeck: Bool {
         interactor.currentUser?.didCreateFirstDeck == true
-    }
-
-    var skippedBatches: Int {
-        flashcardSkippedBatches
-    }
-
-    var hasProgress: Bool {
-        flashcardTotal > 0
     }
 
     var sourceInputMode: SourceInputMode = .text
@@ -113,6 +90,17 @@ class CreateDeckPresenter {
         !isGenerating
     }
 
+    var unavailableReason: UnavailableReason? {
+        if case .unavailable(let reason) = interactor.generationAvailability {
+            return reason
+        }
+        return nil
+    }
+
+    var generatedFlashcardCount: Int {
+        progress.cards.count
+    }
+
     var canCreateEmpty: Bool {
         !deckName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -126,10 +114,21 @@ class CreateDeckPresenter {
 
     func onViewAppear(delegate: CreateDeckDelegate) {
         interactor.trackScreenEvent(event: Event.onAppear(delegate: delegate))
+        if unavailableReason == nil {
+            interactor.prewarmGeneration()
+        }
     }
 
     func onViewDisappear(delegate: CreateDeckDelegate) {
         interactor.trackEvent(event: Event.onDisappear(delegate: delegate))
+        generationTask?.cancel()
+    }
+
+    func onOpenSettingsPressed() {
+        interactor.trackEvent(event: Event.onOpenSettingsPressed)
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
     }
 
     // MARK: - Settings Actions
@@ -192,16 +191,18 @@ class CreateDeckPresenter {
             interactor.trackEvent(event: Event.onPDFFileSelected(fileName: fileName))
             isExtractingPDF = true
 
-            do {
-                let text = try extractText(from: url)
-                sourceText = text
-                pdfFileName = fileName
-                isExtractingPDF = false
-                interactor.trackEvent(event: Event.onPDFExtractSuccess(fileName: fileName, pageCount: pdfPageCount ?? 0, textLength: text.count))
-            } catch {
-                isExtractingPDF = false
-                pdfError = error.localizedDescription
-                interactor.trackEvent(event: Event.onPDFExtractFail(error: error))
+            Task {
+                defer { isExtractingPDF = false }
+                do {
+                    let extraction = try await interactor.extractPDFText(from: url)
+                    sourceText = extraction.text
+                    pdfFileName = fileName
+                    pdfPageCount = extraction.pageCount
+                    interactor.trackEvent(event: Event.onPDFExtractSuccess(fileName: fileName, pageCount: extraction.pageCount, textLength: extraction.text.count))
+                } catch {
+                    pdfError = error.localizedDescription
+                    interactor.trackEvent(event: Event.onPDFExtractFail(error: error))
+                }
             }
 
         case .failure(let error):
@@ -231,18 +232,35 @@ class CreateDeckPresenter {
         guard canGenerate else { return }
 
         wasFirstDeck = !hasCreatedFirstDeck && interactor.decks.isEmpty
-        resetGenerationState()
+        isGenerating = true
+        isGenerationComplete = false
+        progress = GenerationProgressState()
 
-        Task {
+        generationTask = Task {
             do {
-                try await performGeneration()
-                handleGenerationSuccess()
+                for try await event in interactor.generateFlashcards(from: sourceText, count: cardCount, avoiding: []) {
+                    progress.apply(event)
+                }
+                guard !Task.isCancelled else { return }
+                interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: progress.cards.count))
             } catch {
-                interactor.trackEvent(event: Event.onGenerateFail(error: error))
+                guard !Task.isCancelled else { return }
+                let failure = error as? GenerationFailure ?? .other(String(describing: error))
+                interactor.trackEvent(event: Event.onGenerateFail(failure: failure))
                 isGenerating = false
-                router.showSimpleAlert(title: String(localized: "Generation Failed"), subtitle: error.localizedDescription)
+                router.showSimpleAlert(title: String(localized: "Generation Failed"), subtitle: failure.userMessage)
+                return
             }
+            saveGeneratedDeck()
         }
+    }
+
+    func onCancelGenerationPressed() {
+        interactor.trackEvent(event: Event.onCancelGenerationPressed(cardsSoFar: progress.cards.count))
+        generationTask?.cancel()
+        generationTask = nil
+        isGenerating = false
+        progress = GenerationProgressState()
     }
 
     func onSuccessDismissPressed() {
@@ -266,47 +284,26 @@ class CreateDeckPresenter {
         }
     }
 
-    private func resetGenerationState() {
-        isGenerating = true
-        isGenerationComplete = false
-        generationStartTime = Date()
-        estimatedSecondsRemaining = nil
-        flashcardProgress = 0
-        flashcardTotal = 0
-        flashcardStatusText = nil
-        flashcardSkippedBatches = 0
-        flashcardItemsGenerated = 0
-        streamedFlashcards = []
-        generatedFlashcardCount = 0
-    }
-
-    private func handleGenerationSuccess() {
-        isGenerating = false
-        isGenerationComplete = true
-        interactor.playHaptic(option: .achievementUnlocked())
-    }
-
-    private func performGeneration() async throws {
-        let trimmedName = deckName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let savedImageUrl = try saveImageIfNeeded()
-
-        try await generateFlashcards()
-        let flashcards = streamedFlashcards
-
-        guard !flashcards.isEmpty else {
-            throw AppError(String(localized: "No flashcards could be generated from this text. Try pasting actual study material like notes, a textbook excerpt, or an article."))
+    private func saveGeneratedDeck() {
+        do {
+            try interactor.createDeck(
+                name: deckName.trimmingCharacters(in: .whitespacesAndNewlines),
+                color: selectedColor,
+                imageUrl: try saveImageIfNeeded(),
+                sourceText: sourceText,
+                flashcards: progress.cards
+            )
+            isGenerating = false
+            isGenerationComplete = true
+            interactor.playHaptic(option: .achievementUnlocked())
+        } catch {
+            interactor.trackEvent(event: Event.onSaveDeckFail(error: error))
+            isGenerating = false
+            router.showSimpleAlert(
+                title: String(localized: "Couldn't Save Deck"),
+                subtitle: String(localized: "Your flashcards were generated but the deck couldn't be saved. Please try again.")
+            )
         }
-
-        generatedFlashcardCount = flashcards.count
-        interactor.trackEvent(event: Event.onGenerateSuccess(cardCount: flashcards.count))
-
-        try interactor.createDeck(
-            name: trimmedName,
-            color: selectedColor,
-            imageUrl: savedImageUrl,
-            sourceText: sourceText,
-            flashcards: flashcards
-        )
     }
 
     func onCreateEmptyPressed() {
@@ -348,39 +345,5 @@ class CreateDeckPresenter {
             return nil
         }
         return try interactor.saveDeckImage(data: imageData)
-    }
-
-    private func extractText(from url: URL) throws -> String {
-        let didAccess = url.startAccessingSecurityScopedResource()
-        defer {
-            if didAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        guard let document = PDFDocument(url: url) else {
-            throw AppError("Could not read the PDF. The file may be damaged or password-protected.")
-        }
-
-        guard document.pageCount > 0 else {
-            throw AppError("The PDF has no pages.")
-        }
-
-        pdfPageCount = document.pageCount
-
-        var pages: [String] = []
-        for index in 0..<document.pageCount {
-            if let page = document.page(at: index), let text = page.string, !text.isEmpty {
-                pages.append(text)
-            }
-        }
-
-        let fullText = pages.joined(separator: "\n\n")
-
-        guard !fullText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw AppError("No readable text found in the PDF. It may contain only images or scanned content.")
-        }
-
-        return fullText
     }
 }
