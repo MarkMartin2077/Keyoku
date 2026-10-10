@@ -11,8 +11,9 @@ struct GeneratedCardDraft: Equatable, Sendable {
     let answer: String
 }
 
+/// The model side of generation, shared by every item type: availability, model choice and token measuring.
 @MainActor
-protocol FlashcardGenerationService: Sendable {
+protocol GenerationModelService: Sendable {
     var availability: GenerationAvailability { get }
 
     /// The model the current run is using. Moves to `.onDevice` when Private Cloud Compute falls back mid-run.
@@ -27,7 +28,10 @@ protocol FlashcardGenerationService: Sendable {
     func contextSize() async -> Int
 
     func tokenCount(_ text: String) async -> Int
+}
 
+@MainActor
+protocol FlashcardGenerationService: GenerationModelService {
     /// Tokens the flashcard response schema adds to each call.
     func schemaTokenCount() async -> Int
 

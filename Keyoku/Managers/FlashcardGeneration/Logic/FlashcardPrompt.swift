@@ -64,9 +64,4 @@ enum FlashcardPrompt {
         prompt += "\n\nSource text:\n\(sourceText)"
         return prompt
     }
-
-    /// The prompt with no source text, measured once to budget each call.
-    static var template: String {
-        prompt(cardCount: GenerationBudget.cardsPerBatchCeiling, sourceText: "")
-    }
 }
