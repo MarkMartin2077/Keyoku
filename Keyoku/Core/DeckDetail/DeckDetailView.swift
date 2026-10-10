@@ -47,12 +47,20 @@ struct DeckDetailView: View {
                 practiceSection
             }
 
+            #if DEBUG
+            // PROTOTYPE (quiz screens) — throwaway branch only.
+            QuizScreensPrototypeSection(deckColor: presenter.deckColor.color, deckName: presenter.deckName)
+            #endif
+
             if presenter.flashcards.isEmpty {
                 emptyStateView
             } else {
                 flashcardsSection
             }
         }
+        #if DEBUG
+        .overlay(alignment: .bottom) { QuizPrototypeSwitcher() }
+        #endif
         .navigationTitle(presenter.deckName)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
