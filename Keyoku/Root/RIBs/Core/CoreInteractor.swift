@@ -576,6 +576,16 @@ struct CoreInteractor: GlobalInteractor {
         QuizQuestionCount.canMakeQuiz(sourceLength: sourceLength)
     }
 
+    /// The fewest questions a quiz may have.
+    var minQuizQuestionCount: Int {
+        QuizQuestionCount.minimum
+    }
+
+    /// The fewest characters of source text a deck needs for a quiz.
+    var minQuizSourceLength: Int {
+        QuizQuestionCount.minimumSourceLength
+    }
+
     /// The most questions a quiz on this source may have: `clamp(sourceLength / 300, 5, 20)`.
     func maxQuizQuestionCount(sourceLength: Int) -> Int {
         QuizQuestionCount.maximum(sourceLength: sourceLength)

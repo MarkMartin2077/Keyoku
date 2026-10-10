@@ -45,6 +45,22 @@ private class MockDeckDetailInteractor: DeckDetailInteractor {
     func extractPDFText(from url: URL) async throws -> (text: String, pageCount: Int) {
         throw PDFExtractionError.unreadable
     }
+    func quizzes(forDeckId deckId: String) -> [QuizModel] { [] }
+    func deleteQuiz(id: String) throws {}
+    var quizGenerationAvailability: GenerationAvailability { .unavailable(.deviceNotEligible) }
+    func prewarmQuizGeneration() {}
+    func canMakeQuiz(sourceLength: Int) -> Bool { QuizQuestionCount.canMakeQuiz(sourceLength: sourceLength) }
+    var minQuizQuestionCount: Int { QuizQuestionCount.minimum }
+    var minQuizSourceLength: Int { QuizQuestionCount.minimumSourceLength }
+    func maxQuizQuestionCount(sourceLength: Int) -> Int { QuizQuestionCount.maximum(sourceLength: sourceLength) }
+    func defaultQuizQuestionCount(sourceLength: Int) -> Int { QuizQuestionCount.defaultCount(sourceLength: sourceLength) }
+    func generateQuiz(
+        for deck: DeckModel,
+        questionCount: Int,
+        onProgress: @escaping @MainActor (QuizGenerationProgress) -> Void
+    ) async throws -> QuizModel {
+        throw QuizGenerationError.generation(.modelUnavailable)
+    }
 
     // GlobalInteractor
     func trackEvent(eventName: String, parameters: [String: Any]?, type: LogType) {}
@@ -59,6 +75,9 @@ private struct MockDeckDetailRouter: DeckDetailRouter {
     var router: AnyRouter { fatalError("router not accessed in these tests") }
     func showPracticeView(deck: DeckModel, cardLimit: Int?) {}
     func showReviewDueView(deck: DeckModel) {}
+    func showQuizPlayView(quiz: QuizModel, deckColor: DeckColor) {}
+    func showDeleteQuizAlert(quizTitle: String, onDeletePressed: @escaping @MainActor @Sendable () -> Void) {}
+    func showSimpleAlert(title: String, subtitle: String?) {}
 }
 
 // MARK: - Helpers

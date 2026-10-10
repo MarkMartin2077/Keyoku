@@ -10,8 +10,15 @@ import SwiftfulUI
 
 struct AppleIntelligenceUnavailableView: View {
 
+    /// What the unavailable feature would have made; sets the explanation's wording.
+    enum Purpose {
+        case flashcards
+        case quizzes
+    }
+
     let reason: UnavailableReason
     let onOpenSettings: (() -> Void)?
+    var purpose: Purpose = .flashcards
 
     var body: some View {
         VStack(spacing: 16) {
@@ -46,25 +53,30 @@ struct AppleIntelligenceUnavailableView: View {
         }
     }
 
-    @ViewBuilder
     private var description: some View {
-        switch reason {
-        case .deviceNotEligible:
-            Text("This device doesn't support Apple Intelligence. An iPhone 15 Pro or later, or an iPad or Mac with an M1 chip or later, is required.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        case .appleIntelligenceNotEnabled:
-            Text("Turn on Apple Intelligence in Settings to generate flashcards with AI.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        case .modelNotReady:
-            Text("Apple Intelligence may be turned off or still setting up. Check that it's enabled in Settings, then try again.\n\nYou can still add cards manually in the meantime.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        case .unknown:
-            Text("Apple Intelligence is currently unavailable. Please try again later.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        Text(descriptionText)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+    }
+
+    private var descriptionText: String {
+        switch (reason, purpose) {
+        case (.deviceNotEligible, .flashcards):
+            return String(localized: "This device doesn't support Apple Intelligence. An iPhone 15 Pro or later, or an iPad or Mac with an M1 chip or later, is required.")
+        case (.deviceNotEligible, .quizzes):
+            return String(localized: "This device doesn't support Apple Intelligence, so new quizzes can't be made. Saved quizzes still play.")
+        case (.appleIntelligenceNotEnabled, .flashcards):
+            return String(localized: "Turn on Apple Intelligence in Settings to generate flashcards with AI.")
+        case (.appleIntelligenceNotEnabled, .quizzes):
+            return String(localized: "Turn on Apple Intelligence in Settings to make new quizzes. Saved quizzes still play.")
+        case (.modelNotReady, .flashcards):
+            return String(localized: "Apple Intelligence may be turned off or still setting up. Check that it's enabled in Settings, then try again.\n\nYou can still add cards manually in the meantime.")
+        case (.modelNotReady, .quizzes):
+            return String(localized: "Apple Intelligence may be turned off or still setting up. Check that it's enabled in Settings, then try again. Saved quizzes still play.")
+        case (.unknown, .flashcards):
+            return String(localized: "Apple Intelligence is currently unavailable. Please try again later.")
+        case (.unknown, .quizzes):
+            return String(localized: "Apple Intelligence is currently unavailable, so new quizzes can't be made. Saved quizzes still play.")
         }
     }
 
@@ -103,5 +115,13 @@ struct AppleIntelligenceUnavailableView: View {
     AppleIntelligenceUnavailableView(
         reason: .modelNotReady,
         onOpenSettings: nil
+    )
+}
+
+#Preview("Quizzes, Not Enabled") {
+    AppleIntelligenceUnavailableView(
+        reason: .appleIntelligenceNotEnabled,
+        onOpenSettings: { },
+        purpose: .quizzes
     )
 }

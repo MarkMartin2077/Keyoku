@@ -47,6 +47,10 @@ struct DeckDetailView: View {
                 practiceSection
             }
 
+            if presenter.showsQuizSection {
+                quizzesSection
+            }
+
             if presenter.flashcards.isEmpty {
                 emptyStateView
             } else {
@@ -71,6 +75,9 @@ struct DeckDetailView: View {
         .sheet(isPresented: $showGenerateSheet, content: {
             GenerateCardsSheet(presenter: presenter)
         })
+        .sheet(isPresented: newQuizSheetBinding) {
+            NewQuizSheet(presenter: presenter)
+        }
         .onChange(of: showGenerateSheet) { _, isPresented in
             if isPresented {
                 presenter.onGenerateSheetOpened()
