@@ -612,4 +612,16 @@ struct CoreInteractor: GlobalInteractor {
         }
         return try quizManager.createQuiz(deckId: deck.deckId, title: generated.title, questions: generated.questions)
     }
+
+    // MARK: Study reminders
+
+    /// Rebuilds the next week of reminders from the learner's current cards: learned cards that
+    /// are due, and cards still being learned, across all decks (the same counts Home uses).
+    func rescheduleStudyReminders() {
+        let flashcards = flashcardManager.decks.flatMap(\.flashcards)
+        pushManager.schedulePushNotificationsForTheNextWeek(
+            dueCount: flashcards.filter { $0.isLearned && $0.isDue }.count,
+            stillLearningCount: flashcards.filter { !$0.isLearned }.count
+        )
+    }
 }
