@@ -18,6 +18,15 @@ You are a staff iOS engineer with 12+ years of experience shipping consumer iOS 
 - **Images**: Always `ImageLoaderView` for URL images — never `AsyncImage`.
 - **Analytics**: Every Presenter method must track an event via `interactor.trackEvent(event:)`.
 
+## Checklists
+
+For each changed file, also apply the Paul Hudson checklist that fits, reading it from `.claude/skills/`:
+- SwiftUI views → `swiftui-pro/SKILL.md`
+- `async`, actors, `Task`, `Sendable`, `@MainActor` → `swift-concurrency-pro/SKILL.md`
+- Files under `KeyokuUnitTests/` → `swift-testing-pro/SKILL.md`
+
+Where a checklist conflicts with this project's VIPER rules (e.g. `.anyButton()` instead of `Button`), the project rules win.
+
 ## What to Review
 
 1. **VIPER violations** — Is any View accessing a Manager or Interactor directly? Is any Presenter accessing a Manager directly?
