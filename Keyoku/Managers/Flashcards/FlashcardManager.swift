@@ -42,6 +42,10 @@ class FlashcardManager {
     /// Updated in-place on create/update/delete to avoid full reloads.
     private(set) var decks: [DeckModel] = []
 
+    /// Whether the last `logIn` fetched decks from remote. When `false`, `decks` came
+    /// from the local fallback and may be missing decks that exist remotely.
+    private(set) var hasSyncedRemoteDecks = false
+
     init(services: FlashcardServices, imageUploadService: FirebaseImageUploadService? = nil, logManager: LogManager? = nil) {
         self.local = services.local
         self.remote = services.remote
@@ -60,6 +64,7 @@ class FlashcardManager {
     /// - Parameter userId: The authenticated user's ID, stored for remote operations.
     func logIn(userId: String) async throws {
         self.userId = userId
+        hasSyncedRemoteDecks = false
         logManager?.trackEvent(event: Event.logInStart(userId: userId))
 
         do {
@@ -68,6 +73,7 @@ class FlashcardManager {
                 try? local.saveDeck(deck: deck)
             }
             loadDecks()
+            hasSyncedRemoteDecks = true
             logManager?.trackEvent(event: Event.logInSuccess(userId: userId, count: decks.count))
         } catch {
             logManager?.trackEvent(event: Event.logInFail(error: error))
@@ -79,6 +85,7 @@ class FlashcardManager {
     func signOut() {
         logManager?.trackEvent(event: Event.signOut)
         userId = nil
+        hasSyncedRemoteDecks = false
         decks = []
     }
 

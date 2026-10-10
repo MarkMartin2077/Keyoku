@@ -12,6 +12,7 @@ struct CoreInteractor: GlobalInteractor {
     private let hapticManager: HapticManager
     private let soundEffectManager: SoundEffectManager
     private let flashcardManager: FlashcardManager
+    private let quizManager: QuizManager
     private let spotlightManager: SpotlightManager
     private let streakManager: StreakManager
     private let flashcardGenerationManager: FlashcardGenerationManager
@@ -28,6 +29,7 @@ struct CoreInteractor: GlobalInteractor {
             let hapticManager = container.resolve(HapticManager.self),
             let soundEffectManager = container.resolve(SoundEffectManager.self),
             let flashcardManager = container.resolve(FlashcardManager.self),
+            let quizManager = container.resolve(QuizManager.self),
             let spotlightManager = container.resolve(SpotlightManager.self),
             let streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey),
             let flashcardGenerationManager = container.resolve(FlashcardGenerationManager.self)
@@ -45,6 +47,7 @@ struct CoreInteractor: GlobalInteractor {
         self.hapticManager = hapticManager
         self.soundEffectManager = soundEffectManager
         self.flashcardManager = flashcardManager
+        self.quizManager = quizManager
         self.spotlightManager = spotlightManager
         self.streakManager = streakManager
         self.flashcardGenerationManager = flashcardGenerationManager
@@ -388,6 +391,9 @@ struct CoreInteractor: GlobalInteractor {
     func deleteDeck(id: String) throws {
         try flashcardManager.deleteDeck(id: id)
         spotlightManager.removeDeck(id: id)
+        // The deck is already gone, so a failure here must not fail the deck delete.
+        // QuizManager logs the failure, and the next sign-in sweeps the leftover quizzes.
+        try? quizManager.deleteQuizzes(deckId: id)
     }
 
     func addFlashcard(question: String, answer: String, toDeckId: String) throws {
@@ -404,6 +410,27 @@ struct CoreInteractor: GlobalInteractor {
 
     func migrateDecks(_ decksToMigrate: [DeckModel]) {
         flashcardManager.migrateDecks(decksToMigrate)
+        quizManager.migrateQuizzes(deckIds: Set(decksToMigrate.map(\.deckId)))
+    }
+
+    // MARK: QuizManager
+
+    func quizzes(forDeckId deckId: String) -> [QuizModel] {
+        quizManager.quizzes(forDeckId: deckId)
+    }
+
+    @discardableResult
+    func createQuiz(deckId: String, title: String, questions: [QuizQuestionModel]) throws -> QuizModel {
+        try quizManager.createQuiz(deckId: deckId, title: title, questions: questions)
+    }
+
+    @discardableResult
+    func recordQuizAttempt(quizId: String, score: Int, total: Int) throws -> QuizModel {
+        try quizManager.recordAttempt(quizId: quizId, score: score, total: total)
+    }
+
+    func deleteQuiz(id: String) throws {
+        try quizManager.deleteQuiz(id: id)
     }
 
     // MARK: StreakManager
@@ -464,7 +491,7 @@ struct CoreInteractor: GlobalInteractor {
                 firebaseAppInstanceId: Constants.firebaseAnalyticsAppInstanceID
             )
         )
-        async let flashcardLogin: Void = flashcardManager.logIn(userId: user.uid)
+        async let flashcardLogin: Void = logInDecksThenQuizzes(userId: user.uid)
         async let streakLogin: Void = streakManager.logIn(userId: user.uid)
 
         let (_, _, _, _) = await (try userLogin, try purchaseLogin, try flashcardLogin, try streakLogin)
@@ -479,11 +506,22 @@ struct CoreInteractor: GlobalInteractor {
         spotlightManager.indexAllContent(decks: flashcardManager.decks)
     }
 
+    /// Quizzes sync after decks (ADR 0003): the quiz sign-in removes quizzes whose deck
+    /// no longer exists, which is only safe once the deck list came from remote.
+    private func logInDecksThenQuizzes(userId: String) async throws {
+        try await flashcardManager.logIn(userId: userId)
+        let existingDeckIds = flashcardManager.hasSyncedRemoteDecks
+            ? Set(flashcardManager.decks.map(\.deckId))
+            : nil
+        await quizManager.logIn(userId: userId, existingDeckIds: existingDeckIds)
+    }
+
     func signOut() async throws {
         try authManager.signOut()
         try await purchaseManager.logOut()
         userManager.signOut()
         flashcardManager.signOut()
+        quizManager.signOut()
         streakManager.logOut()
         spotlightManager.removeAllItems()
     }
@@ -507,10 +545,12 @@ struct CoreInteractor: GlobalInteractor {
             // Once auth is revoked, security rules block Firestore access.
             try await userManager.deleteCurrentUser()
             try await flashcardManager.deleteAllDecks()
+            try await quizManager.deleteAllQuizzes()
         }
 
         // Log out managers with active listeners
         flashcardManager.signOut()
+        quizManager.signOut()
         streakManager.logOut()
         spotlightManager.removeAllItems()
 
