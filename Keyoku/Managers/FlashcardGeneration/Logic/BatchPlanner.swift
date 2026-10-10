@@ -20,6 +20,16 @@ struct GenerationProfile: Equatable, Sendable {
         itemsPerCallFloor: 3,
         itemsPerCallCeiling: 10
     )
+
+    /// A quiz question costs about twice a card (five fields). A 4K window gets 2 questions per call,
+    /// and Private Cloud Compute's 32K window fits a whole 20-question quiz in one call.
+    /// Research estimates, to be tuned on a device.
+    static let quiz = GenerationProfile(
+        outputTokensPerItem: 180,
+        freeTokensPerItem: 1_300,
+        itemsPerCallFloor: 2,
+        itemsPerCallCeiling: 20
+    )
 }
 
 /// How much source text and how many items fit in one model call, measured for the active model.
@@ -37,7 +47,7 @@ struct GenerationBudget: Equatable, Sendable {
 
     /// `overheadTokens` is everything in a call except the source text and the output:
     /// instructions, prompt template and response schema.
-    init(contextSize: Int, overheadTokens: Int, tokensPerCharacter: Double, profile: GenerationProfile = .flashcards) {
+    init(contextSize: Int, overheadTokens: Int, tokensPerCharacter: Double, profile: GenerationProfile) {
         let freeTokens = max(contextSize - overheadTokens, 0)
         let items = min(profile.itemsPerCallCeiling, max(profile.itemsPerCallFloor, freeTokens / profile.freeTokensPerItem))
         let source = Double(freeTokens - items * profile.outputTokensPerItem) * Self.sourceSafetyFactor
