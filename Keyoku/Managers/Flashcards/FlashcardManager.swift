@@ -131,7 +131,8 @@ class FlashcardManager {
     ///   - color: Theme color (defaults to `.blue`).
     ///   - imageUrl: Optional cover image path (relative to Documents directory).
     ///   - sourceText: The original text used to generate the deck.
-    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String) throws {
+    @discardableResult
+    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String) throws -> DeckModel {
         logManager?.trackEvent(event: Event.createDeckStart(name: name))
 
         let deck = DeckModel(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText)
@@ -142,6 +143,7 @@ class FlashcardManager {
             logManager?.trackEvent(event: Event.createDeckSuccess(deck: deck))
             pushDeckToRemote(deck)
             uploadDeckImageInBackground(deck: deck)
+            return deck
         } catch {
             logManager?.trackEvent(event: Event.createDeckFail(error: error))
             throw error
@@ -160,7 +162,8 @@ class FlashcardManager {
     ///   - imageUrl: Optional cover image path (relative to Documents directory).
     ///   - sourceText: The original text used to generate the deck.
     ///   - flashcards: Pre-generated flashcards whose `deckId` will be overwritten.
-    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, flashcards: [FlashcardModel]) throws {
+    @discardableResult
+    func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, flashcards: [FlashcardModel]) throws -> DeckModel {
         logManager?.trackEvent(event: Event.createDeckStart(name: name))
 
         let deckId = UUID().uuidString
@@ -188,6 +191,7 @@ class FlashcardManager {
             logManager?.trackEvent(event: Event.createDeckSuccess(deck: deck))
             pushDeckToRemote(deck)
             uploadDeckImageInBackground(deck: deck)
+            return deck
         } catch {
             logManager?.trackEvent(event: Event.createDeckFail(error: error))
             throw error

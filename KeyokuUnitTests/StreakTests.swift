@@ -41,8 +41,9 @@ struct StreakManagerTests {
 
     private func makeManager(
         streak: CurrentStreakData? = nil,
-        mockLog: MockLogService = MockLogService()
+        mockLog: MockLogService? = nil
     ) -> (StreakManager, MockLogService) {
+        let mockLog = mockLog ?? MockLogService()
         let config = StreakConfiguration(
             streakKey: "daily",
             eventsRequiredPerDay: 1,
@@ -261,8 +262,9 @@ struct StreakManagerTests {
 struct StreakManagerFreezeTests {
 
     private func makeManager(
-        mockLog: MockLogService = MockLogService()
+        mockLog: MockLogService? = nil
     ) -> (StreakManager, MockLogService) {
+        let mockLog = mockLog ?? MockLogService()
         let config = StreakConfiguration(
             streakKey: "daily",
             eventsRequiredPerDay: 1,

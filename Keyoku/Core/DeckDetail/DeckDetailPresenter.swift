@@ -10,8 +10,8 @@ import SwiftUI
 /// Deck detail presenter that manages a single deck's flashcards, metadata, and AI generation.
 ///
 /// Provides full CRUD for flashcards (add, edit, delete), deck editing (name, color, image),
-/// practice session launching, learned-status reset, and on-device AI card generation from
-/// pasted text or uploaded PDFs. Generation streams cards in batches with quality filtering.
+/// practice session launching, learned-status reset, and AI card generation from pasted text
+/// or uploaded PDFs through the flashcard generation manager.
 ///
 /// The `flashcards` property is sorted by SRS urgency: overdue cards appear first (oldest
 /// due date first), followed by scheduled cards (ascending by due date), with unreviewed
@@ -142,14 +142,8 @@ class DeckDetailPresenter {
 
     var isGeneratingCards: Bool = false
     var isGenerationComplete: Bool = false
-    var generationStartTime: Date?
-    var flashcardProgress: Int = 0
-    var flashcardTotal: Int = 0
-    var flashcardStatusText: String?
-    var flashcardSkippedBatches: Int = 0
-    var flashcardItemsGenerated: Int = 0
-    var streamedFlashcards: [FlashcardModel] = []
-    var generatedFlashcardCount: Int = 0
+    var progress = GenerationProgressState()
+    var generationTask: Task<Void, Never>?
 
     private static let charsPerCard: Int = 150
     static let minimumSourceTextLength: Int = 300
@@ -173,12 +167,15 @@ class DeckDetailPresenter {
         !isGeneratingCards
     }
 
-    var skippedBatches: Int {
-        flashcardSkippedBatches
+    var unavailableReason: UnavailableReason? {
+        if case .unavailable(let reason) = interactor.generationAvailability {
+            return reason
+        }
+        return nil
     }
 
-    var hasProgress: Bool {
-        flashcardTotal > 0
+    var generatedFlashcardCount: Int {
+        progress.cards.count
     }
 
     // MARK: - Init

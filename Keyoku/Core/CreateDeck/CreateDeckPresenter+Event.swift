@@ -25,9 +25,11 @@ extension CreateDeckPresenter {
         case onPDFCleared
         case onCancelPressed
         case onGeneratePressed(sourceTextLength: Int, cardCount: Int, sourceInputMode: String)
-        case onBatchStart(batchNumber: Int, totalBatches: Int, cardCount: Int)
         case onGenerateSuccess(cardCount: Int)
-        case onGenerateFail(error: Error)
+        case onGenerateFail(failure: GenerationFailure)
+        case onCancelGenerationPressed(cardsSoFar: Int)
+        case onSaveDeckFail(error: Error)
+        case onOpenSettingsPressed
         case onSuccessDismissPressed
         case onCreateEmptyPressed
         case onCreateEmptySuccess
@@ -51,9 +53,11 @@ extension CreateDeckPresenter {
             case .onPDFCleared:             return "CreateDeckView_PDF_Cleared"
             case .onCancelPressed:          return "CreateDeckView_Cancel"
             case .onGeneratePressed:        return "CreateDeckView_Generate_Pressed"
-            case .onBatchStart:             return "CreateDeckView_Batch_Start"
             case .onGenerateSuccess:        return "CreateDeckView_Generate_Success"
             case .onGenerateFail:           return "CreateDeckView_Generate_Fail"
+            case .onCancelGenerationPressed: return "CreateDeckView_CancelGeneration_Pressed"
+            case .onSaveDeckFail:           return "CreateDeckView_SaveDeck_Fail"
+            case .onOpenSettingsPressed:    return "CreateDeckView_OpenSettings_Pressed"
             case .onSuccessDismissPressed:   return "CreateDeckView_SuccessDismiss_Pressed"
             case .onCreateEmptyPressed:     return "CreateDeckView_CreateEmpty_Pressed"
             case .onCreateEmptySuccess:     return "CreateDeckView_CreateEmpty_Success"
@@ -84,11 +88,13 @@ extension CreateDeckPresenter {
                 return error.eventParameters
             case .onGeneratePressed(sourceTextLength: let length, cardCount: let count, sourceInputMode: let mode):
                 return ["source_text_length": length, "card_count": count, "source_input_mode": mode]
-            case .onBatchStart(batchNumber: let batch, totalBatches: let total, cardCount: let cards):
-                return ["batch_number": batch, "total_batches": total, "batch_card_count": cards]
             case .onGenerateSuccess(cardCount: let count):
                 return ["card_count": count]
-            case .onGenerateFail(error: let error):
+            case .onGenerateFail(failure: let failure):
+                return ["failure": failure.analyticsName]
+            case .onCancelGenerationPressed(cardsSoFar: let count):
+                return ["cards_so_far": count]
+            case .onSaveDeckFail(error: let error):
                 return error.eventParameters
             case .onCreateEmptyFail(error: let error):
                 return error.eventParameters
@@ -99,7 +105,7 @@ extension CreateDeckPresenter {
 
         var type: LogType {
             switch self {
-            case .onGenerateFail, .onCreateEmptyFail, .onPDFExtractFail, .onPDFPickerFail:
+            case .onGenerateFail, .onSaveDeckFail, .onCreateEmptyFail, .onPDFExtractFail, .onPDFPickerFail:
                 return .severe
             default:
                 return .analytic

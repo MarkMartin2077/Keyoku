@@ -38,8 +38,9 @@ struct FlashcardManagerDeckTests {
 
     private func makeManager(
         decks: [DeckModel] = [],
-        mockLog: MockLogService = MockLogService()
+        mockLog: MockLogService? = nil
     ) -> (FlashcardManager, MockLogService) {
+        let mockLog = mockLog ?? MockLogService()
         let logManager = LogManager(services: [mockLog])
         let manager = FlashcardManager(services: MockFlashcardServices(decks: decks), logManager: logManager)
         return (manager, mockLog)
@@ -158,6 +159,22 @@ struct FlashcardManagerDeckTests {
         #expect(manager.decks.count == 2)
         #expect(manager.decks[0].name == "Second")
         #expect(manager.decks[1].name == "First")
+    }
+
+    @Test("createDeck returns the created deck even when another deck shares its name")
+    func createDeckReturnsCreatedDeck() throws {
+        let (manager, _) = makeManager()
+        let existing = try manager.createDeck(name: "Biology", sourceText: "old")
+
+        let created = try manager.createDeck(
+            name: "Biology",
+            sourceText: "new",
+            flashcards: [FlashcardModel(question: "What is ATP?", answer: "The cell's energy currency.")]
+        )
+
+        #expect(created.deckId != existing.deckId)
+        #expect(manager.getDeck(id: created.deckId)?.sourceText == "new")
+        #expect(created.flashcards.map(\.deckId) == [created.deckId])
     }
 
     // -------------------------------------------------------
@@ -287,8 +304,9 @@ struct FlashcardManagerFlashcardTests {
 
     private func makeManager(
         decks: [DeckModel] = [],
-        mockLog: MockLogService = MockLogService()
+        mockLog: MockLogService? = nil
     ) -> (FlashcardManager, MockLogService) {
+        let mockLog = mockLog ?? MockLogService()
         let logManager = LogManager(services: [mockLog])
         let manager = FlashcardManager(services: MockFlashcardServices(decks: decks), logManager: logManager)
         return (manager, mockLog)

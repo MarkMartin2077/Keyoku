@@ -14,6 +14,7 @@ struct CoreInteractor: GlobalInteractor {
     private let flashcardManager: FlashcardManager
     private let spotlightManager: SpotlightManager
     private let streakManager: StreakManager
+    private let flashcardGenerationManager: FlashcardGenerationManager
 
     init(container: DependencyContainer) {
         guard
@@ -28,7 +29,8 @@ struct CoreInteractor: GlobalInteractor {
             let soundEffectManager = container.resolve(SoundEffectManager.self),
             let flashcardManager = container.resolve(FlashcardManager.self),
             let spotlightManager = container.resolve(SpotlightManager.self),
-            let streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey)
+            let streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey),
+            let flashcardGenerationManager = container.resolve(FlashcardGenerationManager.self)
         else {
             fatalError("CoreInteractor: One or more managers not registered in DependencyContainer. Check Dependencies.swift initialization.")
         }
@@ -45,6 +47,7 @@ struct CoreInteractor: GlobalInteractor {
         self.flashcardManager = flashcardManager
         self.spotlightManager = spotlightManager
         self.streakManager = streakManager
+        self.flashcardGenerationManager = flashcardGenerationManager
     }
     
     // MARK: APP STATE
@@ -312,51 +315,45 @@ struct CoreInteractor: GlobalInteractor {
     // MARK: Haptics
     
     func prepareHaptic(option: HapticOption) {
-        hapticManager.prepare(option: option)
+        hapticManager.prepareHaptic(option: option)
     }
     
     func prepareHaptics(options: [HapticOption]) {
-        hapticManager.prepare(options: options)
+        hapticManager.prepareHaptics(options: options)
     }
         
     func playHaptic(option: HapticOption) {
-        hapticManager.play(option: option)
+        hapticManager.playHaptic(option: option)
     }
     
     func playHaptics(options: [HapticOption]) {
-        hapticManager.play(options: options)
+        hapticManager.playHaptics(options: options)
     }
     
     func tearDownHaptic(option: HapticOption) {
-        hapticManager.tearDown(option: option)
+        hapticManager.tearDownHaptic(option: option)
     }
     
     func tearDownHaptics(options: [HapticOption]) {
-        hapticManager.tearDown(options: options)
+        hapticManager.tearDownHaptics(options: options)
     }
     
     func tearDownAllHaptics() {
-        hapticManager.tearDownAll()
+        hapticManager.tearDownAllHaptics()
     }
     
     // MARK: Sound Effects
 
     func prepareSoundEffect(sound: SoundEffectFile, simultaneousPlayers: Int = 1) {
-        Task {
-            await soundEffectManager.prepare(url: sound.url, simultaneousPlayers: simultaneousPlayers, volume: 1)
-        }
+        soundEffectManager.prepareSoundEffect(url: sound.url, simultaneousPlayers: simultaneousPlayers, volume: 1)
     }
 
     func tearDownSoundEffect(sound: SoundEffectFile) {
-        Task {
-            await soundEffectManager.tearDown(url: sound.url)
-        }
+        soundEffectManager.tearDownSoundEffect(url: sound.url)
     }
 
     func playSoundEffect(sound: SoundEffectFile) {
-        Task {
-            await soundEffectManager.play(url: sound.url)
-        }
+        soundEffectManager.playSoundEffect(url: sound.url)
     }
 
     // MARK: FlashcardManager
@@ -374,17 +371,13 @@ struct CoreInteractor: GlobalInteractor {
     }
 
     func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String) throws {
-        try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText)
-        if let deck = flashcardManager.decks.first(where: { $0.name == name }) {
-            spotlightManager.indexDeck(deck)
-        }
+        let deck = try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText)
+        spotlightManager.indexDeck(deck)
     }
 
     func createDeck(name: String, color: DeckColor = .blue, imageUrl: String? = nil, sourceText: String, flashcards: [FlashcardModel]) throws {
-        try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, flashcards: flashcards)
-        if let deck = flashcardManager.decks.first(where: { $0.name == name }) {
-            spotlightManager.indexDeck(deck)
-        }
+        let deck = try flashcardManager.createDeck(name: name, color: color, imageUrl: imageUrl, sourceText: sourceText, flashcards: flashcards)
+        spotlightManager.indexDeck(deck)
     }
 
     func updateDeck(_ deck: DeckModel) throws {
@@ -425,6 +418,24 @@ struct CoreInteractor: GlobalInteractor {
 
     func recalculateStreak() {
         streakManager.recalculateStreak()
+    }
+
+    // MARK: FlashcardGenerationManager
+
+    var generationAvailability: GenerationAvailability {
+        flashcardGenerationManager.generationAvailability
+    }
+
+    func prewarmGeneration() {
+        flashcardGenerationManager.prewarmGeneration()
+    }
+
+    func generateFlashcards(from text: String, count: Int, avoiding existingQuestions: [String]) -> AsyncThrowingStream<GenerationEvent, Error> {
+        flashcardGenerationManager.generateFlashcards(from: text, count: count, avoiding: existingQuestions)
+    }
+
+    func extractPDFText(from url: URL) async throws -> (text: String, pageCount: Int) {
+        try await flashcardGenerationManager.extractPDFText(from: url)
     }
 
     // MARK: SpotlightManager

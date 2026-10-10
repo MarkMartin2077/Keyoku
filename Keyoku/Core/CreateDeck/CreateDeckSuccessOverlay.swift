@@ -90,11 +90,8 @@ struct CreateDeckSuccessOverlay: View {
 
     @ViewBuilder
     private var notesSection: some View {
-        if presenter.skippedBatches > 0 {
-            noteLabel(
-                text: "\(presenter.skippedBatches) section(s) skipped due to content restrictions.",
-                color: .orange
-            )
+        if let skippedSummary = presenter.progress.skippedSummary {
+            noteLabel(text: skippedSummary, color: .orange)
         }
     }
 

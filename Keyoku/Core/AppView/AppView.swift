@@ -44,7 +44,7 @@ struct AppView<Content: View>: View {
                     }
             }
         )
-        .onNotificationRecieved(name: .fcmToken, action: { notification in
+        .onNotificationReceived(name: .fcmToken, action: { notification in
             presenter.onFCMTokenRecieved(notification: notification)
         })
         .onAppear {
@@ -106,7 +106,7 @@ extension CoreBuilder {
 extension CoreRouter {
     
     func switchToCoreModule() {
-        router.showModule(.trailing, id: Constants.tabbarModuleId, onDismiss: nil) { _ in
+        router.showModule(.trailing(), id: Constants.tabbarModuleId, onDismiss: nil) { _ in
             self.builder.coreModuleEntryView()
         }
     }
@@ -116,7 +116,7 @@ extension CoreRouter {
 extension CoreRouter {
     
     func switchToOnboardingModule() {
-        router.showModule(.trailing, id: Constants.onboardingModuleId, onDismiss: nil) { _ in
+        router.showModule(.trailing(), id: Constants.onboardingModuleId, onDismiss: nil) { _ in
             self.builder.onboardingModuleEntryView()
         }
     }

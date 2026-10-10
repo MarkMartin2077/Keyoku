@@ -6,14 +6,12 @@
 //
 
 import SwiftUI
-import FoundationModels
+import SwiftfulUI
 
 struct AppleIntelligenceUnavailableView: View {
 
-    let reason: SystemLanguageModel.Availability.UnavailableReason
+    let reason: UnavailableReason
     let onOpenSettings: (() -> Void)?
-
-    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(spacing: 16) {
@@ -42,10 +40,7 @@ struct AppleIntelligenceUnavailableView: View {
         case .appleIntelligenceNotEnabled:
             Text("Apple Intelligence Not Enabled")
                 .font(.headline)
-        case .modelNotReady:
-            Text("Apple Intelligence Unavailable")
-                .font(.headline)
-        @unknown default:
+        case .modelNotReady, .unknown:
             Text("Apple Intelligence Unavailable")
                 .font(.headline)
         }
@@ -66,7 +61,7 @@ struct AppleIntelligenceUnavailableView: View {
             Text("Apple Intelligence may be turned off or still setting up. Check that it's enabled in Settings, then try again.\n\nYou can still add cards manually in the meantime.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-        @unknown default:
+        case .unknown:
             Text("Apple Intelligence is currently unavailable. Please try again later.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -75,26 +70,18 @@ struct AppleIntelligenceUnavailableView: View {
 
     @ViewBuilder
     private var settingsButton: some View {
-        if case .appleIntelligenceNotEnabled = reason {
-            openSettingsContent
-        } else if case .modelNotReady = reason {
-            openSettingsContent
-        }
-    }
-
-    private var openSettingsContent: some View {
-        Button {
-            if let action = onOpenSettings {
-                action()
-            } else if let url = URL(string: "App-Prefs:") {
-                openURL(url)
-            }
-        } label: {
+        if let onOpenSettings, reason == .appleIntelligenceNotEnabled || reason == .modelNotReady {
             Text("Open Settings")
                 .font(.subheadline.weight(.medium))
+                .foregroundStyle(.accent)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                .anyButton(.press) {
+                    onOpenSettings()
+                }
+                .padding(.top, 4)
         }
-        .buttonStyle(.bordered)
-        .padding(.top, 4)
     }
 }
 

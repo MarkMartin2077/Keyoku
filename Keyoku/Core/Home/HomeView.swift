@@ -63,13 +63,13 @@ struct HomeView: View {
         .onOpenURL { url in
             presenter.handleDeepLink(url: url)
         }
-        .onNotificationRecieved(name: .pushNotification) { notification in
+        .onNotificationReceived(name: .pushNotification) { notification in
             presenter.handlePushNotificationRecieved(notification: notification)
         }
         .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
             presenter.handleSpotlightActivity(userActivity)
         }
-        .onNotificationRecieved(name: .quickAction) { notification in
+        .onNotificationReceived(name: .quickAction) { notification in
             presenter.handleQuickAction(notification: notification)
         }
     }

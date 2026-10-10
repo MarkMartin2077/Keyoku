@@ -9,7 +9,6 @@ import SwiftUI
 import SwiftfulUI
 import PhotosUI
 import UniformTypeIdentifiers
-import FoundationModels
 
 struct CreateDeckDelegate {
 
@@ -26,8 +25,6 @@ struct CreateDeckView: View {
     @State private var showImageLoadError: Bool = false
     let delegate: CreateDeckDelegate
 
-    private var model: SystemLanguageModel { .default }
-
     var body: some View {
         Form {
             deckPreviewSection
@@ -35,18 +32,18 @@ struct CreateDeckView: View {
             creationModePicker
 
             if presenter.creationMode == .generate {
-                if case .available = model.availability {
-                    cardAmountSection
-                    sourceTextSection
-                } else if case .unavailable(let reason) = model.availability {
+                if let reason = presenter.unavailableReason {
                     Section {
                         AppleIntelligenceUnavailableView(
                             reason: reason,
-                            onOpenSettings: nil
+                            onOpenSettings: presenter.onOpenSettingsPressed
                         )
                     } footer: {
                         Text("You can still create a deck and add cards manually using the Start Empty tab.")
                     }
+                } else {
+                    cardAmountSection
+                    sourceTextSection
                 }
             }
         }
@@ -59,7 +56,17 @@ struct CreateDeckView: View {
         }
         .overlay {
             if presenter.isGenerating {
-                CreateDeckGeneratingOverlay(presenter: presenter)
+                GeneratingFlashcardsOverlayView(
+                    previewCards: presenter.progress.previewCards,
+                    generatedCount: presenter.progress.cards.count,
+                    targetCount: presenter.cardCount,
+                    batchNumber: presenter.progress.currentBatchNumber,
+                    batchTotal: presenter.progress.totalBatchCount,
+                    modelName: presenter.progress.model?.displayName,
+                    skippedMessage: presenter.progress.skippedSummary,
+                    accentColor: presenter.selectedColor.color,
+                    onCancel: presenter.onCancelGenerationPressed
+                )
             } else if presenter.isGenerationComplete {
                 CreateDeckSuccessOverlay(presenter: presenter) {
                     presenter.onSuccessDismissPressed()
@@ -346,6 +353,7 @@ struct CreateDeckView: View {
             case .text:
                 TextEditor(text: $presenter.sourceText)
                     .frame(minHeight: 150)
+                    .accessibilityIdentifier("SourceTextEditor")
             case .pdf:
                 pdfUploadContent
             }
@@ -457,7 +465,7 @@ struct CreateDeckView: View {
     private var bottomActionButton: some View {
         switch presenter.creationMode {
         case .generate:
-            if case .available = model.availability {
+            if presenter.unavailableReason == nil {
                 generateButton
             } else {
                 createEmptyButton
