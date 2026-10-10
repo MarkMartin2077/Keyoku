@@ -31,6 +31,7 @@ struct Dependencies {
         let hapticManager: HapticManager
         let soundEffectManager: SoundEffectManager
         let flashcardManager: FlashcardManager
+        let quizManager: QuizManager
         let spotlightManager: SpotlightManager
         let streakManager: StreakManager
         let flashcardGenerationManager: FlashcardGenerationManager
@@ -55,6 +56,7 @@ struct Dependencies {
             appState = AppState(startingModuleId: isSignedIn ? Constants.tabbarModuleId : Constants.onboardingModuleId)
             hapticManager = HapticManager(logger: logManager)
             flashcardManager = FlashcardManager(services: MockFlashcardServices(), logManager: logManager)
+            quizManager = QuizManager(services: MockQuizServices(quizzes: isSignedIn ? [QuizModel.mock] : []), logManager: logManager)
             streakManager = StreakManager(services: MockStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
             flashcardGenerationManager = FlashcardGenerationManager(
                 service: MockFlashcardGenerationService(delayPerCard: .milliseconds(300)),
@@ -77,6 +79,7 @@ struct Dependencies {
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
             flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), imageUploadService: FirebaseImageUploadService(), logManager: logManager)
+            quizManager = QuizManager(services: ProductionQuizServices(), logManager: logManager)
             streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
             flashcardGenerationManager = FlashcardGenerationManager(service: ProdFlashcardGenerationService(), logManager: logManager)
         case .prod:
@@ -96,6 +99,7 @@ struct Dependencies {
             hapticManager = HapticManager(logger: logManager)
             appState = AppState()
             flashcardManager = FlashcardManager(services: ProductionFlashcardServices(), imageUploadService: FirebaseImageUploadService(), logManager: logManager)
+            quizManager = QuizManager(services: ProductionQuizServices(), logManager: logManager)
             streakManager = StreakManager(services: ProdStreakServices(), configuration: Dependencies.streakConfiguration, logger: logManager)
             flashcardGenerationManager = FlashcardGenerationManager(service: ProdFlashcardGenerationService(), logManager: logManager)
         }
@@ -114,6 +118,7 @@ struct Dependencies {
         container.register(HapticManager.self, service: hapticManager)
         container.register(SoundEffectManager.self, service: soundEffectManager)
         container.register(FlashcardManager.self, service: flashcardManager)
+        container.register(QuizManager.self, service: quizManager)
 
         container.register(SpotlightManager.self, service: spotlightManager)
         container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
@@ -141,6 +146,7 @@ class DevPreview {
         container.register(SoundEffectManager.self, service: soundEffectManager)
         container.register(HapticManager.self, service: hapticManager)
         container.register(FlashcardManager.self, service: flashcardManager)
+        container.register(QuizManager.self, service: quizManager)
 
         container.register(SpotlightManager.self, service: spotlightManager)
         container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
@@ -158,6 +164,7 @@ class DevPreview {
     let hapticManager: HapticManager
     let soundEffectManager: SoundEffectManager
     let flashcardManager: FlashcardManager
+    let quizManager: QuizManager
     let spotlightManager: SpotlightManager
     let streakManager: StreakManager
     let flashcardGenerationManager: FlashcardGenerationManager
@@ -173,6 +180,7 @@ class DevPreview {
         self.hapticManager = HapticManager()
         self.soundEffectManager = SoundEffectManager()
         self.flashcardManager = FlashcardManager(services: MockFlashcardServices())
+        self.quizManager = QuizManager(services: MockQuizServices(quizzes: isSignedIn ? QuizModel.mocks : []))
         self.spotlightManager = SpotlightManager()
         self.streakManager = StreakManager(services: MockStreakServices(), configuration: Dependencies.streakConfiguration, logger: nil)
         self.flashcardGenerationManager = FlashcardGenerationManager(service: MockFlashcardGenerationService())

@@ -10,13 +10,17 @@ import Foundation
 @MainActor
 class MockDeckPersistence: DeckService {
     private var decks: [DeckModel]
-    
-    init(decks: [DeckModel] = DeckModel.mocks) {
+    private let shouldFail: Bool
+
+    /// - Parameter shouldFail: When `true`, reads and saves throw, like a broken SwiftData store.
+    init(decks: [DeckModel] = DeckModel.mocks, shouldFail: Bool = false) {
         self.decks = decks
+        self.shouldFail = shouldFail
     }
-    
+
     func getAllDecks() throws -> [DeckModel] {
-        decks.sorted { $0.createdAt > $1.createdAt }
+        if shouldFail { throw AppError("Mock local read failed") }
+        return decks.sorted { $0.createdAt > $1.createdAt }
     }
     
     func getDeck(id: String) throws -> DeckModel? {
@@ -24,6 +28,7 @@ class MockDeckPersistence: DeckService {
     }
     
     func saveDeck(deck: DeckModel) throws {
+        if shouldFail { throw AppError("Mock local save failed") }
         if let index = decks.firstIndex(where: { $0.deckId == deck.deckId }) {
             decks[index] = deck
         } else {
