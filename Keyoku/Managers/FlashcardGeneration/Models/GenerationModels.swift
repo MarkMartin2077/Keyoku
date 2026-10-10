@@ -17,6 +17,6 @@ struct GeneratedFlashcard {
 
 @Generable
 struct GeneratedFlashcardBatch {
-    @Guide(description: "Array of generated flashcards", .maximumCount(GenerationBudget.cardsPerBatchCeiling))
+    @Guide(description: "Array of generated flashcards", .maximumCount(GenerationProfile.flashcards.itemsPerCallCeiling))
     let cards: [GeneratedFlashcard]
 }
