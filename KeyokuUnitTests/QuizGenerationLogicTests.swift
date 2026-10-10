@@ -170,3 +170,29 @@ struct QuizTitleTests {
         #expect(QuizGenerationManager.fallbackTitle(deckName: "  ") == "Quiz")
     }
 }
+
+@Suite("QuizGenerationError messages")
+struct QuizGenerationErrorMessageTests {
+
+    static let allErrors: [QuizGenerationError] = [
+        .notEnoughSourceText,
+        .tooFewQuestions(generated: 0),
+        .tooFewQuestions(generated: 4)
+    ] + [
+        GenerationFailure.contextTooLarge,
+        .restricted,
+        .rateLimited(retryAfter: nil),
+        .unsupportedLanguage,
+        .modelUnavailable,
+        .cloudUnavailable,
+        .cancelled,
+        .unreadableText,
+        .other("boom")
+    ].map(QuizGenerationError.generation)
+
+    @Test("No quiz error message mentions flashcards", arguments: allErrors)
+    func messagesAreAboutQuizzes(error: QuizGenerationError) {
+        #expect(!error.userMessage.isEmpty)
+        #expect(!error.userMessage.localizedCaseInsensitiveContains("flashcard"))
+    }
+}

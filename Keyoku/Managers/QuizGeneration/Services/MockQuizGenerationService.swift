@@ -10,6 +10,8 @@ import Foundation
 final class MockQuizGenerationService: QuizGenerationService {
 
     var availability: GenerationAvailability
+    /// Whether the title call's on-device model is available, whatever model the question calls use.
+    var isOnDeviceAvailable: Bool
     private(set) var activeModel: GenerationModelKind
     private let contextSizes: [GenerationModelKind: Int]
     private let failures: [Int: any Error]
@@ -27,6 +29,7 @@ final class MockQuizGenerationService: QuizGenerationService {
     ///   - title: What the title call returns or throws.
     init(
         availability: GenerationAvailability = .available(.onDevice),
+        isOnDeviceAvailable: Bool = true,
         contextSizes: [GenerationModelKind: Int] = [.onDevice: 4_096, .privateCloud: 32_768],
         failures: [Int: any Error] = [:],
         delayPerQuestion: Duration = .zero,
@@ -34,6 +37,7 @@ final class MockQuizGenerationService: QuizGenerationService {
         title: Result<String, any Error> = .success("Sample Concepts")
     ) {
         self.availability = availability
+        self.isOnDeviceAvailable = isOnDeviceAvailable
         if case .available(let model) = availability {
             self.activeModel = model
         } else {
@@ -100,6 +104,7 @@ final class MockQuizGenerationService: QuizGenerationService {
 
     func generateQuizTitle(prompt: String, instructions: String) async throws -> String {
         titlePrompts.append(prompt)
+        guard isOnDeviceAvailable else { throw GenerationFailure.modelUnavailable }
         return try title.get()
     }
 

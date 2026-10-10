@@ -37,7 +37,31 @@ enum QuizGenerationError: Error, Equatable {
         case .tooFewQuestions:
             return String(localized: "Couldn't write enough good questions from this deck. Try again, or add more source text.")
         case .generation(let failure):
-            return failure.userMessage
+            return Self.userMessage(for: failure)
+        }
+    }
+
+    /// Quiz wording for a generation failure; `GenerationFailure.userMessage` talks about flashcards.
+    private static func userMessage(for failure: GenerationFailure) -> String {
+        switch failure {
+        case .contextTooLarge:
+            return String(localized: "This deck's text is too long to make a quiz in one go. Try a deck with a shorter excerpt.")
+        case .restricted:
+            return String(localized: "Apple Intelligence couldn't make a quiz from this content because of its safety guidelines. Try different study material.")
+        case .rateLimited:
+            return String(localized: "Apple Intelligence is busy right now. Wait a moment and try again.")
+        case .unsupportedLanguage:
+            return String(localized: "This deck's language isn't supported by Apple Intelligence yet.")
+        case .modelUnavailable:
+            return String(localized: "Apple Intelligence isn't available right now. Check that it's turned on in Settings, then try again.")
+        case .cloudUnavailable:
+            return String(localized: "Couldn't reach Private Cloud Compute. Check your connection and try again.")
+        case .cancelled:
+            return String(localized: "Quiz generation was cancelled.")
+        case .unreadableText:
+            return String(localized: "Couldn't write quiz questions from this deck's text. Try a deck made from notes, a textbook excerpt, or an article.")
+        case .other:
+            return String(localized: "Something went wrong while making the quiz. Please try again.")
         }
     }
 

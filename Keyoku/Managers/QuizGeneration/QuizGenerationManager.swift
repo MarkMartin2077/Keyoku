@@ -39,13 +39,14 @@ final class QuizGenerationManager {
     ///   - count: Clamped to what the source text allows (`QuizQuestionCount`).
     ///   - existingQuestions: The deck's other quiz questions, oldest first. The newest are kept when the prompt can't fit them all.
     ///   - onProgress: Counts only; never question text.
-    /// - Throws: `QuizGenerationError`. Cancelling the task throws `.generation(.cancelled)`.
+    /// - Throws: `QuizGenerationError`. Cancelling the task throws `.generation(.cancelled)`;
+    ///   a run that ends with no valid question throws `.tooFewQuestions(generated: 0)`.
     func generateQuiz(
         from sourceText: String,
         deckName: String,
         count: Int,
         avoiding existingQuestions: [String],
-        onProgress: @escaping (QuizGenerationProgress) -> Void
+        onProgress: @escaping @MainActor (QuizGenerationProgress) -> Void
     ) async throws -> GeneratedQuiz {
         let questionCount = QuizQuestionCount.clamped(count, sourceLength: sourceText.count)
         logManager?.trackEvent(event: Event.generateStart(
@@ -90,7 +91,7 @@ final class QuizGenerationManager {
         from sourceText: String,
         count: Int,
         avoiding existingQuestions: [String],
-        onProgress: @escaping (QuizGenerationProgress) -> Void
+        onProgress: @escaping @MainActor (QuizGenerationProgress) -> Void
     ) async throws -> (questions: [QuizQuestionModel], summary: GenerationRunSummary) {
         let logManager = logManager
         var counter = QuizProgressCounter(totalCount: count)
@@ -114,7 +115,13 @@ final class QuizGenerationManager {
                 }
             }
         )
-        let summary = try await run.run()
+        let summary: GenerationRunSummary
+        do {
+            summary = try await run.run()
+        } catch GenerationFailure.unreadableText {
+            // The run had no usable batch, or the filter rejected every question it wrote.
+            throw QuizGenerationError.tooFewQuestions(generated: 0)
+        }
         return (Array(counter.acceptedQuestions.prefix(count)), summary)
     }
 

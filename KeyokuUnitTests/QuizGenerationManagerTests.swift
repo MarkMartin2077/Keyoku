@@ -47,6 +47,20 @@ private func draftsValid(upTo validCount: Int) -> (Int) -> GeneratedQuizQuestion
     }
 }
 
+/// The questions a quiz prompt's earlier-questions list names, and the prompt's source text.
+private func promptParts(_ prompt: String) -> (avoiding: [String], source: String) {
+    guard let sourceRange = prompt.range(of: "\n\nSource text:\n") else { return ([], "") }
+    let source = String(prompt[sourceRange.upperBound...])
+    let head = prompt[..<sourceRange.lowerBound]
+    guard let listRange = head.range(of: "Do NOT repeat or rephrase any of these existing questions:\n") else {
+        return ([], source)
+    }
+    let avoiding = head[listRange.upperBound...]
+        .components(separatedBy: "\n")
+        .map { String($0.dropFirst("  - ".count)) }
+    return (avoiding, source)
+}
+
 private struct GenerationOutcome {
     let quiz: GeneratedQuiz?
     let error: QuizGenerationError?
@@ -178,6 +192,32 @@ struct QuizGenerationManagerTests {
         #expect(!mockLog.hasEvent(named: "QuizGenMan_Generate_Success"))
     }
 
+    @Test("A run where no question survives the filter fails as too few questions, not as unreadable text")
+    func zeroSurvivingQuestions() async {
+        let service = MockQuizGenerationService(makeDraft: draftsValid(upTo: 0))
+        let (manager, mockLog) = makeManager(service: service)
+
+        let result = await generate(manager)
+
+        #expect(result.quiz == nil)
+        #expect(result.error == .tooFewQuestions(generated: 0))
+        #expect(service.titlePrompts.isEmpty)
+        #expect(mockLog.hasEvent(named: "QuizGenMan_Generate_Fail"))
+    }
+
+    @Test("Failures other than nothing surviving keep their generation failure")
+    func otherFailuresStayGenerationFailures() async {
+        let everyCall = Dictionary(uniqueKeysWithValues: (0..<40).map { ($0, GenerationFailure.restricted as any Error) })
+        let restricted = await generate(makeManager(service: MockQuizGenerationService(failures: everyCall)).0)
+        let failing = Dictionary(uniqueKeysWithValues: (0..<40).map { ($0, GenerationFailure.other("boom") as any Error) })
+        let other = await generate(makeManager(service: MockQuizGenerationService(failures: failing)).0)
+        let unavailable = await generate(makeManager(service: MockQuizGenerationService(availability: .unavailable(.modelNotReady))).0)
+
+        #expect(restricted.error == .generation(.restricted))
+        #expect(other.error == .generation(.other("boom")))
+        #expect(unavailable.error == .generation(.modelUnavailable))
+    }
+
     @Test("A failed title call falls back to the deck name plus Quiz")
     func titleFallsBackOnFailure() async throws {
         let service = MockQuizGenerationService(title: .failure(GenerationFailure.modelUnavailable))
@@ -200,6 +240,20 @@ struct QuizGenerationManagerTests {
 
         #expect(quiz.title == "Cell Biology Quiz")
         #expect(quiz.usedFallbackTitle)
+    }
+
+    @Test("Without an on-device model the title falls back to the deck name plus Quiz and the quiz still succeeds")
+    func titleFallsBackWithoutOnDeviceModel() async throws {
+        let service = MockQuizGenerationService(availability: .available(.privateCloud), isOnDeviceAvailable: false)
+        let (manager, mockLog) = makeManager(service: service)
+
+        let quiz = try #require(await generate(manager, deckName: "Cell Biology").quiz)
+
+        #expect(quiz.questions.count == 10)
+        #expect(quiz.title == "Cell Biology Quiz")
+        #expect(quiz.usedFallbackTitle)
+        #expect(mockLog.hasEvent(named: "QuizGenMan_Title_Fallback"))
+        #expect(mockLog.hasEvent(named: "QuizGenMan_Generate_Success"))
     }
 
     @Test("Source text under 1,500 characters fails before any model call")
@@ -239,6 +293,51 @@ struct QuizGenerationManagerTests {
             #expect(prompt.contains(repeated))
             #expect(!prompt.contains("Earlier question number 1 about"))
         }
+    }
+
+    @Test("The earlier-questions list stays within a third of the source room and the source per call shrinks to make room")
+    func avoidListCappedAtAThirdOfSourceRoom() async throws {
+        let contextSize = 2_048
+        let text = Array(repeating: quizSourceText, count: 3).joined(separator: "\n\n")
+        let old = (1...400).map { "Earlier question number \($0) about an older part of the deck?" }
+
+        // The source room with nothing to avoid, measured the way the run measures it.
+        let measuring = MockQuizGenerationService()
+        let tokensPerCharacter = Double(await measuring.tokenCount(text)) / Double(text.count)
+        let template = QuizPrompt.prompt(questionCount: GenerationProfile.quiz.itemsPerCallCeiling, sourceText: "")
+        let instructionTokens = await measuring.tokenCount(QuizPrompt.instructions)
+        let templateTokens = await measuring.tokenCount(template)
+        let schemaTokens = await measuring.schemaTokenCount()
+        let baseBudget = GenerationBudget(
+            contextSize: contextSize,
+            overheadTokens: instructionTokens + templateTokens + schemaTokens,
+            tokensPerCharacter: tokensPerCharacter,
+            profile: .quiz
+        )
+        let avoidRoom = baseBudget.sourceCharacters / 3
+
+        let plainService = MockQuizGenerationService(contextSizes: [.onDevice: contextSize])
+        _ = try #require(await generate(makeManager(service: plainService).0, text: text, count: 5).quiz)
+        let avoidingService = MockQuizGenerationService(contextSizes: [.onDevice: contextSize])
+        _ = try #require(await generate(makeManager(service: avoidingService).0, text: text, count: 5, avoiding: old).quiz)
+
+        let plainParts = plainService.prompts.map(promptParts)
+        let avoidingParts = avoidingService.prompts.map(promptParts)
+        let longestOld = old.map(\.count).max() ?? 0
+
+        #expect(plainParts.allSatisfy { $0.avoiding.isEmpty })
+        #expect(!avoidingParts.isEmpty)
+        for parts in avoidingParts {
+            let avoidCharacters = parts.avoiding.map(\.count).reduce(0, +)
+            #expect(avoidCharacters <= avoidRoom)
+            #expect(avoidCharacters > avoidRoom - longestOld)
+            #expect(parts.avoiding.last == old.last)
+        }
+        let plainLongest = plainParts.map(\.source.count).max() ?? 0
+        let avoidingLongest = avoidingParts.map(\.source.count).max() ?? 0
+        #expect(plainLongest <= baseBudget.sourceCharacters)
+        #expect(avoidingLongest < plainLongest)
+        #expect(avoidingService.prompts.count > plainService.prompts.count)
     }
 
     @Test("Cancelling stops the run and tracks a cancel instead of a failure")
@@ -326,6 +425,25 @@ struct CoreInteractorQuizGenerationTests {
         }
         try? await Task.sleep(for: .milliseconds(120))
         task.cancel()
+        let result = await task.result
+
+        #expect(throws: QuizGenerationError.generation(.cancelled)) { try result.get() }
+        #expect(harness.quizManager.quizzes(forDeckId: deck.deckId).isEmpty)
+        #expect(!harness.mockLog.hasEvent(named: "QuizMan_CreateQuiz_Start"))
+    }
+
+    @Test("Cancelling once every question is generated, before the save, saves nothing")
+    func cancelAfterGenerationSavesNothing() async {
+        let harness = makeInteractor(service: MockQuizGenerationService())
+
+        let task = Task {
+            try await harness.interactor.generateQuiz(for: deck, questionCount: 10) { progress in
+                // The last progress update comes after the final question; cancel the task from inside it.
+                if progress.generatedCount == progress.totalCount {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            }
+        }
         let result = await task.result
 
         #expect(throws: QuizGenerationError.generation(.cancelled)) { try result.get() }

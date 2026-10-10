@@ -592,7 +592,7 @@ struct CoreInteractor: GlobalInteractor {
     func generateQuiz(
         for deck: DeckModel,
         questionCount: Int,
-        onProgress: @escaping (QuizGenerationProgress) -> Void
+        onProgress: @escaping @MainActor (QuizGenerationProgress) -> Void
     ) async throws -> QuizModel {
         let existingQuestions = quizManager.quizzes(forDeckId: deck.deckId)
             .reversed()
@@ -605,6 +605,11 @@ struct CoreInteractor: GlobalInteractor {
             avoiding: existingQuestions,
             onProgress: onProgress
         )
+        do {
+            try Task.checkCancellation()
+        } catch {
+            throw QuizGenerationError.generation(.cancelled)
+        }
         return try quizManager.createQuiz(deckId: deck.deckId, title: generated.title, questions: generated.questions)
     }
 }
