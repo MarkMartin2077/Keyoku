@@ -5,28 +5,43 @@
 
 import Foundation
 
-/// How much source text and how many cards fit in one model call, measured for the active model.
-struct GenerationBudget: Equatable, Sendable {
-    static let cardsPerBatchFloor = 3
-    static let cardsPerBatchCeiling = 10
-    static let outputTokensPerCard = 90
+/// What one generated item costs and how many items a single model call may ask for.
+struct GenerationProfile: Equatable, Sendable {
+    let outputTokensPerItem: Int
+    /// One item per this many free tokens, before the per-call floor and ceiling apply.
+    let freeTokensPerItem: Int
+    let itemsPerCallFloor: Int
+    let itemsPerCallCeiling: Int
+
     /// One card per ~1K free tokens: a 4K window gets 3 cards per call, 8K gets 7, 32K gets 10.
-    static let freeTokensPerCard = 1_000
+    static let flashcards = GenerationProfile(
+        outputTokensPerItem: 90,
+        freeTokensPerItem: 1_000,
+        itemsPerCallFloor: 3,
+        itemsPerCallCeiling: 10
+    )
+}
+
+/// How much source text and how many items fit in one model call, measured for the active model.
+struct GenerationBudget: Equatable, Sendable {
+    /// The flashcard profile's output cost per card.
+    static var outputTokensPerCard: Int { GenerationProfile.flashcards.outputTokensPerItem }
     /// Chunks are cut using the text's average tokens-per-character, so a dense chunk can run over; keep headroom.
     static let sourceSafetyFactor = 0.9
     static let minimumSourceTokens = 256
 
     let sourceTokens: Int
+    /// Items per call. Named for cards, but holds whatever item the profile describes.
     let cardsPerBatch: Int
     let tokensPerCharacter: Double
 
     /// `overheadTokens` is everything in a call except the source text and the output:
     /// instructions, prompt template and response schema.
-    init(contextSize: Int, overheadTokens: Int, tokensPerCharacter: Double) {
+    init(contextSize: Int, overheadTokens: Int, tokensPerCharacter: Double, profile: GenerationProfile = .flashcards) {
         let freeTokens = max(contextSize - overheadTokens, 0)
-        let cards = min(Self.cardsPerBatchCeiling, max(Self.cardsPerBatchFloor, freeTokens / Self.freeTokensPerCard))
-        let source = Double(freeTokens - cards * Self.outputTokensPerCard) * Self.sourceSafetyFactor
-        self.cardsPerBatch = cards
+        let items = min(profile.itemsPerCallCeiling, max(profile.itemsPerCallFloor, freeTokens / profile.freeTokensPerItem))
+        let source = Double(freeTokens - items * profile.outputTokensPerItem) * Self.sourceSafetyFactor
+        self.cardsPerBatch = items
         self.sourceTokens = max(Int(source), Self.minimumSourceTokens)
         self.tokensPerCharacter = tokensPerCharacter > 0 ? tokensPerCharacter : 0.25
     }
@@ -37,7 +52,7 @@ struct GenerationBudget: Equatable, Sendable {
 }
 
 /// Splits a whole document into batches that each fit the budget, and spreads the requested
-/// card count across all of them so long documents are covered end to end.
+/// item count across all of them so long documents are covered end to end.
 enum BatchPlanner {
 
     static func plan(text: String, cardCount: Int, budget: GenerationBudget, firstIndex: Int = 0) -> [GenerationBatch] {
