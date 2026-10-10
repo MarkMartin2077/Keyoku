@@ -225,6 +225,11 @@ class QuizPlayPresenter {
         interactor.trackEvent(event: Event.onRetakePressed(previousScore: score, total: total))
         interactor.playHaptic(option: .medium)
 
+        // The finished attempt's streak event still records, but its result must not
+        // land on the new attempt's end screen.
+        recordStreakTask?.cancel()
+        recordStreakTask = nil
+
         withAnimation(.easeInOut(duration: 0.3)) {
             resetAttempt()
         }
@@ -279,14 +284,17 @@ class QuizPlayPresenter {
                 _ = try await interactor.addStreakEvent(metadata: metadata)
                 interactor.trackEvent(event: Event.onStreakEventRecorded(quizId: quiz.id))
 
+                // Reschedule the next week of reminders now that the learner studied today.
+                interactor.rescheduleStudyReminders()
+
+                // A retake started while this was in flight; leave the new attempt's state alone.
+                guard !Task.isCancelled else { return }
+
                 let updatedStreak = interactor.currentStreakData.currentStreak ?? 0
                 currentStreak = updatedStreak
                 if updatedStreak > previousStreak {
                     newStreakCount = updatedStreak
                 }
-
-                // Reschedule the next week of reminders now that the learner studied today.
-                interactor.schedulePushNotificationsForTheNextWeek(dueCount: 0, stillLearningCount: 0)
             } catch {
                 interactor.trackEvent(event: Event.onStreakEventFailed(error: error))
             }

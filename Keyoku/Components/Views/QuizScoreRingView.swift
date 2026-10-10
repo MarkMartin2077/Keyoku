@@ -12,6 +12,8 @@ struct QuizScoreRingView: View {
     let total: Int?
     let tint: Color?
 
+    @ScaledMetric(relativeTo: .largeTitle) private var ringSize: CGFloat = 180
+
     private var fraction: Double {
         guard let score, let total, total > 0 else { return 0 }
         return min(1, max(0, Double(score) / Double(total)))
@@ -34,11 +36,11 @@ struct QuizScoreRingView: View {
 
             if let score, let total {
                 Text("\(score)/\(total)")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded).bold())
                     .contentTransition(.numericText())
             }
         }
-        .frame(width: 180, height: 180)
+        .frame(width: ringSize, height: ringSize)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
     }

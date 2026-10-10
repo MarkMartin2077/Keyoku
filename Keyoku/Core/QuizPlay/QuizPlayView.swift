@@ -49,14 +49,17 @@ struct QuizPlayView: View {
             }
         }
         .sheet(item: Binding(get: { presenter.feedback }, set: { _ in })) { feedback in
-            QuizFeedbackView(
-                isCorrect: feedback.isCorrect,
-                correctAnswer: feedback.correctAnswer,
-                explanation: feedback.explanation,
-                buttonTitle: feedback.buttonTitle,
-                onContinue: { presenter.onContinuePressed() }
-            )
-            .presentationDetents([.height(280), .medium])
+            ScrollView {
+                QuizFeedbackView(
+                    isCorrect: feedback.isCorrect,
+                    correctAnswer: feedback.correctAnswer,
+                    explanation: feedback.explanation,
+                    buttonTitle: feedback.buttonTitle,
+                    onContinue: { presenter.onContinuePressed() }
+                )
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
             .interactiveDismissDisabled()
         }
@@ -71,6 +74,14 @@ struct QuizPlayView: View {
     // MARK: - Question
 
     private var questionView: some View {
+        // Scrolls once wrapped text at large Dynamic Type no longer fits on screen.
+        ScrollView {
+            questionContent
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    private var questionContent: some View {
         VStack(spacing: 20) {
             QuizProgressStripView(
                 segments: presenter.progressSegments,
@@ -81,7 +92,7 @@ struct QuizPlayView: View {
                 questionCard(question)
 
                 LazyVGrid(columns: gridColumns, spacing: 12) {
-                    ForEach(Array(question.answers.enumerated()), id: \.offset) { answerIndex, answer in
+                    ForEach(question.answers.enumerated(), id: \.offset) { answerIndex, answer in
                         QuizAnswerTileView(
                             text: answer,
                             state: presenter.answerState(at: answerIndex),
@@ -93,7 +104,6 @@ struct QuizPlayView: View {
             }
         }
         .padding()
-        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private func questionCard(_ question: QuizPlayQuestion) -> some View {
@@ -105,7 +115,6 @@ struct QuizPlayView: View {
             Text(question.question)
                 .font(.title2.bold())
                 .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.7)
         }
         .padding(24)
         .frame(maxWidth: .infinity, minHeight: 200)

@@ -21,7 +21,7 @@ struct QuizProgressStripView: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+            ForEach(segments.enumerated(), id: \.offset) { _, segment in
                 Capsule()
                     .fill(color(for: segment))
                     .frame(height: 6)
@@ -42,8 +42,9 @@ struct QuizProgressStripView: View {
     }
 
     private var accessibilityText: String {
-        let answered = segments.filter { $0 == .correct || $0 == .incorrect }.count
-        return "\(answered) of \(segments.count) questions answered"
+        let correct = segments.filter { $0 == .correct }.count
+        let answered = correct + segments.filter { $0 == .incorrect }.count
+        return "\(answered) of \(segments.count) answered, \(correct) correct"
     }
 }
 

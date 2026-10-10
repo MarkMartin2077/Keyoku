@@ -20,7 +20,7 @@ private final class MockQuizPlayInteractor: QuizPlayInteractor {
     let mockLog = MockLogService()
     private(set) var recordedAttempts: [QuizAttemptModel] = []
     private(set) var streakEventCount: Int = 0
-    private(set) var rescheduleCount: Int = 0
+    private(set) var studyReminderRescheduleCount: Int = 0
     private(set) var playedHaptics: [HapticOption] = []
     var streakBefore: Int = 2
     var streakAfter: Int = 3
@@ -47,8 +47,8 @@ private final class MockQuizPlayInteractor: QuizPlayInteractor {
         return quiz.appendingAttempt(QuizAttemptModel(score: score, total: total))
     }
 
-    func schedulePushNotificationsForTheNextWeek(dueCount: Int, stillLearningCount: Int) {
-        rescheduleCount += 1
+    func rescheduleStudyReminders() {
+        studyReminderRescheduleCount += 1
     }
 
     // GlobalInteractor
@@ -120,10 +120,10 @@ private func playThrough(_ presenter: QuizPlayPresenter, correctCount: Int) {
     }
 }
 
-/// The attempt's question order plus each question's answer order.
+/// Each question's answer order, keyed by question id so question order doesn't matter.
 @MainActor
-private func attemptOrder(_ presenter: QuizPlayPresenter) -> [[String]] {
-    presenter.questions.map { [$0.id] + $0.answers }
+private func answerOrderById(_ presenter: QuizPlayPresenter) -> [String: [String]] {
+    Dictionary(uniqueKeysWithValues: presenter.questions.map { ($0.id, $0.answers) })
 }
 
 // MARK: - Shuffling
@@ -147,18 +147,18 @@ struct QuizPlayShuffleTests {
         }
     }
 
-    @Test("Retake reshuffles question and answer order")
-    func retakeReshuffles() {
+    @Test("Retake reshuffles question order")
+    func retakeReshufflesQuestions() {
         let harness = makeHarness()
         let presenter = harness.presenter
-        let firstOrder = attemptOrder(presenter)
+        let firstOrder = presenter.questions.map(\.id)
 
-        // 5 questions × 4 answers: the chance of 20 identical shuffles in a row is negligible.
+        // 5 questions: the chance of 50 identical shuffles in a row is (1/120)^50.
         var sawDifferentOrder = false
-        for _ in 0..<20 {
+        for _ in 0..<50 {
             playThrough(presenter, correctCount: 0)
             presenter.onRetakePressed()
-            if attemptOrder(presenter) != firstOrder {
+            if presenter.questions.map(\.id) != firstOrder {
                 sawDifferentOrder = true
                 break
             }
@@ -166,6 +166,26 @@ struct QuizPlayShuffleTests {
 
         #expect(sawDifferentOrder)
         #expect(Set(presenter.questions.map(\.id)) == Set(QuizQuestionModel.mocks.map(\.id)))
+    }
+
+    @Test("Retake reshuffles each question's answer order")
+    func retakeReshufflesAnswers() {
+        let harness = makeHarness()
+        let presenter = harness.presenter
+        let firstAnswerOrder = answerOrderById(presenter)
+
+        // 5 questions × 4 answers: the chance of 50 identical answer shuffles in a row is negligible.
+        var sawDifferentOrder = false
+        for _ in 0..<50 {
+            playThrough(presenter, correctCount: 0)
+            presenter.onRetakePressed()
+            if answerOrderById(presenter) != firstAnswerOrder {
+                sawDifferentOrder = true
+                break
+            }
+        }
+
+        #expect(sawDifferentOrder)
     }
 
     @Test("Retake resets the attempt")
@@ -303,7 +323,7 @@ struct QuizPlayLeavingTests {
         #expect(router.dismissCount == 1)
         #expect(interactor.recordedAttempts.isEmpty)
         #expect(interactor.streakEventCount == 0)
-        #expect(interactor.rescheduleCount == 0)
+        #expect(interactor.studyReminderRescheduleCount == 0)
         #expect(interactor.mockLog.hasEvent(named: "QuizPlayView_Leave_Confirmed"))
         #expect(!interactor.mockLog.hasEvent(named: "QuizPlayView_QuizCompleted"))
     }
@@ -359,9 +379,23 @@ struct QuizPlayFinishTests {
         #expect(attempt.score == 4)
         #expect(attempt.total == 5)
         #expect(interactor.streakEventCount == 1)
-        #expect(interactor.rescheduleCount == 1)
+        #expect(interactor.studyReminderRescheduleCount == 1)
         #expect(interactor.mockLog.hasEvent(named: "QuizPlayView_QuizCompleted"))
         #expect(interactor.mockLog.hasEvent(named: "QuizPlayView_Streak_Recorded"))
+    }
+
+    // QuizPlayInteractor no longer exposes schedulePushNotificationsForTheNextWeek, so a
+    // zeroed-count reschedule can't be written here; the real counts live in CoreInteractor.
+    @Test("Finishing reschedules study reminders from the learner's real cards")
+    func finishReschedulesStudyReminders() async {
+        let harness = makeHarness()
+        let presenter = harness.presenter
+        let interactor = harness.interactor
+
+        playThrough(presenter, correctCount: 3)
+        await presenter.recordStreakTask?.value
+
+        #expect(interactor.studyReminderRescheduleCount == 1)
     }
 
     @Test("Finishing plays the lesson-complete haptic")
@@ -454,6 +488,28 @@ struct QuizPlayFinishTests {
 
         #expect(interactor.recordedAttempts.map(\.score) == [1, 5])
         #expect(interactor.streakEventCount == 2)
+    }
+
+    @Test("Retake cancels the previous attempt's streak recording")
+    func retakeCancelsStreakTask() async {
+        let harness = makeHarness()
+        let presenter = harness.presenter
+        let interactor = harness.interactor
+        interactor.streakBefore = 2
+        interactor.streakAfter = 3
+
+        // Retake before the first attempt's streak task gets to run.
+        playThrough(presenter, correctCount: 1)
+        let staleTask = presenter.recordStreakTask
+        presenter.onRetakePressed()
+        await staleTask?.value
+
+        // The finished attempt still counts toward the streak, but its result
+        // must not leak into the new attempt's state.
+        #expect(staleTask?.isCancelled == true)
+        #expect(interactor.streakEventCount == 1)
+        #expect(presenter.newStreakCount == 0)
+        #expect(!presenter.isFinished)
     }
 }
 

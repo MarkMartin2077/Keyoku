@@ -34,7 +34,7 @@ struct QuizAnswerTileView: View {
             Text(text ?? "")
                 .font(.headline)
                 .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(foreground)
         .padding(12)
@@ -53,7 +53,7 @@ struct QuizAnswerTileView: View {
             guard state == .idle else { return }
             onTap?()
         }
-        .allowsHitTesting(state == .idle)
+        .disabled(state != .idle)
         .accessibilityLabel(accessibilityText)
     }
 
