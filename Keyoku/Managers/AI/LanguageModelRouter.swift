@@ -106,6 +106,14 @@ final class LanguageModelRouter {
         return stream
     }
 
+    /// One request on the on-device model, whatever the run's active model. For small follow-up calls
+    /// that shouldn't spend Private Cloud Compute quota.
+    func respondOnDevice<T: Generable>(to prompt: String, instructions: String, generating type: T.Type) async throws -> T {
+        guard onDevice.isAvailable else { throw GenerationFailure.modelUnavailable }
+        let session = makeSession(for: .onDevice, instructions: instructions)
+        return try await session.respond(to: prompt, generating: type).content
+    }
+
     /// Returns true when the cloud finished the response, false when the caller should retry on-device.
     private func streamFromCloud<T: Generable>(
         prompt: String,

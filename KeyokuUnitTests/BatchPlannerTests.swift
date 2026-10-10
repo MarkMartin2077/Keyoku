@@ -11,9 +11,9 @@ struct GenerationBudgetTests {
 
     @Test("A 4K window keeps today's 3 cards per call; bigger windows get bigger batches")
     func cardsPerBatchScalesWithWindow() {
-        let small = GenerationBudget(contextSize: 4_096, overheadTokens: 650, tokensPerCharacter: 0.25)
-        let medium = GenerationBudget(contextSize: 8_192, overheadTokens: 650, tokensPerCharacter: 0.25)
-        let large = GenerationBudget(contextSize: 32_768, overheadTokens: 650, tokensPerCharacter: 0.25)
+        let small = GenerationBudget(contextSize: 4_096, overheadTokens: 650, tokensPerCharacter: 0.25, profile: .flashcards)
+        let medium = GenerationBudget(contextSize: 8_192, overheadTokens: 650, tokensPerCharacter: 0.25, profile: .flashcards)
+        let large = GenerationBudget(contextSize: 32_768, overheadTokens: 650, tokensPerCharacter: 0.25, profile: .flashcards)
 
         #expect(small.cardsPerBatch == 3)
         #expect(medium.cardsPerBatch == 7)
@@ -24,7 +24,7 @@ struct GenerationBudgetTests {
 
     @Test("Source, overhead and reserved output fit inside the window")
     func budgetFitsWindow() {
-        let budget = GenerationBudget(contextSize: 4_096, overheadTokens: 650, tokensPerCharacter: 0.25)
+        let budget = GenerationBudget(contextSize: 4_096, overheadTokens: 650, tokensPerCharacter: 0.25, profile: .flashcards)
 
         let used = 650 + budget.sourceTokens + budget.cardsPerBatch * GenerationBudget.outputTokensPerCard
         #expect(used <= 4_096)
@@ -35,7 +35,7 @@ struct GenerationBudgetTests {
 @Suite("BatchPlanner")
 struct BatchPlannerTests {
 
-    private let budget = GenerationBudget(contextSize: 4_096, overheadTokens: 650, tokensPerCharacter: 0.25)
+    private let budget = GenerationBudget(contextSize: 4_096, overheadTokens: 650, tokensPerCharacter: 0.25, profile: .flashcards)
 
     private func paragraphs(_ count: Int, length: Int = 400) -> String {
         (0..<count).map { index in

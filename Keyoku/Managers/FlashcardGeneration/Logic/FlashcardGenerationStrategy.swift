@@ -21,6 +21,9 @@ struct FlashcardGenerationStrategy: GenerationStrategy {
 
     var instructions: String { FlashcardPrompt.instructions }
 
+    /// Flashcards list existing questions only in the top-up; the filter catches repeats elsewhere.
+    var avoidsExistingQuestionsInEveryCall: Bool { false }
+
     func prompt(count: Int, sourceText: String, avoiding existingQuestions: [String]) -> String {
         FlashcardPrompt.prompt(cardCount: count, sourceText: sourceText, avoiding: existingQuestions)
     }

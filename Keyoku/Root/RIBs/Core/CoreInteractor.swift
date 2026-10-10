@@ -16,6 +16,7 @@ struct CoreInteractor: GlobalInteractor {
     private let spotlightManager: SpotlightManager
     private let streakManager: StreakManager
     private let flashcardGenerationManager: FlashcardGenerationManager
+    private let quizGenerationManager: QuizGenerationManager
 
     init(container: DependencyContainer) {
         guard
@@ -32,7 +33,8 @@ struct CoreInteractor: GlobalInteractor {
             let quizManager = container.resolve(QuizManager.self),
             let spotlightManager = container.resolve(SpotlightManager.self),
             let streakManager = container.resolve(StreakManager.self, key: Dependencies.streakConfiguration.streakKey),
-            let flashcardGenerationManager = container.resolve(FlashcardGenerationManager.self)
+            let flashcardGenerationManager = container.resolve(FlashcardGenerationManager.self),
+            let quizGenerationManager = container.resolve(QuizGenerationManager.self)
         else {
             fatalError("CoreInteractor: One or more managers not registered in DependencyContainer. Check Dependencies.swift initialization.")
         }
@@ -51,6 +53,7 @@ struct CoreInteractor: GlobalInteractor {
         self.spotlightManager = spotlightManager
         self.streakManager = streakManager
         self.flashcardGenerationManager = flashcardGenerationManager
+        self.quizGenerationManager = quizGenerationManager
     }
     
     // MARK: APP STATE
@@ -556,5 +559,52 @@ struct CoreInteractor: GlobalInteractor {
 
         // Delete logs (Mixpanel)
         logManager.deleteUserProfile()
+    }
+
+    // MARK: QuizGenerationManager
+
+    var quizGenerationAvailability: GenerationAvailability {
+        quizGenerationManager.generationAvailability
+    }
+
+    func prewarmQuizGeneration() {
+        quizGenerationManager.prewarmGeneration()
+    }
+
+    /// Whether the deck has enough source text for a quiz (at least 1,500 characters).
+    func canMakeQuiz(sourceLength: Int) -> Bool {
+        QuizQuestionCount.canMakeQuiz(sourceLength: sourceLength)
+    }
+
+    /// The most questions a quiz on this source may have: `clamp(sourceLength / 300, 5, 20)`.
+    func maxQuizQuestionCount(sourceLength: Int) -> Int {
+        QuizQuestionCount.maximum(sourceLength: sourceLength)
+    }
+
+    /// The question count a new quiz starts at: `min(10, max)`.
+    func defaultQuizQuestionCount(sourceLength: Int) -> Int {
+        QuizQuestionCount.defaultCount(sourceLength: sourceLength)
+    }
+
+    /// Generates a quiz from the deck's source text, avoiding its other quizzes' questions, then saves it.
+    /// Nothing is saved when generation fails or the task is cancelled.
+    /// - Throws: `QuizGenerationError`, or the error from saving.
+    func generateQuiz(
+        for deck: DeckModel,
+        questionCount: Int,
+        onProgress: @escaping (QuizGenerationProgress) -> Void
+    ) async throws -> QuizModel {
+        let existingQuestions = quizManager.quizzes(forDeckId: deck.deckId)
+            .reversed()
+            .flatMap(\.questions)
+            .map(\.question)
+        let generated = try await quizGenerationManager.generateQuiz(
+            from: deck.sourceText,
+            deckName: deck.name,
+            count: questionCount,
+            avoiding: existingQuestions,
+            onProgress: onProgress
+        )
+        return try quizManager.createQuiz(deckId: deck.deckId, title: generated.title, questions: generated.questions)
     }
 }

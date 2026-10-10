@@ -106,6 +106,13 @@ struct Dependencies {
         pushManager = PushManager(logManager: logManager)
         soundEffectManager = SoundEffectManager(logger: logManager)
         spotlightManager = SpotlightManager(logManager: logManager)
+        let quizGenerationService: QuizGenerationService
+        if case .mock = config {
+            quizGenerationService = MockQuizGenerationService(delayPerQuestion: .milliseconds(300))
+        } else {
+            quizGenerationService = ProdQuizGenerationService()
+        }
+        let quizGenerationManager = QuizGenerationManager(service: quizGenerationService, logManager: logManager)
         
         let container = DependencyContainer()
         container.register(AuthManager.self, service: authManager)
@@ -123,6 +130,7 @@ struct Dependencies {
         container.register(SpotlightManager.self, service: spotlightManager)
         container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
         container.register(FlashcardGenerationManager.self, service: flashcardGenerationManager)
+        container.register(QuizGenerationManager.self, service: quizGenerationManager)
 
         self.container = container
         
@@ -151,6 +159,7 @@ class DevPreview {
         container.register(SpotlightManager.self, service: spotlightManager)
         container.register(StreakManager.self, key: Dependencies.streakConfiguration.streakKey, service: streakManager)
         container.register(FlashcardGenerationManager.self, service: flashcardGenerationManager)
+        container.register(QuizGenerationManager.self, service: quizGenerationManager)
         return container
     }
     
@@ -168,6 +177,7 @@ class DevPreview {
     let spotlightManager: SpotlightManager
     let streakManager: StreakManager
     let flashcardGenerationManager: FlashcardGenerationManager
+    let quizGenerationManager: QuizGenerationManager
 
     init(isSignedIn: Bool = true) {
         self.authManager = AuthManager(service: MockAuthService(user: isSignedIn ? .mock() : nil))
@@ -184,6 +194,7 @@ class DevPreview {
         self.spotlightManager = SpotlightManager()
         self.streakManager = StreakManager(services: MockStreakServices(), configuration: Dependencies.streakConfiguration, logger: nil)
         self.flashcardGenerationManager = FlashcardGenerationManager(service: MockFlashcardGenerationService())
+        self.quizGenerationManager = QuizGenerationManager(service: MockQuizGenerationService())
     }
 
 }

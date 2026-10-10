@@ -16,6 +16,10 @@ protocol GenerationStrategy {
     var profile: GenerationProfile { get }
     var instructions: String { get }
 
+    /// Whether every call, not just the top-up, lists the existing questions to avoid.
+    /// The list takes at most a third of the source room, newest questions first.
+    var avoidsExistingQuestionsInEveryCall: Bool { get }
+
     func prompt(count: Int, sourceText: String, avoiding existingQuestions: [String]) -> String
 
     /// Tokens the item's response schema adds to each call.
@@ -75,9 +79,14 @@ final class GenerationRun<Strategy: GenerationStrategy> {
     private var strategy: Strategy
     private var announcedModel: GenerationModelKind = .onDevice
     private var budgetModel: GenerationModelKind = .onDevice
-    private var budget = GenerationBudget(contextSize: 0, overheadTokens: 0, tokensPerCharacter: 0)
+    /// The budget with nothing to avoid. The avoid lists' third of the source room is measured against it.
+    private var baseBudget: GenerationBudget
+    /// The budget each planned call runs with, after `callAvoidList` has taken its room.
+    private var budget: GenerationBudget
+    private var callAvoidList: [String] = []
     private var contextSize = 0
     private var overheadTokens = 0
+    private var templateTokens = 0
     private var tokensPerCharacter = 0.0
     private var nextIndex = 0
     private var plannedBatches: [GenerationBatch] = []
@@ -102,6 +111,8 @@ final class GenerationRun<Strategy: GenerationStrategy> {
         self.service = service
         self.strategy = strategy
         self.emit = emit
+        self.baseBudget = GenerationBudget(contextSize: 0, overheadTokens: 0, tokensPerCharacter: 0, profile: strategy.profile)
+        self.budget = baseBudget
     }
 
     func run() async throws -> GenerationRunSummary {
@@ -112,9 +123,9 @@ final class GenerationRun<Strategy: GenerationStrategy> {
         announcedModel = service.beginRun()
         budgetModel = announcedModel
         tokensPerCharacter = Double(await service.tokenCount(text)) / Double(max(text.count, 1))
-        let template = strategy.prompt(count: strategy.profile.itemsPerCallCeiling, sourceText: "", avoiding: [])
+        templateTokens = await service.tokenCount(template(avoiding: []))
         overheadTokens = await service.tokenCount(strategy.instructions)
-            + service.tokenCount(template)
+            + templateTokens
             + strategy.schemaTokenCount()
         await measureBudget()
 
@@ -124,7 +135,7 @@ final class GenerationRun<Strategy: GenerationStrategy> {
         while !pending.isEmpty {
             try Task.checkCancellation()
             let batch = pending.removeFirst()
-            let outcome = try await process(batch)
+            let outcome = try await process(batch, avoiding: callAvoidList)
 
             if service.activeModel != budgetModel {
                 announceModelChangeIfNeeded()
@@ -156,12 +167,40 @@ final class GenerationRun<Strategy: GenerationStrategy> {
 
     private func measureBudget() async {
         contextSize = await service.contextSize()
-        budget = GenerationBudget(
+        baseBudget = GenerationBudget(
             contextSize: contextSize,
             overheadTokens: overheadTokens,
             tokensPerCharacter: tokensPerCharacter,
             profile: strategy.profile
         )
+        budget = baseBudget
+
+        guard strategy.avoidsExistingQuestionsInEveryCall else { return }
+        callAvoidList = Self.avoidList(from: existingQuestions, characterBudget: baseBudget.sourceCharacters / 3).questions
+        guard !callAvoidList.isEmpty else { return }
+        let avoidTokens = await service.tokenCount(template(avoiding: callAvoidList)) - templateTokens
+        budget = GenerationBudget(
+            contextSize: contextSize,
+            overheadTokens: overheadTokens + max(avoidTokens, 0),
+            tokensPerCharacter: tokensPerCharacter,
+            profile: strategy.profile
+        )
+    }
+
+    private func template(avoiding questions: [String]) -> String {
+        strategy.prompt(count: strategy.profile.itemsPerCallCeiling, sourceText: "", avoiding: questions)
+    }
+
+    /// The newest questions that fit in `characterBudget`, in their original order.
+    private static func avoidList(from questions: [String], characterBudget: Int) -> (questions: [String], characters: Int) {
+        var avoiding: [String] = []
+        var characters = 0
+        for question in questions.reversed() {
+            guard characters + question.count <= characterBudget else { break }
+            avoiding.append(question)
+            characters += question.count
+        }
+        return (avoiding.reversed(), characters)
     }
 
     private func plan(_ text: String, itemCount: Int) -> [GenerationBatch] {
@@ -180,15 +219,11 @@ final class GenerationRun<Strategy: GenerationStrategy> {
         try Task.checkCancellation()
 
         // The avoid list shares the source budget, so the largest chunk gives up room for it.
-        let avoidBudgetCharacters = budget.sourceCharacters / 3
-        var avoiding: [String] = []
-        var avoidCharacters = 0
-        for question in (existingQuestions + acceptedQuestions).reversed() {
-            guard avoidCharacters + question.count <= avoidBudgetCharacters else { break }
-            avoiding.append(question)
-            avoidCharacters += question.count
-        }
-        let sourceLimit = budget.sourceCharacters - avoidCharacters
+        let (avoiding, avoidCharacters) = Self.avoidList(
+            from: existingQuestions + acceptedQuestions,
+            characterBudget: baseBudget.sourceCharacters / 3
+        )
+        let sourceLimit = baseBudget.sourceCharacters - avoidCharacters
         let source = largest.text.count <= sourceLimit
             ? largest.text
             : String(largest.text[..<BatchPlanner.findBreak(
@@ -199,7 +234,7 @@ final class GenerationRun<Strategy: GenerationStrategy> {
 
         let batch = GenerationBatch(index: nextIndex, text: source, cardCount: min(shortfall, budget.cardsPerBatch))
         nextIndex += 1
-        if try await process(batch, avoiding: Array(avoiding.reversed())) == .interrupted {
+        if try await process(batch, avoiding: avoiding) == .interrupted {
             announceModelChangeIfNeeded()
             skip(batch.index, reason: .failed)
         }
@@ -207,7 +242,7 @@ final class GenerationRun<Strategy: GenerationStrategy> {
 
     // MARK: Batches
 
-    private func process(_ batch: GenerationBatch, avoiding: [String] = []) async throws -> BatchOutcome {
+    private func process(_ batch: GenerationBatch, avoiding: [String]) async throws -> BatchOutcome {
         if looksLikeGibberish(batch.text) {
             skip(batch.index, reason: .unreadableText)
             return .skipped
