@@ -153,6 +153,14 @@ View → Presenter → Interactor → Manager
 - ✅ ALL Presenter methods MUST track events
 - ✅ ALL Manager methods MUST track events with logger
 
+### Disk Hygiene
+- ✅ Builds, test runs and agent worktrees fill the disk fast. Clean up as you go:
+  - Remove temporary git worktrees and their branches when done (`git worktree remove <path>`, `git branch -D <branch>`, `git worktree prune`)
+  - Delete temp files written to the scratchpad or `/tmp` (patches, logs, baseline builds) once they've been used
+  - After heavy build/test work, suggest clearing `~/Library/Developer/Xcode/DerivedData`, old `.xcresult` bundles, and `xcrun simctl delete unavailable`
+- ✅ Check `df -h /` before long build or test runs; if under ~10 GB free, clean up first
+- ❌ Never delete DerivedData or simulators while a build or test is running
+
 ---
 
 ## 🔧 Build Configurations
