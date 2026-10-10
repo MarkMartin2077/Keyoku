@@ -10,13 +10,17 @@ import Foundation
 struct MockRemoteDeckService: RemoteDeckService {
 
     private var decks: [DeckModel]
+    private let shouldFail: Bool
 
-    init(decks: [DeckModel] = []) {
+    /// - Parameter shouldFail: When `true`, fetching all decks throws, like being offline.
+    init(decks: [DeckModel] = [], shouldFail: Bool = false) {
         self.decks = decks
+        self.shouldFail = shouldFail
     }
 
     func getAllDecks(userId: String) async throws -> [DeckModel] {
-        decks
+        if shouldFail { throw AppError("Mock remote fetch failed") }
+        return decks
     }
 
     func getDeck(userId: String, deckId: String) async throws -> DeckModel {

@@ -42,9 +42,16 @@ class FlashcardManager {
     /// Updated in-place on create/update/delete to avoid full reloads.
     private(set) var decks: [DeckModel] = []
 
-    /// Whether the last `logIn` fetched decks from remote. When `false`, `decks` came
-    /// from the local fallback and may be missing decks that exist remotely.
-    private(set) var hasSyncedRemoteDecks = false
+    /// The deck ids the last `logIn` fetched from remote, or `nil` if that fetch failed.
+    private var remoteDeckIds: Set<String>?
+
+    /// Every deck id known to exist: the ids the last remote fetch returned plus the
+    /// decks in memory. Built from the fetch itself, so a failed local save or load
+    /// can't hide a remote deck. `nil` when the remote fetch failed, because the local
+    /// fallback may be missing decks that exist remotely.
+    var trustedDeckIds: Set<String>? {
+        remoteDeckIds?.union(decks.map(\.deckId))
+    }
 
     init(services: FlashcardServices, imageUploadService: FirebaseImageUploadService? = nil, logManager: LogManager? = nil) {
         self.local = services.local
@@ -64,7 +71,7 @@ class FlashcardManager {
     /// - Parameter userId: The authenticated user's ID, stored for remote operations.
     func logIn(userId: String) async throws {
         self.userId = userId
-        hasSyncedRemoteDecks = false
+        remoteDeckIds = nil
         logManager?.trackEvent(event: Event.logInStart(userId: userId))
 
         do {
@@ -73,7 +80,7 @@ class FlashcardManager {
                 try? local.saveDeck(deck: deck)
             }
             loadDecks()
-            hasSyncedRemoteDecks = true
+            remoteDeckIds = Set(remoteDecks.map(\.deckId))
             logManager?.trackEvent(event: Event.logInSuccess(userId: userId, count: decks.count))
         } catch {
             logManager?.trackEvent(event: Event.logInFail(error: error))
@@ -85,7 +92,7 @@ class FlashcardManager {
     func signOut() {
         logManager?.trackEvent(event: Event.signOut)
         userId = nil
-        hasSyncedRemoteDecks = false
+        remoteDeckIds = nil
         decks = []
     }
 

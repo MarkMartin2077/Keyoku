@@ -22,9 +22,17 @@ struct SwiftDataQuizPersistence: QuizService {
         self.container = try! ModelContainer(for: QuizEntity.self, configurations: config)
     }
 
-    func getAllQuizzes() throws -> [QuizModel] {
+    /// Uses the given container, for example an in-memory one in tests.
+    init(container: ModelContainer) {
+        self.container = container
+    }
+
+    func getAllQuizzes() throws -> QuizLoadResult {
         let descriptor = FetchDescriptor<QuizEntity>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        return try mainContext.fetch(descriptor).map { try $0.toModel() }
+        let entities = try mainContext.fetch(descriptor)
+        // One corrupt row must not hide every other quiz, so rows that fail to decode are skipped.
+        let quizzes = entities.compactMap { try? $0.toModel() }
+        return QuizLoadResult(quizzes: quizzes, skippedCount: entities.count - quizzes.count)
     }
 
     func saveQuiz(_ quiz: QuizModel) throws {

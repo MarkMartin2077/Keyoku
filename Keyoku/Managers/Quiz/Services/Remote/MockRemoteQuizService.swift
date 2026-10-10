@@ -11,9 +11,12 @@ import Foundation
 final class MockRemoteQuizService: RemoteQuizService {
 
     private(set) var quizzes: [QuizModel]
+    private let deleteDelay: Duration
 
-    init(quizzes: [QuizModel] = []) {
+    /// - Parameter deleteDelay: How long each single-quiz delete takes, like a slow or offline Firestore.
+    init(quizzes: [QuizModel] = [], deleteDelay: Duration = .zero) {
         self.quizzes = quizzes
+        self.deleteDelay = deleteDelay
     }
 
     func getAllQuizzes(userId: String) async throws -> [QuizModel] {
@@ -29,6 +32,7 @@ final class MockRemoteQuizService: RemoteQuizService {
     }
 
     func deleteQuiz(userId: String, quizId: String) async throws {
+        try await Task.sleep(for: deleteDelay)
         quizzes.removeAll { $0.id == quizId }
     }
 

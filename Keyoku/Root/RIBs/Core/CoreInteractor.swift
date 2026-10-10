@@ -510,10 +510,7 @@ struct CoreInteractor: GlobalInteractor {
     /// no longer exists, which is only safe once the deck list came from remote.
     private func logInDecksThenQuizzes(userId: String) async throws {
         try await flashcardManager.logIn(userId: userId)
-        let existingDeckIds = flashcardManager.hasSyncedRemoteDecks
-            ? Set(flashcardManager.decks.map(\.deckId))
-            : nil
-        await quizManager.logIn(userId: userId, existingDeckIds: existingDeckIds)
+        await quizManager.logIn(userId: userId, existingDeckIds: flashcardManager.trustedDeckIds)
     }
 
     func signOut() async throws {

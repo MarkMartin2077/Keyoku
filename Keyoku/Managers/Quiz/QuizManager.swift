@@ -39,8 +39,8 @@ class QuizManager {
     /// Falls back to local storage if the remote fetch fails.
     ///
     /// Must run after decks have synced. When `existingDeckIds` is given, every quiz whose
-    /// deck is not in it is deleted locally and remotely. Pass `nil` when the deck list
-    /// can't be trusted (for example, the deck sync failed) to skip that cleanup.
+    /// deck is not in it is deleted locally, and remotely in the background. Pass `nil` when
+    /// the deck list can't be trusted (for example, the deck sync failed) to skip that cleanup.
     func logIn(userId: String, existingDeckIds: Set<String>?) async {
         self.userId = userId
         logManager?.trackEvent(event: Event.logInStart(userId: userId))
@@ -58,7 +58,7 @@ class QuizManager {
         }
 
         if let existingDeckIds {
-            await deleteOrphanedQuizzes(existingDeckIds: existingDeckIds)
+            deleteOrphanedQuizzes(existingDeckIds: existingDeckIds)
         }
     }
 
@@ -96,12 +96,17 @@ class QuizManager {
     // MARK: - Reads
 
     /// Reloads all quizzes from local storage into memory.
+    /// Rows that can't be decoded are skipped with a warning so the rest still load.
     /// Errors are logged and leave the array unchanged.
     func loadQuizzes() {
         logManager?.trackEvent(event: Event.loadQuizzesStart)
 
         do {
-            quizzes = try local.getAllQuizzes()
+            let result = try local.getAllQuizzes()
+            quizzes = result.quizzes
+            if result.skippedCount > 0 {
+                logManager?.trackEvent(event: Event.loadQuizzesSkippedCorrupt(count: result.skippedCount))
+            }
             logManager?.trackEvent(event: Event.loadQuizzesSuccess(count: quizzes.count))
         } catch {
             logManager?.trackEvent(event: Event.loadQuizzesFail(error: error))
@@ -204,27 +209,31 @@ class QuizManager {
 
     // MARK: - Orphan Cleanup
 
-    /// Deletes, locally and remotely, every loaded quiz whose deck is not in `existingDeckIds`.
-    /// Remote deletes are awaited so the cleanup is finished when `logIn` returns.
-    private func deleteOrphanedQuizzes(existingDeckIds: Set<String>) async {
+    /// Deletes every loaded quiz whose deck is not in `existingDeckIds` locally now, and
+    /// remotely in the background so an offline Firestore can't stall `logIn`.
+    /// The background deletes log their own success or failure.
+    private func deleteOrphanedQuizzes(existingDeckIds: Set<String>) {
         let orphanedQuizzes = quizzes.filter { !existingDeckIds.contains($0.deckId) }
         guard !orphanedQuizzes.isEmpty else { return }
 
         logManager?.trackEvent(event: Event.deleteOrphansStart(count: orphanedQuizzes.count))
 
+        var localDeletedCount = 0
         for quiz in orphanedQuizzes {
             do {
                 try local.deleteQuiz(id: quiz.id)
                 quizzes.removeAll { $0.id == quiz.id }
-                if let userId {
-                    try await remote.deleteQuiz(userId: userId, quizId: quiz.id)
-                }
+                localDeletedCount += 1
+                deleteQuizFromRemote(quizId: quiz.id)
             } catch {
                 logManager?.trackEvent(event: Event.deleteOrphansFail(error: error))
             }
         }
 
-        logManager?.trackEvent(event: Event.deleteOrphansSuccess(count: orphanedQuizzes.count))
+        logManager?.trackEvent(event: Event.deleteOrphansSuccess(
+            localDeletedCount: localDeletedCount,
+            remoteDispatchedCount: userId == nil ? 0 : localDeletedCount
+        ))
     }
 
     // MARK: - Remote Sync Helpers
@@ -278,6 +287,7 @@ class QuizManager {
         case loadQuizzesStart
         case loadQuizzesSuccess(count: Int)
         case loadQuizzesFail(error: Error)
+        case loadQuizzesSkippedCorrupt(count: Int)
         case createQuizStart(deckId: String)
         case createQuizSuccess(quiz: QuizModel)
         case createQuizFail(error: Error)
@@ -294,7 +304,7 @@ class QuizManager {
         case deleteAllQuizzesSuccess
         case deleteAllQuizzesFail(error: Error)
         case deleteOrphansStart(count: Int)
-        case deleteOrphansSuccess(count: Int)
+        case deleteOrphansSuccess(localDeletedCount: Int, remoteDispatchedCount: Int)
         case deleteOrphansFail(error: Error)
         case migrateQuizzesStart(count: Int)
         case migrateQuizzesSuccess(count: Int)
@@ -314,6 +324,7 @@ class QuizManager {
             case .loadQuizzesStart:                 return "QuizMan_LoadQuizzes_Start"
             case .loadQuizzesSuccess:               return "QuizMan_LoadQuizzes_Success"
             case .loadQuizzesFail:                  return "QuizMan_LoadQuizzes_Fail"
+            case .loadQuizzesSkippedCorrupt:        return "QuizMan_LoadQuizzes_SkippedCorrupt"
             case .createQuizStart:                  return "QuizMan_CreateQuiz_Start"
             case .createQuizSuccess:                return "QuizMan_CreateQuiz_Success"
             case .createQuizFail:                   return "QuizMan_CreateQuiz_Fail"
@@ -351,10 +362,13 @@ class QuizManager {
                 return ["user_id": userId, "quiz_count": count]
             case .loadQuizzesSuccess(count: let count),
                     .deleteOrphansStart(count: let count),
-                    .deleteOrphansSuccess(count: let count),
                     .migrateQuizzesStart(count: let count),
                     .migrateQuizzesSuccess(count: let count):
                 return ["quiz_count": count]
+            case .loadQuizzesSkippedCorrupt(count: let count):
+                return ["skipped_count": count]
+            case .deleteOrphansSuccess(localDeletedCount: let localDeletedCount, remoteDispatchedCount: let remoteDispatchedCount):
+                return ["local_deleted_count": localDeletedCount, "remote_dispatched_count": remoteDispatchedCount]
             case .createQuizStart(deckId: let deckId),
                     .deleteDeckQuizzesStart(deckId: let deckId),
                     .deleteDeckQuizzesSuccess(deckId: let deckId),
@@ -391,6 +405,8 @@ class QuizManager {
                     .deleteDeckQuizzesFail, .deleteAllQuizzesFail, .deleteOrphansFail,
                     .remotePushFail, .remoteDeleteFail, .remoteDeleteDeckQuizzesFail:
                 return .severe
+            case .loadQuizzesSkippedCorrupt:
+                return .warning
             default:
                 return .analytic
             }

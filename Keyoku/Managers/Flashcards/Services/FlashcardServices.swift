@@ -22,6 +22,12 @@ struct MockFlashcardServices: FlashcardServices {
         self.local = MockDeckPersistence(decks: decks)
         self.remote = MockRemoteDeckService(decks: decks)
     }
+
+    /// Lets tests seed local and remote separately.
+    init(local: DeckService, remote: RemoteDeckService) {
+        self.local = local
+        self.remote = remote
+    }
 }
 
 @MainActor

@@ -8,13 +8,16 @@ import Foundation
 @MainActor
 class MockQuizPersistence: QuizService {
     private var quizzes: [QuizModel]
+    private let skippedCount: Int
 
-    init(quizzes: [QuizModel] = QuizModel.mocks) {
+    /// - Parameter skippedCount: How many corrupt rows every read reports skipping.
+    init(quizzes: [QuizModel] = QuizModel.mocks, skippedCount: Int = 0) {
         self.quizzes = quizzes
+        self.skippedCount = skippedCount
     }
 
-    func getAllQuizzes() throws -> [QuizModel] {
-        quizzes.sorted { $0.createdAt > $1.createdAt }
+    func getAllQuizzes() throws -> QuizLoadResult {
+        QuizLoadResult(quizzes: quizzes.sorted { $0.createdAt > $1.createdAt }, skippedCount: skippedCount)
     }
 
     func saveQuiz(_ quiz: QuizModel) throws {

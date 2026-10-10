@@ -11,6 +11,7 @@
 import Testing
 @testable import Keyoku
 import Foundation
+import SwiftData
 
 // MARK: - Helpers
 
@@ -66,7 +67,7 @@ struct QuizManagerCreateTests {
         #expect(quiz.questions.count == QuizQuestionModel.mocks.count)
         #expect(quiz.attempts.isEmpty)
         #expect(quiz.bestScore == nil)
-        #expect(try local.getAllQuizzes().map(\.id) == [quiz.id])
+        #expect(try local.getAllQuizzes().quizzes.map(\.id) == [quiz.id])
 
         // AND
         #expect(mockLog.hasEvent(named: "QuizMan_CreateQuiz_Start"))
@@ -98,7 +99,7 @@ struct QuizManagerCreateTests {
         try manager.createQuiz(deckId: "deck1", title: "Offline", questions: QuizQuestionModel.mocks)
         await Task.yield()
 
-        #expect(try local.getAllQuizzes().count == 1)
+        #expect(try local.getAllQuizzes().quizzes.count == 1)
         #expect(remote.quizzes.isEmpty)
     }
 
@@ -148,7 +149,7 @@ struct QuizManagerAttemptTests {
         // THEN
         #expect(updated.attempts == [QuizAttemptModel(date: date, score: 4, total: 5)])
         #expect(manager.quizzes.first?.attempts.count == 1)
-        #expect(try local.getAllQuizzes().first?.attempts.count == 1)
+        #expect(try local.getAllQuizzes().quizzes.first?.attempts.count == 1)
 
         // AND
         #expect(mockLog.hasEvent(named: "QuizMan_RecordAttempt_Start"))
@@ -232,7 +233,7 @@ struct QuizManagerDeletionTests {
 
         // THEN
         #expect(manager.quizzes.map(\.id) == ["quiz2"])
-        #expect(try local.getAllQuizzes().map(\.id) == ["quiz2"])
+        #expect(try local.getAllQuizzes().quizzes.map(\.id) == ["quiz2"])
         await waitUntil { remote.quizzes.count == 1 }
         #expect(remote.quizzes.map(\.id) == ["quiz2"])
 
@@ -258,7 +259,7 @@ struct QuizManagerDeletionTests {
 
         // THEN — memory and local storage update immediately
         #expect(manager.quizzes.map(\.id) == ["quiz3"])
-        #expect(try local.getAllQuizzes().map(\.id) == ["quiz3"])
+        #expect(try local.getAllQuizzes().quizzes.map(\.id) == ["quiz3"])
 
         // AND — the background remote delete catches up
         await waitUntil { remote.quizzes.count == 1 }
@@ -283,7 +284,7 @@ struct QuizManagerDeletionTests {
 
         // THEN — no waiting needed: the remote delete is awaited
         #expect(manager.quizzes.isEmpty)
-        #expect(try local.getAllQuizzes().isEmpty)
+        #expect(try local.getAllQuizzes().quizzes.isEmpty)
         #expect(remote.quizzes.isEmpty)
 
         // AND
@@ -321,7 +322,7 @@ struct QuizManagerLifecycleTests {
 
         // THEN
         #expect(manager.quizzes.map(\.id) == ["quiz1"])
-        #expect(try local.getAllQuizzes().map(\.id) == ["quiz1"])
+        #expect(try local.getAllQuizzes().quizzes.map(\.id) == ["quiz1"])
 
         // AND
         #expect(mockLog.hasEvent(named: "QuizMan_LogIn_Start"))
@@ -339,14 +340,41 @@ struct QuizManagerLifecycleTests {
         // WHEN
         await manager.logIn(userId: "user1", existingDeckIds: ["deck1"])
 
-        // THEN — the orphan is gone everywhere and the other quiz is untouched
+        // THEN — the orphan is gone locally at once and the other quiz is untouched
         #expect(manager.quizzes.map(\.id) == ["quiz1"])
-        #expect(try local.getAllQuizzes().map(\.id) == ["quiz1"])
+        #expect(try local.getAllQuizzes().quizzes.map(\.id) == ["quiz1"])
+
+        // AND — the background remote delete catches up
+        await waitUntil { remote.quizzes.count == 1 }
         #expect(remote.quizzes.map(\.id) == ["quiz1"])
 
-        // AND
+        // AND — success reports one local delete and one remote delete dispatched
         #expect(mockLog.hasEvent(named: "QuizMan_DeleteOrphans_Start"))
-        #expect(mockLog.hasEvent(named: "QuizMan_DeleteOrphans_Success"))
+        let success = mockLog.events.first { $0.eventName == "QuizMan_DeleteOrphans_Success" }
+        #expect(success?.parameters?["local_deleted_count"] as? Int == 1)
+        #expect(success?.parameters?["remote_dispatched_count"] as? Int == 1)
+        await waitUntil { mockLog.hasEvent(named: "QuizMan_RemoteDelete_Success") }
+        #expect(mockLog.hasEvent(named: "QuizMan_RemoteDelete_Success"))
+    }
+
+    @Test("Logging in doesn't wait for the orphans' remote deletes")
+    func logInDoesNotWaitForRemoteOrphanDeletes() async throws {
+        // GIVEN — remote deletes are slow, like Firestore while offline
+        let quizzes = [makeQuiz(id: "quiz1", deckId: "deck1"), makeQuiz(id: "quiz2", deckId: "deletedDeck")]
+        let local = MockQuizPersistence(quizzes: quizzes)
+        let remote = MockRemoteQuizService(quizzes: quizzes, deleteDelay: .milliseconds(300))
+        let (manager, _) = makeManager(local: local, remote: remote)
+
+        // WHEN
+        await manager.logIn(userId: "user1", existingDeckIds: ["deck1"])
+
+        // THEN — logIn returned with the orphan gone locally while its remote delete is still running
+        #expect(try local.getAllQuizzes().quizzes.map(\.id) == ["quiz1"])
+        #expect(remote.quizzes.count == 2)
+
+        // AND — the remote delete finishes in the background
+        await waitUntil { remote.quizzes.count == 1 }
+        #expect(remote.quizzes.map(\.id) == ["quiz1"])
     }
 
     @Test("Logging in without a trusted deck list keeps every quiz")
@@ -374,7 +402,92 @@ struct QuizManagerLifecycleTests {
 
         // THEN
         #expect(manager.quizzes.isEmpty)
-        #expect(try local.getAllQuizzes().count == 1)
+        #expect(try local.getAllQuizzes().quizzes.count == 1)
         #expect(mockLog.hasEvent(named: "QuizMan_SignOut"))
+    }
+}
+
+// MARK: - Corrupt Rows
+
+@Suite("QuizManager — Corrupt Rows")
+@MainActor
+struct QuizManagerCorruptRowTests {
+
+    @Test("A quiz row that can't be decoded is skipped and the rest still load")
+    func swiftDataSkipsCorruptRow() throws {
+        // GIVEN — an in-memory store with one valid row and one with unreadable questions
+        let container = try ModelContainer(
+            for: QuizEntity.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let persistence = SwiftDataQuizPersistence(container: container)
+        try persistence.saveQuiz(makeQuiz(id: "quiz1", deckId: "deck1"))
+        container.mainContext.insert(QuizEntity(
+            id: "corrupt",
+            deckId: "deck1",
+            title: "Corrupt",
+            createdAt: .now,
+            questionsData: Data("not json".utf8),
+            attemptsData: Data("[]".utf8)
+        ))
+        try container.mainContext.save()
+
+        // WHEN
+        let result = try persistence.getAllQuizzes()
+
+        // THEN
+        #expect(result.quizzes.map(\.id) == ["quiz1"])
+        #expect(result.skippedCount == 1)
+    }
+
+    @Test("Loading quizzes tracks a warning when rows were skipped")
+    func loadQuizzesWarnsAboutSkippedRows() {
+        // GIVEN — local storage reports one unreadable row next to a valid quiz
+        let local = MockQuizPersistence(quizzes: [makeQuiz(id: "quiz1", deckId: "deck1")], skippedCount: 1)
+        let (manager, mockLog) = makeManager(local: local)
+
+        // WHEN
+        manager.loadQuizzes()
+
+        // THEN
+        #expect(manager.quizzes.map(\.id) == ["quiz1"])
+        let warning = mockLog.events.first { $0.eventName == "QuizMan_LoadQuizzes_SkippedCorrupt" }
+        #expect(warning?.type == .warning)
+        #expect(warning?.parameters?["skipped_count"] as? Int == 1)
+        #expect(mockLog.hasEvent(named: "QuizMan_LoadQuizzes_Success"))
+    }
+}
+
+// MARK: - Migration
+
+@Suite("QuizManager — Migration")
+@MainActor
+struct QuizManagerMigrationTests {
+
+    @Test("Migrating pushes the anonymous user's quizzes to the new account and keeps them locally")
+    func migrateQuizzes() async throws {
+        // GIVEN — quizzes made while anonymous, now signed in to a new account with nothing on remote
+        let local = MockQuizPersistence(quizzes: [
+            makeQuiz(id: "quiz1", deckId: "deck1"),
+            makeQuiz(id: "quiz2", deckId: "otherDeck")
+        ])
+        let remote = MockRemoteQuizService()
+        let (manager, mockLog) = makeManager(local: local, remote: remote)
+        await manager.logIn(userId: "newAccount", existingDeckIds: nil)
+
+        // WHEN — only deck1 is being migrated
+        manager.migrateQuizzes(deckIds: ["deck1"])
+
+        // THEN — deck1's quiz reaches the new account's remote
+        await waitUntil { remote.quizzes.contains { $0.id == "quiz1" } }
+        #expect(remote.quizzes.map(\.id) == ["quiz1"])
+
+        // AND — both quizzes stay local and in memory
+        #expect(Set(try local.getAllQuizzes().quizzes.map(\.id)) == ["quiz1", "quiz2"])
+        #expect(Set(manager.quizzes.map(\.id)) == ["quiz1", "quiz2"])
+
+        // AND
+        #expect(mockLog.hasEvent(named: "QuizMan_MigrateQuizzes_Start"))
+        #expect(mockLog.hasEvent(named: "QuizMan_MigrateQuizzes_Success"))
     }
 }
