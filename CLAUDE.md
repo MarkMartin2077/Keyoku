@@ -45,6 +45,12 @@ This documentation is organized into focused files for better maintainability. E
   - Finding elements, accessibility identifiers, and common gotchas
   - Checklist for writing new tests
 
+- **AI Toolkit (skills, agents, helpers)**: `.claude/docs/AI-TOOLKIT.md`
+  - Index of every skill (Matt Pocock, pstack/poteto, Paul Hudson, Kun Chen, project skills) and agent
+  - Idea → ship workflow and which skill to use at each stage
+  - Vendored skills live in `.claude/skills/`, pinned in `skills-lock.json`; pstack is a plugin in `.claude/settings.json`
+  - **When you add, remove, or update a skill or agent, update `AI-TOOLKIT.md` in the same change** (`./scripts/sync-ai-toolkit.sh --check`)
+
 ### Required Actions
 
 When the user triggers specific requests, follow these action workflows:
@@ -64,6 +70,22 @@ When the user triggers specific requests, follow these action workflows:
 - **ACTION 4 - Create Data Model**: @.claude/docs/action-create-model.md
   - Triggers: "create data model", "new model", "create model", "new data type"
   - Uses Xcode model templates for consistency
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues for MarkMartin2077/Keyoku (via `gh`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 ---
 
