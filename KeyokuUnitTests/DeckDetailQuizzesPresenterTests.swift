@@ -29,8 +29,13 @@ private final class MockQuizDeckInteractor: DeckDetailInteractor {
     var deleteError: Error?
     /// When true, `generateQuiz` reports progress and then waits for `releaseGeneration()`.
     var holdsGeneration = false
-    private(set) var isWaitingAtGate = false
-    private var gate: CheckedContinuation<Void, Never>?
+    /// When true, `generateQuiz` saves even if its task was cancelled (the post-save cancel window).
+    var savesWhenCancelled = false
+    private var gates: [CheckedContinuation<Void, Never>] = []
+    var isWaitingAtGate: Bool { !gates.isEmpty }
+    var runsWaitingAtGate: Int { gates.count }
+    /// The progress callback of every run, in start order.
+    private(set) var progressHandlers: [@MainActor (QuizGenerationProgress) -> Void] = []
 
     init(deck: DeckModel, quizzes: [QuizModel] = []) {
         self.deck = deck
@@ -41,10 +46,11 @@ private final class MockQuizDeckInteractor: DeckDetailInteractor {
         storedQuizzes = storedQuizzes.map { $0.id == quiz.id ? quiz : $0 }
     }
 
+    /// Releases every run waiting at the gate.
     func releaseGeneration() {
-        gate?.resume()
-        gate = nil
-        isWaitingAtGate = false
+        let waiting = gates
+        gates = []
+        waiting.forEach { $0.resume() }
     }
 
     // Quizzes
@@ -61,6 +67,8 @@ private final class MockQuizDeckInteractor: DeckDetailInteractor {
     var quizGenerationAvailability: GenerationAvailability { availability }
     func prewarmQuizGeneration() { prewarmCount += 1 }
     func canMakeQuiz(sourceLength: Int) -> Bool { QuizQuestionCount.canMakeQuiz(sourceLength: sourceLength) }
+    var minQuizQuestionCount: Int { QuizQuestionCount.minimum }
+    var minQuizSourceLength: Int { QuizQuestionCount.minimumSourceLength }
     func maxQuizQuestionCount(sourceLength: Int) -> Int { QuizQuestionCount.maximum(sourceLength: sourceLength) }
     func defaultQuizQuestionCount(sourceLength: Int) -> Int { QuizQuestionCount.defaultCount(sourceLength: sourceLength) }
 
@@ -69,13 +77,13 @@ private final class MockQuizDeckInteractor: DeckDetailInteractor {
         questionCount: Int,
         onProgress: @escaping @MainActor (QuizGenerationProgress) -> Void
     ) async throws -> QuizModel {
+        progressHandlers.append(onProgress)
         onProgress(QuizGenerationProgress(generatedCount: 3, totalCount: questionCount))
         if holdsGeneration {
-            isWaitingAtGate = true
-            await withCheckedContinuation { gate = $0 }
+            await withCheckedContinuation { gates.append($0) }
         }
         // Mirrors CoreInteractor: a cancelled run saves nothing.
-        if Task.isCancelled {
+        if Task.isCancelled && !savesWhenCancelled {
             throw QuizGenerationError.generation(.cancelled)
         }
         switch generationResult {
@@ -320,6 +328,40 @@ struct DeckDetailNewQuizSheetTests {
         #expect(harness.presenter.newQuizCardStatus == .ready)
         #expect(harness.interactor.mockLog.hasEvent(named: "DeckDetailView_QuizNewSheet_Cancelled"))
     }
+
+    @Test("Swiping the sheet down is tracked as a cancel")
+    func swipeDismissTracksCancel() {
+        let harness = makeHarness()
+        harness.presenter.onNewQuizCardPressed()
+
+        // The sheet binding's setter calls this when SwiftUI dismisses the sheet.
+        harness.presenter.onNewQuizSheetCancelled()
+
+        #expect(harness.presenter.showNewQuizSheet == false)
+        #expect(harness.interactor.mockLog.events.filter { $0.eventName == "DeckDetailView_QuizNewSheet_Cancelled" }.count == 1)
+    }
+
+    @Test("Closing the sheet with Make Quiz isn't tracked as a cancel")
+    func makeQuizDismissIsNotACancel() async {
+        let harness = makeHarness()
+        harness.presenter.onNewQuizCardPressed()
+
+        harness.presenter.onMakeQuizPressed()
+        // SwiftUI may write `false` back through the binding as the sheet closes.
+        harness.presenter.onNewQuizSheetCancelled()
+        await harness.presenter.quizGenerationTask?.value
+
+        #expect(!harness.interactor.mockLog.hasEvent(named: "DeckDetailView_QuizNewSheet_Cancelled"))
+        #expect(harness.interactor.mockLog.hasEvent(named: "DeckDetailView_QuizMake_Success"))
+    }
+
+    @Test("The question count's lower bound comes from the interactor")
+    func minimumFromInteractor() {
+        let harness = makeHarness()
+
+        #expect(harness.presenter.minQuizQuestionCount == QuizQuestionCount.minimum)
+        #expect(harness.presenter.minQuizSourceLength == QuizQuestionCount.minimumSourceLength)
+    }
 }
 
 // MARK: - Making a Quiz
@@ -338,7 +380,7 @@ struct DeckDetailMakeQuizTests {
 
         #expect(harness.presenter.showNewQuizSheet == false)
         await waitUntil { harness.interactor.isWaitingAtGate }
-        #expect(harness.presenter.newQuizCardStatus == .generating(questionCount: 3))
+        #expect(harness.presenter.newQuizCardStatus == .generating(generatedCount: 3, totalCount: 10))
 
         let task = harness.presenter.quizGenerationTask
         harness.interactor.releaseGeneration()
@@ -416,6 +458,86 @@ struct DeckDetailMakeQuizTests {
         #expect(harness.interactor.mockLog.hasEvent(named: "DeckDetailView_QuizMake_Cancelled"))
         #expect(!harness.interactor.mockLog.hasEvent(named: "DeckDetailView_QuizMake_Success"))
         #expect(!harness.interactor.mockLog.hasEvent(named: "DeckDetailView_QuizMake_Fail"))
+    }
+
+    @Test("A cancelled run's late progress doesn't overwrite a newer run's count")
+    func staleProgressIgnored() async {
+        let harness = makeHarness()
+        harness.interactor.holdsGeneration = true
+        harness.presenter.onMakeQuizPressed()
+        await waitUntil { harness.interactor.runsWaitingAtGate == 1 }
+        let firstTask = harness.presenter.quizGenerationTask
+
+        harness.presenter.onNewQuizCardPressed() // cancel the first run
+        harness.presenter.quizQuestionCount = 8
+        harness.presenter.onMakeQuizPressed()
+        await waitUntil { harness.interactor.runsWaitingAtGate == 2 }
+        let secondTask = harness.presenter.quizGenerationTask
+        #expect(harness.presenter.newQuizCardStatus == .generating(generatedCount: 3, totalCount: 8))
+
+        // The first run reports late.
+        harness.interactor.progressHandlers.first?(QuizGenerationProgress(generatedCount: 9, totalCount: 10))
+
+        #expect(harness.presenter.newQuizCardStatus == .generating(generatedCount: 3, totalCount: 8))
+
+        harness.interactor.releaseGeneration()
+        await firstTask?.value
+        await secondTask?.value
+
+        #expect(harness.presenter.newQuizCardStatus == .ready)
+        #expect(harness.presenter.quizzes.count == 1)
+        #expect(harness.router.simpleAlerts.isEmpty)
+    }
+
+    @Test("A quiz saved just as the run was cancelled is deleted")
+    func cancelAfterSaveDeletesQuiz() async {
+        let harness = makeHarness()
+        harness.interactor.holdsGeneration = true
+        harness.interactor.savesWhenCancelled = true
+        harness.presenter.onMakeQuizPressed()
+        await waitUntil { harness.interactor.isWaitingAtGate }
+        let task = harness.presenter.quizGenerationTask
+
+        harness.presenter.onNewQuizCardPressed()
+        harness.interactor.releaseGeneration()
+        await task?.value
+
+        #expect(harness.interactor.deletedQuizIds.count == 1)
+        #expect(harness.interactor.storedQuizzes.isEmpty)
+        #expect(!harness.interactor.mockLog.hasEvent(named: "DeckDetailView_QuizCancelCleanup_Fail"))
+    }
+
+    @Test("A failed clean-up after a post-save cancel is tracked as severe")
+    func cancelAfterSaveCleanupFailure() async {
+        let harness = makeHarness()
+        harness.interactor.holdsGeneration = true
+        harness.interactor.savesWhenCancelled = true
+        harness.interactor.deleteError = AppError("write failed")
+        harness.presenter.onMakeQuizPressed()
+        await waitUntil { harness.interactor.isWaitingAtGate }
+        let task = harness.presenter.quizGenerationTask
+
+        harness.presenter.onNewQuizCardPressed()
+        harness.interactor.releaseGeneration()
+        await task?.value
+
+        let event = harness.interactor.mockLog.events.first { $0.eventName == "DeckDetailView_QuizCancelCleanup_Fail" }
+        #expect(event?.type == .severe)
+        #expect(harness.router.simpleAlerts.isEmpty)
+    }
+
+    @Test("Make Quiz starts nothing if Apple Intelligence became unavailable while the sheet was open")
+    func makeQuizNeedsAI() {
+        let harness = makeHarness()
+        harness.presenter.onNewQuizCardPressed()
+        harness.interactor.availability = .unavailable(.appleIntelligenceNotEnabled)
+
+        harness.presenter.onMakeQuizPressed()
+
+        #expect(harness.presenter.quizGenerationTask == nil)
+        #expect(harness.presenter.showNewQuizSheet == false)
+        #expect(harness.presenter.newQuizCardStatus == .unavailable)
+        #expect(harness.interactor.storedQuizzes.isEmpty)
     }
 
     @Test("Make Quiz does nothing when the deck's source text is too short")

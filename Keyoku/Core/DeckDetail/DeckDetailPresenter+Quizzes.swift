@@ -47,8 +47,8 @@ extension DeckDetailPresenter {
     }
 
     var newQuizCardStatus: NewQuizCardStatus {
-        if let quizGeneratedCount {
-            return .generating(questionCount: quizGeneratedCount)
+        if let quizGenerationProgress {
+            return .generating(generatedCount: quizGenerationProgress.generatedCount, totalCount: quizGenerationProgress.totalCount)
         }
         if quizUnavailableReason != nil {
             return .unavailable
@@ -57,11 +57,20 @@ extension DeckDetailPresenter {
     }
 
     var isGeneratingQuiz: Bool {
-        quizGeneratedCount != nil
+        quizGenerationProgress != nil
+    }
+
+    var minQuizQuestionCount: Int {
+        interactor.minQuizQuestionCount
     }
 
     var maxQuizQuestionCount: Int {
         interactor.maxQuizQuestionCount(sourceLength: quizSourceLength)
+    }
+
+    /// How many characters of source text a deck needs before it can be quizzed.
+    var minQuizSourceLength: Int {
+        interactor.minQuizSourceLength
     }
 
     /// The Quizzes section is hidden on an empty hand-made deck, where the empty state already explains what to do.
@@ -115,12 +124,14 @@ extension DeckDetailPresenter {
     }
 
     func onQuizQuestionCountChanged(_ count: Int) {
-        let clamped = min(max(count, QuizQuestionCount.minimum), maxQuizQuestionCount)
+        let clamped = min(max(count, minQuizQuestionCount), maxQuizQuestionCount)
         interactor.trackEvent(event: Event.onQuizCountChanged(count: clamped))
         quizQuestionCount = clamped
     }
 
+    /// Cancel button or swipe-down. Does nothing once the sheet is already closing (e.g. after Make Quiz).
     func onNewQuizSheetCancelled() {
+        guard showNewQuizSheet else { return }
         interactor.trackEvent(event: Event.onQuizNewSheetCancelled)
         showNewQuizSheet = false
     }
@@ -130,25 +141,30 @@ extension DeckDetailPresenter {
         interactor.trackEvent(event: Event.onQuizMakePressed(questionCount: questionCount, sourceLength: quizSourceLength))
         showNewQuizSheet = false
 
-        guard let currentDeck = deck, quizSectionState == .strip, !isGeneratingQuiz else { return }
+        guard let currentDeck = deck,
+              quizSectionState == .strip,
+              quizUnavailableReason == nil,
+              !isGeneratingQuiz else { return }
 
-        quizGeneratedCount = 0
+        let runId = UUID()
+        quizGenerationRunId = runId
+        quizGenerationProgress = QuizGenerationProgress(generatedCount: 0, totalCount: questionCount)
         quizGenerationTask = Task {
             do {
                 let quiz = try await interactor.generateQuiz(for: currentDeck, questionCount: questionCount) { [weak self] progress in
-                    guard let self, self.isGeneratingQuiz else { return }
-                    self.quizGeneratedCount = progress.generatedCount
+                    guard let self, self.quizGenerationRunId == runId else { return }
+                    self.quizGenerationProgress = progress
                 }
-                guard !Task.isCancelled else {
+                guard !Task.isCancelled, quizGenerationRunId == runId else {
                     // Cancelled after the save landed: cancelling must leave nothing behind.
-                    try? interactor.deleteQuiz(id: quiz.id)
+                    removeQuizSavedAfterCancel(quiz)
                     return
                 }
                 finishQuizGeneration()
                 interactor.trackEvent(event: Event.onQuizMakeSuccess(quiz: quiz, requestedCount: questionCount))
                 interactor.playHaptic(option: .achievementUnlocked())
             } catch {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, quizGenerationRunId == runId else { return }
                 finishQuizGeneration()
                 let quizError = error as? QuizGenerationError
                 if quizError?.isCancelled == true { return }
@@ -165,13 +181,22 @@ extension DeckDetailPresenter {
     // MARK: - Private
 
     private func cancelQuizGeneration() {
-        interactor.trackEvent(event: Event.onQuizMakeCancelled(questionsSoFar: quizGeneratedCount ?? 0))
+        interactor.trackEvent(event: Event.onQuizMakeCancelled(questionsSoFar: quizGenerationProgress?.generatedCount ?? 0))
         quizGenerationTask?.cancel()
         finishQuizGeneration()
     }
 
+    private func removeQuizSavedAfterCancel(_ quiz: QuizModel) {
+        do {
+            try interactor.deleteQuiz(id: quiz.id)
+        } catch {
+            interactor.trackEvent(event: Event.onQuizCancelCleanupFail(error: error))
+        }
+    }
+
     private func finishQuizGeneration() {
         quizGenerationTask = nil
-        quizGeneratedCount = nil
+        quizGenerationProgress = nil
+        quizGenerationRunId = nil
     }
 }

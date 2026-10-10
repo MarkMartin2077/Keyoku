@@ -25,6 +25,8 @@ protocol DeckDetailInteractor: GlobalInteractor {
     var quizGenerationAvailability: GenerationAvailability { get }
     func prewarmQuizGeneration()
     func canMakeQuiz(sourceLength: Int) -> Bool
+    var minQuizQuestionCount: Int { get }
+    var minQuizSourceLength: Int { get }
     func maxQuizQuestionCount(sourceLength: Int) -> Int
     func defaultQuizQuestionCount(sourceLength: Int) -> Int
     func generateQuiz(

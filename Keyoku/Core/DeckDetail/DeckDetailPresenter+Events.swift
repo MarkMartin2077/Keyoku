@@ -70,6 +70,7 @@ extension DeckDetailPresenter {
         case onQuizMakeSuccess(quiz: QuizModel, requestedCount: Int)
         case onQuizMakeFail(error: Error)
         case onQuizMakeCancelled(questionsSoFar: Int)
+        case onQuizCancelCleanupFail(error: Error)
 
         var eventName: String {
             switch self {
@@ -126,6 +127,7 @@ extension DeckDetailPresenter {
             case .onQuizMakeSuccess:            return "DeckDetailView_QuizMake_Success"
             case .onQuizMakeFail:               return "DeckDetailView_QuizMake_Fail"
             case .onQuizMakeCancelled:          return "DeckDetailView_QuizMake_Cancelled"
+            case .onQuizCancelCleanupFail:      return "DeckDetailView_QuizCancelCleanup_Fail"
             }
         }
 
@@ -173,7 +175,7 @@ extension DeckDetailPresenter {
                 return quiz.eventParameters
             case .onQuizDeleteSuccess(quizId: let id):
                 return ["quiz_id": id]
-            case .onQuizDeleteFail(error: let error):
+            case .onQuizDeleteFail(error: let error), .onQuizCancelCleanupFail(error: let error):
                 return error.eventParameters
             case .onQuizNewCardPressed(status: let status):
                 return ["new_quiz_card_status": status.analyticsName]
@@ -201,7 +203,7 @@ extension DeckDetailPresenter {
             switch self {
             case .onAddCardFail, .onDeleteCardFail, .onEditCardSaveFail, .onEditDeckSaveFail,
                  .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail, .onSaveGeneratedCardsFail, .onResetLearnedStatusFail,
-                 .onQuizDeleteFail, .onQuizMakeFail:
+                 .onQuizDeleteFail, .onQuizMakeFail, .onQuizCancelCleanupFail:
                 return .severe
             default:
                 return .analytic

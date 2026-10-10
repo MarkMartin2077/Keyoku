@@ -21,7 +21,7 @@ struct NewQuizSheet: View {
                             get: { presenter.quizQuestionCount },
                             set: { presenter.onQuizQuestionCountChanged($0) }
                         ),
-                        in: QuizQuestionCount.minimum...presenter.maxQuizQuestionCount
+                        in: presenter.minQuizQuestionCount...presenter.maxQuizQuestionCount
                     )
                     .accessibilityIdentifier("QuizQuestionCountStepper")
                 } footer: {
@@ -36,9 +36,12 @@ struct NewQuizSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        presenter.onNewQuizSheetCancelled()
-                    }
+                    Text("Cancel")
+                        .foregroundStyle(.tint)
+                        .anyButton {
+                            presenter.onNewQuizSheetCancelled()
+                        }
+                        .accessibilityIdentifier("NewQuizCancelButton")
                 }
             }
         }

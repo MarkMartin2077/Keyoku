@@ -50,6 +50,8 @@ private class MockDeckDetailInteractor: DeckDetailInteractor {
     var quizGenerationAvailability: GenerationAvailability { .unavailable(.deviceNotEligible) }
     func prewarmQuizGeneration() {}
     func canMakeQuiz(sourceLength: Int) -> Bool { QuizQuestionCount.canMakeQuiz(sourceLength: sourceLength) }
+    var minQuizQuestionCount: Int { QuizQuestionCount.minimum }
+    var minQuizSourceLength: Int { QuizQuestionCount.minimumSourceLength }
     func maxQuizQuestionCount(sourceLength: Int) -> Int { QuizQuestionCount.maximum(sourceLength: sourceLength) }
     func defaultQuizQuestionCount(sourceLength: Int) -> Int { QuizQuestionCount.defaultCount(sourceLength: sourceLength) }
     func generateQuiz(

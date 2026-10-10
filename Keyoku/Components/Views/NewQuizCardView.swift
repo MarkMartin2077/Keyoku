@@ -10,8 +10,8 @@ import SwiftfulUI
 enum NewQuizCardStatus: Equatable, Sendable {
     /// A new quiz can be made; tapping opens the New Quiz sheet.
     case ready
-    /// A quiz is being made. Shows how many questions are written so far; tapping cancels.
-    case generating(questionCount: Int)
+    /// A quiz is being made. Shows how many of the requested questions are written so far (counts only); tapping cancels.
+    case generating(generatedCount: Int, totalCount: Int)
     /// Apple Intelligence is unavailable, so the card is greyed out and does nothing.
     case unavailable
 
@@ -63,13 +63,13 @@ struct NewQuizCardView: View {
                 Text("New Quiz")
                     .font(.subheadline.bold())
             }
-        case .generating(let questionCount):
+        case .generating(let generatedCount, let totalCount):
             VStack(spacing: 6) {
                 ProgressView()
                     .tint(tint)
                 Text("Making your quiz…")
                     .font(.subheadline.bold())
-                Text("^[\(questionCount) question](inflect: true)")
+                Text("\(generatedCount) of \(totalCount)")
                     .font(.caption)
                     .monospacedDigit()
                     .contentTransition(.numericText())
@@ -88,8 +88,8 @@ struct NewQuizCardView: View {
         switch status {
         case .ready:
             return String(localized: "New Quiz")
-        case .generating(let questionCount):
-            return String(AttributedString(localized: "Making your quiz, ^[\(questionCount) question](inflect: true) so far").characters)
+        case .generating(let generatedCount, let totalCount):
+            return String(localized: "Making your quiz, \(generatedCount) of \(totalCount) questions written")
         case .unavailable:
             return String(localized: "New Quiz, unavailable")
         }
@@ -114,13 +114,13 @@ struct NewQuizCardView: View {
 }
 
 #Preview("Generating") {
-    NewQuizCardView(status: .generating(questionCount: 6), tint: .orange, onTap: { })
+    NewQuizCardView(status: .generating(generatedCount: 6, totalCount: 10), tint: .orange, onTap: { })
         .frame(height: 150)
         .padding()
 }
 
 #Preview("Generating, none yet") {
-    NewQuizCardView(status: .generating(questionCount: 0), tint: .blue, onTap: nil)
+    NewQuizCardView(status: .generating(generatedCount: 0, totalCount: 10), tint: .blue, onTap: nil)
         .frame(height: 150)
         .padding()
 }

@@ -182,9 +182,11 @@ class DeckDetailPresenter {
 
     var showNewQuizSheet: Bool = false
     var quizQuestionCount: Int = QuizQuestionCount.preferred
-    /// Questions accepted so far while a quiz is being made, or `nil` when no quiz is being made.
-    var quizGeneratedCount: Int?
+    /// Questions written so far out of the requested count while a quiz is being made, or `nil` when no quiz is being made.
+    var quizGenerationProgress: QuizGenerationProgress?
     var quizGenerationTask: Task<Void, Never>?
+    /// Identifies the current quiz run, so a cancelled run's late progress or result can't touch a newer run.
+    var quizGenerationRunId: UUID?
 
     // MARK: - Init
 

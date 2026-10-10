@@ -23,13 +23,26 @@ extension DeckDetailView {
                     )
                 }
             case .needsMoreSource:
-                quizExplanation(String(localized: "Add more source text to make a quiz. Quizzes need at least 1,500 characters of source text."))
+                quizExplanation(String(localized: "Add more source text to make a quiz. Quizzes need at least \(presenter.minQuizSourceLength.formatted()) characters of source text."))
             case .handMade:
                 quizExplanation(String(localized: "Quizzes are made from a deck's source text. This deck was made by hand, so it has no source text to quiz you on."))
             }
         } header: {
             Text("Quizzes")
         }
+    }
+
+    /// Routes swipe-to-dismiss through the presenter. Make Quiz and Cancel close the sheet themselves first,
+    /// so the presenter ignores the write-back when they do.
+    var newQuizSheetBinding: Binding<Bool> {
+        Binding(
+            get: { presenter.showNewQuizSheet },
+            set: { isPresented in
+                if !isPresented {
+                    presenter.onNewQuizSheetCancelled()
+                }
+            }
+        )
     }
 
     private var quizStrip: some View {
