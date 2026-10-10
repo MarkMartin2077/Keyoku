@@ -18,6 +18,20 @@ protocol DeckDetailInteractor: GlobalInteractor {
     func prewarmGeneration()
     func generateFlashcards(from text: String, count: Int, avoiding existingQuestions: [String]) -> AsyncThrowingStream<GenerationEvent, Error>
     func extractPDFText(from url: URL) async throws -> (text: String, pageCount: Int)
+
+    // Quizzes
+    func quizzes(forDeckId deckId: String) -> [QuizModel]
+    func deleteQuiz(id: String) throws
+    var quizGenerationAvailability: GenerationAvailability { get }
+    func prewarmQuizGeneration()
+    func canMakeQuiz(sourceLength: Int) -> Bool
+    func maxQuizQuestionCount(sourceLength: Int) -> Int
+    func defaultQuizQuestionCount(sourceLength: Int) -> Int
+    func generateQuiz(
+        for deck: DeckModel,
+        questionCount: Int,
+        onProgress: @escaping @MainActor (QuizGenerationProgress) -> Void
+    ) async throws -> QuizModel
 }
 
 extension CoreInteractor: DeckDetailInteractor { }

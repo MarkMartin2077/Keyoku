@@ -178,6 +178,14 @@ class DeckDetailPresenter {
         progress.cards.count
     }
 
+    // MARK: - Quiz State (see DeckDetailPresenter+Quizzes)
+
+    var showNewQuizSheet: Bool = false
+    var quizQuestionCount: Int = QuizQuestionCount.preferred
+    /// Questions accepted so far while a quiz is being made, or `nil` when no quiz is being made.
+    var quizGeneratedCount: Int?
+    var quizGenerationTask: Task<Void, Never>?
+
     // MARK: - Init
 
     init(interactor: DeckDetailInteractor, router: DeckDetailRouter, deck: DeckModel) {

@@ -116,6 +116,34 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
         mocks[0]
     }
 
+    /// Long enough (over 1,500 characters) that the mock Spanish deck can make quizzes.
+    private static let spanishMockSourceText = """
+    Core Spanish vocabulary, grammar, and conversational phrases for beginners.
+
+    Greetings: "Hola" means hello and works at any time of day. "Buenos días" is good morning, \
+    "buenas tardes" is good afternoon and "buenas noches" is good evening or good night. To say goodbye, \
+    use "adiós", or "hasta luego" for see you later and "hasta mañana" for see you tomorrow.
+
+    Courtesy: "Por favor" means please and "gracias" means thank you. The usual reply to thanks is \
+    "de nada", meaning you're welcome. "Lo siento" is an apology, while "perdón" and "con permiso" \
+    are used to get someone's attention or to ask to pass.
+
+    The verbs ser and estar both mean "to be". Ser describes lasting traits such as identity, origin, \
+    profession and personality: "Soy de México" (I am from Mexico). Estar describes temporary states \
+    and locations: "Estoy cansado" (I am tired) and "El libro está en la mesa" (the book is on the table).
+
+    Nouns have gender. Most nouns ending in -o are masculine and take "el", like "el libro". Most nouns \
+    ending in -a are feminine and take "la", like "la mesa". Plurals add -s after a vowel and -es after \
+    a consonant: "los libros", "las ciudades".
+
+    Common questions: "¿Cómo estás?" asks how you are, "¿Cómo te llamas?" asks your name and \
+    "¿De dónde eres?" asks where you are from. Answer with "Estoy bien", "Me llamo Ana" and "Soy de España". \
+    Questions and exclamations open with inverted marks, ¿ and ¡, as well as closing with the usual ones.
+
+    Numbers one to five are uno, dos, tres, cuatro and cinco. The days of the week are not capitalised \
+    in Spanish: lunes, martes, miércoles, jueves, viernes, sábado and domingo.
+    """
+
     static var mocks: [Self] {
         let now = Date()
         let allCards = FlashcardModel.mocks
@@ -124,7 +152,7 @@ struct DeckModel: StringIdentifiable, Codable, Sendable {
                 deckId: "deck1",
                 name: "Spanish Essentials",
                 color: .orange,
-                sourceText: "Core Spanish vocabulary, grammar, and conversational phrases for beginners",
+                sourceText: Self.spanishMockSourceText,
                 createdAt: now,
                 flashcards: allCards.filter { $0.deckId == "deck1" },
                 clickCount: 5,

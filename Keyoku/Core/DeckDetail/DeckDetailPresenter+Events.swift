@@ -57,6 +57,19 @@ extension DeckDetailPresenter {
         case onCancelGenerationPressed(cardsSoFar: Int)
         case onSaveGeneratedCardsFail(error: Error)
         case onOpenSettingsPressed
+        // Quizzes
+        case onQuizPressed(quiz: QuizModel)
+        case onQuizDeletePressed(quiz: QuizModel)
+        case onQuizDeleteConfirmed(quiz: QuizModel)
+        case onQuizDeleteSuccess(quizId: String)
+        case onQuizDeleteFail(error: Error)
+        case onQuizNewCardPressed(status: NewQuizCardStatus)
+        case onQuizNewSheetCancelled
+        case onQuizCountChanged(count: Int)
+        case onQuizMakePressed(questionCount: Int, sourceLength: Int)
+        case onQuizMakeSuccess(quiz: QuizModel, requestedCount: Int)
+        case onQuizMakeFail(error: Error)
+        case onQuizMakeCancelled(questionsSoFar: Int)
 
         var eventName: String {
             switch self {
@@ -101,6 +114,18 @@ extension DeckDetailPresenter {
             case .onCancelGenerationPressed:    return "DeckDetailView_CancelGeneration_Pressed"
             case .onSaveGeneratedCardsFail:     return "DeckDetailView_SaveGeneratedCards_Fail"
             case .onOpenSettingsPressed:        return "DeckDetailView_OpenSettings_Pressed"
+            case .onQuizPressed:                return "DeckDetailView_Quiz_Pressed"
+            case .onQuizDeletePressed:          return "DeckDetailView_QuizDelete_Pressed"
+            case .onQuizDeleteConfirmed:        return "DeckDetailView_QuizDelete_Confirmed"
+            case .onQuizDeleteSuccess:          return "DeckDetailView_QuizDelete_Success"
+            case .onQuizDeleteFail:             return "DeckDetailView_QuizDelete_Fail"
+            case .onQuizNewCardPressed:         return "DeckDetailView_QuizNewCard_Pressed"
+            case .onQuizNewSheetCancelled:      return "DeckDetailView_QuizNewSheet_Cancelled"
+            case .onQuizCountChanged:           return "DeckDetailView_QuizCount_Changed"
+            case .onQuizMakePressed:            return "DeckDetailView_QuizMake_Pressed"
+            case .onQuizMakeSuccess:            return "DeckDetailView_QuizMake_Success"
+            case .onQuizMakeFail:               return "DeckDetailView_QuizMake_Fail"
+            case .onQuizMakeCancelled:          return "DeckDetailView_QuizMake_Cancelled"
             }
         }
 
@@ -144,6 +169,29 @@ extension DeckDetailPresenter {
                 return ["cards_so_far": count]
             case .onGenerateCardsSuccess(count: let count):
                 return ["card_count": count]
+            case .onQuizPressed(quiz: let quiz), .onQuizDeletePressed(quiz: let quiz), .onQuizDeleteConfirmed(quiz: let quiz):
+                return quiz.eventParameters
+            case .onQuizDeleteSuccess(quizId: let id):
+                return ["quiz_id": id]
+            case .onQuizDeleteFail(error: let error):
+                return error.eventParameters
+            case .onQuizNewCardPressed(status: let status):
+                return ["new_quiz_card_status": status.analyticsName]
+            case .onQuizCountChanged(count: let count):
+                return ["question_count": count]
+            case .onQuizMakePressed(questionCount: let count, sourceLength: let length):
+                return ["question_count": count, "source_text_length": length]
+            case .onQuizMakeSuccess(quiz: let quiz, requestedCount: let requested):
+                var params = quiz.eventParameters
+                params["requested_question_count"] = requested
+                return params
+            case .onQuizMakeFail(error: let error):
+                if let quizError = error as? QuizGenerationError {
+                    return ["failure": quizError.analyticsName]
+                }
+                return error.eventParameters
+            case .onQuizMakeCancelled(questionsSoFar: let count):
+                return ["questions_so_far": count]
             default:
                 return nil
             }
@@ -152,7 +200,8 @@ extension DeckDetailPresenter {
         var type: LogType {
             switch self {
             case .onAddCardFail, .onDeleteCardFail, .onEditCardSaveFail, .onEditDeckSaveFail,
-                 .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail, .onSaveGeneratedCardsFail, .onResetLearnedStatusFail:
+                 .onPDFExtractFail, .onPDFPickerFail, .onGenerateCardsFail, .onSaveGeneratedCardsFail, .onResetLearnedStatusFail,
+                 .onQuizDeleteFail, .onQuizMakeFail:
                 return .severe
             default:
                 return .analytic

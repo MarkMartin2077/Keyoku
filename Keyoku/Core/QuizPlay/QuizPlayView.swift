@@ -98,6 +98,7 @@ struct QuizPlayView: View {
                             state: presenter.answerState(at: answerIndex),
                             onTap: { presenter.onAnswerSelected(answerIndex: answerIndex) }
                         )
+                        .accessibilityIdentifier("QuizAnswerTile_\(answerIndex)")
                     }
                 }
                 .id(question.id)
