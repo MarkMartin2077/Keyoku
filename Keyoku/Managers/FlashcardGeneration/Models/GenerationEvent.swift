@@ -37,7 +37,10 @@ struct GenerationBatch: Equatable, Sendable {
 
 enum GenerationFailure: Error, Equatable {
     case contextTooLarge
+    /// A guardrail blocked the source text or the generated output.
     case restricted
+    /// The model declined the request without a guardrail being triggered.
+    case refused
     case rateLimited(retryAfter: Date?)
     case unsupportedLanguage
     case modelUnavailable
@@ -51,7 +54,7 @@ enum GenerationFailure: Error, Equatable {
         switch self {
         case .contextTooLarge:
             return String(localized: "This text is too long to process in one go. Try a shorter excerpt.")
-        case .restricted:
+        case .restricted, .refused:
             return String(localized: "Apple Intelligence couldn't create flashcards from this content because of its safety guidelines. Try different study material.")
         case .rateLimited:
             return String(localized: "Apple Intelligence is busy right now. Wait a moment and try again.")
@@ -74,6 +77,7 @@ enum GenerationFailure: Error, Equatable {
         switch self {
         case .contextTooLarge: return "context_too_large"
         case .restricted: return "restricted"
+        case .refused: return "refused"
         case .rateLimited: return "rate_limited"
         case .unsupportedLanguage: return "unsupported_language"
         case .modelUnavailable: return "model_unavailable"
@@ -88,6 +92,7 @@ enum GenerationFailure: Error, Equatable {
 enum SkipReason: String, Sendable {
     case unreadableText
     case restricted
+    case refused
     case failed
 }
 

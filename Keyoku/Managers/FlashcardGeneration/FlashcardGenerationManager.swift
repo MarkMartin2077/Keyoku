@@ -47,8 +47,8 @@ final class FlashcardGenerationManager {
             strategy: FlashcardGenerationStrategy(service: service, avoiding: existingQuestions),
             emit: { event in
                 switch event {
-                case .batchSkipped(batch: let batch, reason: let reason, failure: let failure):
-                    logManager?.trackEvent(event: Event.batchSkipped(batch: batch, reason: reason, failure: failure))
+                case .batchSkipped(batch: let batch, reason: let reason, failure: let failure, detail: let detail):
+                    logManager?.trackEvent(event: Event.batchSkipped(batch: batch, reason: reason, failure: failure, detail: detail))
                 case .modelChanged(from: let fromModel, to: let toModel):
                     logManager?.trackEvent(event: Event.modelFallback(fromModel: fromModel, toModel: toModel))
                 default:
@@ -101,7 +101,7 @@ extension FlashcardGenerationManager {
         case generateSuccess(summary: GenerationRunSummary)
         case generateFail(failure: GenerationFailure)
         case generateCancelled
-        case batchSkipped(batch: Int, reason: SkipReason, failure: GenerationFailure?)
+        case batchSkipped(batch: Int, reason: SkipReason, failure: GenerationFailure?, detail: String?)
         case modelFallback(fromModel: GenerationModelKind, toModel: GenerationModelKind)
         case pdfExtractStart
         case pdfExtractSuccess(pageCount: Int, textLength: Int)
@@ -138,11 +138,17 @@ extension FlashcardGenerationManager {
                 ]
             case .generateFail(failure: let failure):
                 return ["failure": failure.analyticsName]
-            case .batchSkipped(batch: let batch, reason: let reason, failure: let failure):
+            case .batchSkipped(batch: let batch, reason: let reason, failure: let failure, detail: let detail):
                 var parameters: [String: Any] = ["batch_index": batch, "reason": reason.rawValue]
                 if reason == .failed, let failure {
                     parameters["failure"] = failure.analyticsName
                 }
+                #if DEBUG
+                // The raw model error, for diagnosing skips in Debug builds; may describe source text, so never sent from release builds.
+                if let detail {
+                    parameters["error_detail"] = detail
+                }
+                #endif
                 return parameters
             case .modelFallback(fromModel: let fromModel, toModel: let toModel):
                 return ["from_model": fromModel.rawValue, "to_model": toModel.rawValue]
@@ -182,7 +188,7 @@ private extension GenerationEvent {
             self = .partial(batch: batch, cards: cards)
         case .batchCompleted(batch: let batch, items: let cards):
             self = .batchCompleted(batch: batch, cards: cards)
-        case .batchSkipped(batch: let batch, reason: let reason, failure: _):
+        case .batchSkipped(batch: let batch, reason: let reason, failure: _, detail: _):
             self = .batchSkipped(batch: batch, reason: reason)
         }
     }

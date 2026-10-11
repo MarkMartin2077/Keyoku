@@ -21,7 +21,8 @@ enum GenerationErrorClassifier {
         case is SystemLanguageModel.Error:
             return .modelUnavailable
         case let error as LanguageModelSession.Error:
-            return error == .concurrentRequests ? .rateLimited(retryAfter: nil) : .other(String(describing: error))
+            // Calling a session that's still responding is a bug in the caller, not system load: don't back off and retry.
+            return .other(String(describing: error))
         default:
             return legacyClassifier.classify(error) ?? .other(String(describing: error))
         }
@@ -31,7 +32,8 @@ enum GenerationErrorClassifier {
         switch error {
         case .contextSizeExceeded: return .contextTooLarge
         case .rateLimited(let info): return .rateLimited(retryAfter: info.resetDate)
-        case .guardrailViolation, .refusal: return .restricted
+        case .guardrailViolation: return .restricted
+        case .refusal: return .refused
         case .unsupportedLanguageOrLocale: return .unsupportedLanguage
         case .timeout: return .other("timeout")
         case .unsupportedCapability, .unsupportedTranscriptContent, .unsupportedGenerationGuide:
@@ -58,9 +60,11 @@ private struct LegacyGenerationErrorClassifier: LegacyGenerationErrorClassifying
         switch error {
         case .exceededContextWindowSize: return .contextTooLarge
         case .assetsUnavailable: return .modelUnavailable
-        case .guardrailViolation, .refusal: return .restricted
+        case .guardrailViolation: return .restricted
+        case .refusal: return .refused
         case .unsupportedLanguageOrLocale: return .unsupportedLanguage
-        case .rateLimited, .concurrentRequests: return .rateLimited(retryAfter: nil)
+        case .rateLimited: return .rateLimited(retryAfter: nil)
+        case .concurrentRequests: return .other(String(describing: error))
         case .unsupportedGuide, .decodingFailure: return .other(String(describing: error))
         @unknown default: return .other(String(describing: error))
         }

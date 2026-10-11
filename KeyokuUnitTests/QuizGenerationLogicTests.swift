@@ -181,6 +181,7 @@ struct QuizGenerationErrorMessageTests {
     ] + [
         GenerationFailure.contextTooLarge,
         .restricted,
+        .refused,
         .rateLimited(retryAfter: nil),
         .unsupportedLanguage,
         .modelUnavailable,

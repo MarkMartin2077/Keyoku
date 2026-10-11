@@ -46,7 +46,8 @@ enum GenerationRunEvent<Item> {
     case modelChanged(from: GenerationModelKind, to: GenerationModelKind)
     case partial(batch: Int, items: [Item])
     case batchCompleted(batch: Int, items: [Item])
-    case batchSkipped(batch: Int, reason: SkipReason, failure: GenerationFailure?)
+    /// `detail` is the raw model error, for debugging; nil when no model call failed.
+    case batchSkipped(batch: Int, reason: SkipReason, failure: GenerationFailure?, detail: String?)
 }
 
 struct GenerationRunSummary {
@@ -271,7 +272,7 @@ final class GenerationRun<Strategy: GenerationStrategy> {
                     hasRetried = true
                     continue
                 }
-                skip(batch.index, reason: skipReason(for: failure))
+                skip(batch.index, reason: skipReason(for: failure), detail: String(reflecting: error))
                 return .skipped
             }
         }
@@ -324,6 +325,8 @@ final class GenerationRun<Strategy: GenerationStrategy> {
         switch failure {
         case .restricted:
             return .restricted
+        case .refused:
+            return .refused
         case .unreadableText:
             return .unreadableText
         default:
@@ -332,12 +335,12 @@ final class GenerationRun<Strategy: GenerationStrategy> {
         }
     }
 
-    private func skip(_ index: Int, reason: SkipReason) {
+    private func skip(_ index: Int, reason: SkipReason, detail: String? = nil) {
         skippedBatchCount += 1
-        if reason == .restricted {
+        if reason == .restricted || reason == .refused {
             restrictedSkipCount += 1
         }
-        emit(.batchSkipped(batch: index, reason: reason, failure: lastFailure))
+        emit(.batchSkipped(batch: index, reason: reason, failure: lastFailure, detail: detail))
     }
 
     private func announceModelChangeIfNeeded() {
