@@ -36,12 +36,10 @@ struct NewQuizSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Text("Cancel")
-                        .foregroundStyle(.tint)
-                        .anyButton {
-                            presenter.onNewQuizSheetCancelled()
-                        }
-                        .accessibilityIdentifier("NewQuizCancelButton")
+                    Button("Cancel") {
+                        presenter.onNewQuizSheetCancelled()
+                    }
+                    .accessibilityIdentifier("NewQuizCancelButton")
                 }
             }
         }
