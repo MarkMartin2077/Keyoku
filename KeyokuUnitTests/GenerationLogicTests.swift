@@ -74,6 +74,21 @@ struct GenerationErrorClassifierTests {
         #expect(GenerationErrorClassifier.classify(error) == .restricted)
     }
 
+    @Test("Refusals are told apart from guardrail violations")
+    func refusal() {
+        let error = LanguageModelError.refusal(.init(explanation: "I'd rather not.", debugDescription: "refused"))
+        #expect(GenerationErrorClassifier.classify(error) == .refused)
+    }
+
+    @Test("Calling a session that's still responding is a programming error, not rate limiting")
+    func concurrentRequests() {
+        let failure = GenerationErrorClassifier.classify(LanguageModelSession.Error.concurrentRequests)
+        if case .other = failure {
+        } else {
+            Issue.record("concurrentRequests should classify as .other, got \(failure)")
+        }
+    }
+
     @Test("Private Cloud Compute errors are fallback-eligible", arguments: [
         PrivateCloudComputeLanguageModel.Error.networkFailure(.init(debugDescription: "offline")),
         .quotaLimitReached(.init(debugDescription: "quota")),
@@ -131,6 +146,17 @@ struct GenerationProgressStateTests {
         #expect(state.skippedCounts == [.restricted: 1, .unreadableText: 1])
         #expect(state.skippedSummary?.contains("unreadable text") == true)
         #expect(state.skippedSummary?.contains("content restrictions") == true)
+    }
+
+    @Test("Refused and restricted sections share one content-restrictions phrase in the summary")
+    func refusedSummarisedWithRestricted() {
+        var state = GenerationProgressState()
+        state.apply(.started(model: .onDevice, batchCount: 2))
+        state.apply(.batchSkipped(batch: 0, reason: .restricted))
+        state.apply(.batchSkipped(batch: 1, reason: .refused))
+
+        #expect(state.skippedCounts == [.restricted: 1, .refused: 1])
+        #expect(state.skippedSummary == "2 section(s) skipped: content restrictions")
     }
 
     @Test("A model change records the new model and drops the interrupted partial")

@@ -65,15 +65,14 @@ struct GenerationProgressState {
 
     var skippedSummary: String? {
         guard skippedCount > 0 else { return nil }
-        let reasons = [SkipReason.unreadableText, .restricted, .failed]
-            .filter { skippedCounts[$0, default: 0] > 0 }
-            .map { reason -> String in
-                switch reason {
-                case .unreadableText: return String(localized: "unreadable text")
-                case .restricted: return String(localized: "content restrictions")
-                case .failed: return String(localized: "generation errors")
-                }
-            }
+        // Guardrail blocks and refusals both read as content restrictions to the learner.
+        let reasons = [
+            ([SkipReason.unreadableText], String(localized: "unreadable text")),
+            ([.restricted, .refused], String(localized: "content restrictions")),
+            ([.failed], String(localized: "generation errors"))
+        ]
+            .filter { reasons, _ in reasons.contains { skippedCounts[$0, default: 0] > 0 } }
+            .map(\.1)
             .formatted(.list(type: .and))
         return String(localized: "\(skippedCount) section(s) skipped: \(reasons)")
     }

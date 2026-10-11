@@ -46,7 +46,7 @@ enum QuizGenerationError: Error, Equatable {
         switch failure {
         case .contextTooLarge:
             return String(localized: "This deck's text is too long to make a quiz in one go. Try a deck with a shorter excerpt.")
-        case .restricted:
+        case .restricted, .refused:
             return String(localized: "Apple Intelligence couldn't make a quiz from this content because of its safety guidelines. Try different study material.")
         case .rateLimited:
             return String(localized: "Apple Intelligence is busy right now. Wait a moment and try again.")

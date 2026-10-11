@@ -103,8 +103,8 @@ final class QuizGenerationManager {
             strategy: QuizGenerationStrategy(service: service, avoiding: existingQuestions),
             emit: { event in
                 switch event {
-                case .batchSkipped(batch: let batch, reason: let reason, failure: let failure):
-                    logManager?.trackEvent(event: Event.batchSkipped(batch: batch, reason: reason, failure: failure))
+                case .batchSkipped(batch: let batch, reason: let reason, failure: let failure, detail: let detail):
+                    logManager?.trackEvent(event: Event.batchSkipped(batch: batch, reason: reason, failure: failure, detail: detail))
                 case .modelChanged(from: let fromModel, to: let toModel):
                     logManager?.trackEvent(event: Event.modelFallback(fromModel: fromModel, toModel: toModel))
                 default:
@@ -203,7 +203,7 @@ extension QuizGenerationManager {
         case generateSuccess(summary: GenerationRunSummary, usedFallbackTitle: Bool)
         case generateFail(failure: QuizGenerationError)
         case generateCancelled
-        case batchSkipped(batch: Int, reason: SkipReason, failure: GenerationFailure?)
+        case batchSkipped(batch: Int, reason: SkipReason, failure: GenerationFailure?, detail: String?)
         case modelFallback(fromModel: GenerationModelKind, toModel: GenerationModelKind)
         case titleStart
         case titleSuccess(wordCount: Int)
@@ -245,11 +245,17 @@ extension QuizGenerationManager {
                     parameters["generated_count"] = generated
                 }
                 return parameters
-            case .batchSkipped(batch: let batch, reason: let reason, failure: let failure):
+            case .batchSkipped(batch: let batch, reason: let reason, failure: let failure, detail: let detail):
                 var parameters: [String: Any] = ["batch_index": batch, "reason": reason.rawValue]
                 if reason == .failed, let failure {
                     parameters["failure"] = failure.analyticsName
                 }
+                #if DEBUG
+                // The raw model error, for diagnosing skips in Debug builds; may describe source text, so never sent from release builds.
+                if let detail {
+                    parameters["error_detail"] = detail
+                }
+                #endif
                 return parameters
             case .modelFallback(fromModel: let fromModel, toModel: let toModel):
                 return ["from_model": fromModel.rawValue, "to_model": toModel.rawValue]

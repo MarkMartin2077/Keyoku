@@ -149,6 +149,22 @@ struct FlashcardGenerationManagerTests {
         #expect(finalCards(events).count == 10)
     }
 
+    @Test("Refused batches are skipped and reported apart from guardrail blocks")
+    func refusedSkip() async {
+        let service = MockFlashcardGenerationService(failures: [1: GenerationFailure.refused])
+        let (manager, mockLog) = makeManager(service: service)
+
+        let (events, failure) = await collect(manager, count: 10)
+
+        #expect(failure == nil)
+        #expect(events.contains {
+            if case .batchSkipped(1, .refused) = $0 { return true } else { return false }
+        })
+        let skipEvent = mockLog.events.first { $0.eventName == "FlashcardGenMan_BatchSkipped" }
+        #expect(skipEvent?.parameters?["reason"] as? String == "refused")
+        #expect(finalCards(events).count == 10)
+    }
+
     @Test("Unreadable text is skipped without calling the model and fails the run")
     func gibberishFails() async {
         let service = MockFlashcardGenerationService()
