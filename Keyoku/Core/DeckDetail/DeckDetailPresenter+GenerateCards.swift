@@ -134,6 +134,15 @@ extension DeckDetailPresenter {
         isGenerationComplete = false
     }
 
+    /// The deck's source text after generating more cards: the new text is added after the existing text,
+    /// so everything the deck was made from stays available (e.g. for quizzes). Text already in the deck isn't added again.
+    static func combinedSourceText(existing: String, new: String) -> String {
+        let newText = new.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newText.isEmpty, !existing.contains(newText) else { return existing }
+        guard !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return new }
+        return existing + "\n\n" + new
+    }
+
     private func saveGeneratedCards() {
         guard let currentDeck = deck else {
             isGeneratingCards = false
@@ -148,7 +157,7 @@ extension DeckDetailPresenter {
             name: currentDeck.name,
             color: currentDeck.color,
             imageUrl: currentDeck.imageUrl,
-            sourceText: currentDeck.sourceText.isEmpty ? sourceText : currentDeck.sourceText,
+            sourceText: Self.combinedSourceText(existing: currentDeck.sourceText, new: sourceText),
             createdAt: currentDeck.createdAt,
             flashcards: currentDeck.flashcards + newCards,
             clickCount: currentDeck.clickCount,
